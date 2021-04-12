@@ -1,0 +1,8 @@
+~
+.bak
+.tmp
+.rej
+.orig
+
+# scratch dir
+/SF-HG/
