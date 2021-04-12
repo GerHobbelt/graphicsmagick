@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -102,7 +102,7 @@ typedef struct {
     compression;
 
   /* not really part of the doc, but makes it easy to pass around! */
-  ExceptionInfo 
+  ExceptionInfo
     *exception;
 
   /* File size */
@@ -307,7 +307,7 @@ static char *ReadBlobStringWithLongSize(Image *image,char *string,size_t max)
 }
 
 
-static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* inDocInfo, 
+static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* inDocInfo,
                                  XCFLayerInfo*  inLayerInfo, size_t data_length)
 {
   size_t
@@ -327,6 +327,31 @@ static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* in
   unsigned char
     *graydata;
 
+  /*
+    Validate that claimed data length is sufficent for tile.
+  */
+  {
+    size_t
+      expected_data_length=0;
+
+    if (inDocInfo->image_type == GIMP_GRAY)
+      {
+        expected_data_length=tile_image->columns*tile_image->rows*
+          sizeof(unsigned char);
+      }
+    else if (inDocInfo->image_type == GIMP_RGB)
+      {
+        expected_data_length=tile_image->columns*tile_image->rows*
+          sizeof(XCFPixelPacket);
+      }
+    if (expected_data_length && (expected_data_length > data_length))
+      {
+        ThrowException(&image->exception,CorruptImageError,CorruptImage,
+                       "Claimed tile data length is insufficient for tile data");
+        return MagickFail;
+      }
+  }
+
   xcfdata = xcfodata = MagickAllocateMemory(XCFPixelPacket *,data_length);
   graydata = (unsigned char *) xcfdata;  /* used by gray and indexed */
 
@@ -340,9 +365,7 @@ static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* in
   if (nmemb_read_successfully != data_length)
     {
       MagickFreeMemory(xcfodata);
-      ThrowException(&image->exception,CorruptImageError,UnexpectedEndOfFile,
-                     NULL);
-      return MagickFail;
+      ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
     }
 
   q=SetImagePixels(tile_image,0,0,tile_image->columns,tile_image->rows);
@@ -373,7 +396,7 @@ static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* in
               q->green    = ScaleCharToQuantum(xcfdata->green);
               q->blue     = ScaleCharToQuantum(xcfdata->blue);
               q->opacity  = (Quantum) (xcfdata->opacity==0U ? TransparentOpacity :
-                                       ScaleCharToQuantum(255U-inLayerInfo->opacity)); 
+                                       ScaleCharToQuantum(255U-inLayerInfo->opacity));
               xcfdata++;
               q++;
             }
@@ -386,7 +409,7 @@ static MagickPassFail load_tile (Image* image, Image* tile_image, XCFDocInfo* in
 
 static MagickPassFail load_tile_rle (Image* image,
                                      Image* tile_image,
-                                     XCFDocInfo* inDocInfo, 
+                                     XCFDocInfo* inDocInfo,
                                      XCFLayerInfo*  inLayerInfo,
                                      size_t data_length)
 {
@@ -433,13 +456,11 @@ static MagickPassFail load_tile_rle (Image* image,
                               (unsigned long) nmemb_read_successfully,
                               (unsigned long) data_length);
       MagickFreeMemory(xcfodata);
-      ThrowException(&image->exception,CorruptImageError,UnexpectedEndOfFile,
-                     NULL);
-      return MagickFail;
+      ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
     }
 
   xcfdatalimit = &xcfodata[nmemb_read_successfully - 1];
-  
+
   for (i = 0; i < bpp; i++)
     {
       q=SetImagePixels(tile_image,0,0,tile_image->columns,tile_image->rows);
@@ -457,9 +478,9 @@ static MagickPassFail load_tile_rle (Image* image,
             {
               goto bogus_rle;
             }
-    
+
           val = *xcfdata++;
-    
+
           length = val;
 
           if (length >= 128)
@@ -472,24 +493,24 @@ static MagickPassFail load_tile_rle (Image* image,
                     {
                       goto bogus_rle;
                     }
-    
+
                   length = ((*xcfdata << 8) + xcfdata[1]) & 0xFFFF;
                   xcfdata += 2;
                 }
-    
+
               count += length;
               size -= length;
-    
+
               if (size < 0)
                 {
                   goto bogus_rle;
                 }
-    
+
               if (&xcfdata[length-1] > xcfdatalimit)
                 {
                   goto bogus_rle;
                 }
-    
+
               while (length-- > 0)
                 {
                   data = *xcfdata++;
@@ -497,7 +518,7 @@ static MagickPassFail load_tile_rle (Image* image,
                     {
                     case 0:
                       {
-                        q->red          = ScaleCharToQuantum(data);  
+                        q->red          = ScaleCharToQuantum(data);
                         if ( inDocInfo->image_type == GIMP_GRAY )
                           {
                             q->green    = ScaleCharToQuantum(data);
@@ -525,7 +546,7 @@ static MagickPassFail load_tile_rle (Image* image,
                     case 3:
                       {
                         q->opacity = (Quantum) (data==0 ? TransparentOpacity :
-                                                ScaleCharToQuantum(255-inLayerInfo->opacity));  
+                                                ScaleCharToQuantum(255-inLayerInfo->opacity));
                         break;
                       }
                     }
@@ -541,26 +562,26 @@ static MagickPassFail load_tile_rle (Image* image,
                     {
                       goto bogus_rle;
                     }
-    
+
                   length = ((*xcfdata << 8) + xcfdata[1]) & 0xFFFF;
                   xcfdata += 2;
                 }
-    
+
               count += length;
               size -= length;
 
               if (size < 0)
                 {
-		  goto bogus_rle;
+                  goto bogus_rle;
                 }
-    
+
               if (xcfdata > xcfdatalimit)
                 {
                   goto bogus_rle;
                 }
-    
+
               val = *xcfdata++;
-    
+
               for (j = 0; j < length; j++)
                 {
                   data = val;
@@ -568,7 +589,7 @@ static MagickPassFail load_tile_rle (Image* image,
                     {
                     case 0:
                       {
-                        q->red = ScaleCharToQuantum(data);  
+                        q->red = ScaleCharToQuantum(data);
                         if ( inDocInfo->image_type == GIMP_GRAY )
                           {
                             q->green = ScaleCharToQuantum(data);
@@ -596,7 +617,7 @@ static MagickPassFail load_tile_rle (Image* image,
                     case 3:
                       {
                         q->opacity = (Quantum) (data==0 ? TransparentOpacity :
-                                                ScaleCharToQuantum(255-inLayerInfo->opacity));  
+                                                ScaleCharToQuantum(255-inLayerInfo->opacity));
                         break;
                       }
                     }
@@ -605,7 +626,7 @@ static MagickPassFail load_tile_rle (Image* image,
             }
         }
       if (SyncImagePixelsEx(tile_image,&tile_image->exception) == MagickFail)
-	break;
+        break;
     }
   MagickFreeMemory(xcfodata);
   return MagickPass;
@@ -657,9 +678,9 @@ static MagickPassFail load_level (Image* image,
   MagickPassFail
     status = MagickPass;
 
-  ExceptionInfo 
+  ExceptionInfo
     *exception = inDocInfo->exception;
-  
+
   /* start reading the data */
   width = ReadBlobMSBLong(image); /* width */
   height = ReadBlobMSBLong(image); /* height */
@@ -669,6 +690,10 @@ static MagickPassFail load_level (Image* image,
    *  and we can simply return.
    */
   offset = ReadBlobMSBLong(image);
+
+  if (EOFBlob(image))
+    ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
+
   if (offset == 0)
     return MagickPass;
 
@@ -724,6 +749,8 @@ static MagickPassFail load_level (Image* image,
         amount of data needed for this tile
       */
       offset2 = ReadBlobMSBLong(image);
+      if (EOFBlob(image))
+        ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
       if (offset2 >= inDocInfo->file_size)
         {
           if (image->logging)
@@ -732,11 +759,22 @@ static MagickPassFail load_level (Image* image,
                                   (long) offset2, (unsigned long) inDocInfo->file_size);
           ThrowBinaryException(CorruptImageError,CorruptImage,image->filename);
         }
-      
-      /* seek to the tile offset */
-      (void) SeekBlob(image, offset, SEEK_SET);
 
-      /* allocate the image for the tile 
+      /* verify that seek position is in file */
+      if ((magick_off_t) offset >= GetBlobSize(image))
+        {
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Tile offset %" MAGICK_OFF_F "d is outside file bounds",
+                                  (magick_off_t) offset);
+          ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+        }
+
+      /* seek to the tile offset */
+      if (SeekBlob(image, offset, SEEK_SET) != offset)
+        ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+
+      /* allocate the image for the tile
          NOTE: the last tile in a row or column may not be a full tile!
       */
       tile_image_width=(size_t) (destLeft == (int) ntile_cols-1 ?
@@ -747,6 +785,9 @@ static MagickPassFail load_level (Image* image,
       if (tile_image_height == 0) tile_image_height=TILE_HEIGHT;
       tile_image=CloneImage(inLayerInfo->image, tile_image_width,
                             tile_image_height,True,exception);
+
+      if (tile_image == (Image *) NULL)
+        return MagickFail;
 
       /*
         Compute the tile data size.
@@ -799,7 +840,10 @@ static MagickPassFail load_level (Image* image,
                                       "Final tile data size: %lu",
                                       (unsigned long) tile_data_size);
               if (offset2 <= offset)
-                ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
+                {
+                  DestroyImage(tile_image);
+                  ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
+                }
             }
         }
 
@@ -815,9 +859,11 @@ static MagickPassFail load_level (Image* image,
                                tile_data_size);
           break;
         case COMPRESS_ZLIB:
+          DestroyImage(tile_image);
           ThrowBinaryException(CoderError,ZipCompressionNotSupported,
                                image->filename);
         case COMPRESS_FRACTAL:
+          DestroyImage(tile_image);
           ThrowBinaryException(CoderError,FractalCompressionNotSupported,
                                image->filename);
         }
@@ -880,6 +926,7 @@ static MagickPassFail load_level (Image* image,
 #endif
         }
       DestroyImage(tile_image);
+      tile_image = (Image *) NULL;
 
       /* adjust tile position */
       destLeft++;
@@ -889,9 +936,9 @@ static MagickPassFail load_level (Image* image,
           destTop++;
         }
 
-      if (MagickPass != status) 
+      if (MagickPass != status)
         return status;
-      
+
       /* restore the saved position so we'll be ready to
        *  read the next offset.
        */
@@ -899,11 +946,13 @@ static MagickPassFail load_level (Image* image,
 
       /* read in the offset of the next tile */
       offset = ReadBlobMSBLong(image);
+      if (EOFBlob(image))
+        ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
       if (offset != 0)
         if (!MagickMonitorFormatted(offset,inDocInfo->file_size,
                                     &image->exception,LoadImageText,
                                     image->filename,
-				    image->columns,image->rows))
+                                    image->columns,image->rows))
           break;
     }
 
@@ -916,7 +965,7 @@ static MagickPassFail load_level (Image* image,
       (void) MagickMonitorFormatted(inDocInfo->file_size,
                                     inDocInfo->file_size+1,&image->exception,
                                     LoadImageText,image->filename,
-				    image->columns,image->rows);
+                                    image->columns,image->rows);
     }
 
   return MagickPass;
@@ -946,22 +995,36 @@ static MagickPassFail load_hierarchy (Image *image, XCFDocInfo* inDocInfo, XCFLa
    */
   offset = ReadBlobMSBLong(image);  /* top level */
 
+  if (EOFBlob(image))
+    ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
+
   if (image->logging)
     (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-                          "load_hierarchy: dimensions %lux%lu, bpp=%lu, offset=%lu",
+                          "load_hierarchy: dimensions %lux%lu, bpp=%lu,"
+                          " offset=%" MAGICK_OFF_F "d",
                           width,height,(unsigned long) inDocInfo->bpp,
-                          (unsigned long) offset);
+                          (magick_off_t) offset);
+
+  /* verify that seek position is in file */
+  if ((magick_off_t) offset >= GetBlobSize(image))
+    {
+      if (image->logging)
+        (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                              "Heirarchy offset %" MAGICK_OFF_F "d is outside file bounds",
+                              (magick_off_t) offset);
+      ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+    }
 
   /* discard offsets for layers below first, if any.
    */
-  do 
+  do
     {
       junk = ReadBlobMSBLong(image);
     }
   while ((junk != 0) && (!EOFBlob(image)));
 
   if (EOFBlob(image))
-    return MagickFail;
+    ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
 
   /* save the current position as it is where the
    *  next level offset is stored.
@@ -969,18 +1032,30 @@ static MagickPassFail load_hierarchy (Image *image, XCFDocInfo* inDocInfo, XCFLa
   saved_pos = TellBlob(image);
   if (saved_pos < 0)
     ThrowBinaryException(BlobError,UnableToObtainOffset,image->filename);
-  
+
+  /* verify that seek position is in file */
+  if ((magick_off_t) offset >= GetBlobSize(image))
+    {
+      if (image->logging)
+        (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                              "Level offset %" MAGICK_OFF_F "d is outside file bounds",
+                              (magick_off_t) offset);
+      ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+    }
+
   /* seek to the level offset */
-  (void) SeekBlob(image, offset, SEEK_SET);
-  
+  if (SeekBlob(image, offset, SEEK_SET) != offset)
+    ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+
   /* read in the level */
   if (load_level (image, inDocInfo, inLayer) == MagickFail)
     return MagickFail;
-      
+
   /* restore the saved position so we'll be ready to
    *  read the next offset.
    */
-  (void) SeekBlob(image, saved_pos, SEEK_SET);
+  if (SeekBlob(image, saved_pos, SEEK_SET) != saved_pos)
+    ThrowBinaryException(BlobError,UnableToSeekToOffset,image->filename);
 
   return MagickPass;
 }
@@ -996,18 +1071,25 @@ static MagickPassFail ReadOneLayer( Image* image, XCFDocInfo* inDocInfo, XCFLaye
     foundPropEnd = 0;
 
   unsigned long
-    hierarchy_offset, 
+    hierarchy_offset,
     layer_mask_offset;
+
+  magick_off_t start_offset;
+
+  start_offset = TellBlob(image);
 
   /* clear the block! */
   (void) memset( outLayer, 0, sizeof( XCFLayerInfo ) );
-  
+
   /* read in the layer width, height, type and name */
   outLayer->width = ReadBlobMSBLong(image);
   outLayer->height = ReadBlobMSBLong(image);
   outLayer->type = ReadBlobMSBLong(image);
   (void) ReadBlobStringWithLongSize(image, outLayer->name,
                                     sizeof(outLayer->name));
+
+  if (EOFBlob(image))
+    ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
 
   if (image->logging)
     (void) LogMagickEvent(CoderEvent,GetMagickModule(),
@@ -1016,6 +1098,9 @@ static MagickPassFail ReadOneLayer( Image* image, XCFDocInfo* inDocInfo, XCFLaye
                           (unsigned long) outLayer->width,
                           (unsigned long) outLayer->height,
                           (unsigned long) outLayer->type);
+
+  if ((outLayer->width == 0) || (outLayer->height == 0))
+    ThrowBinaryException(CorruptImageError,ImproperImageHeader,image->filename);
 
   /* allocate the image for this layer */
   outLayer->image=CloneImage(image,outLayer->width, outLayer->height,True,
@@ -1113,34 +1198,86 @@ static MagickPassFail ReadOneLayer( Image* image, XCFDocInfo* inDocInfo, XCFLaye
           break;
         }
     }
+  if (EOFBlob(image))
+    ThrowBinaryException(CorruptImageError,UnexpectedEndOfFile,image->filename);
 
   if (!foundPropEnd)
     return MagickFail;
 
   /* clear the image based on the layer opacity */
-  (void) SetImage(outLayer->image,(Quantum)(255-outLayer->opacity));
+  if (SetImage(outLayer->image,(Quantum)(255-outLayer->opacity)) != MagickPass)
+    return MagickFail;
 
   /* set the compositing mode */
   outLayer->image->compose = GIMPBlendModeToCompositeOperator( outLayer->mode );
   if ( outLayer->visible == False )
     {
       /* BOGUS: should really be separate member var! */
-      outLayer->image->compose = NoCompositeOp;  
+      outLayer->image->compose = NoCompositeOp;
     }
 
   /* read the hierarchy and layer mask offsets */
   hierarchy_offset = ReadBlobMSBLong(image);
   layer_mask_offset = ReadBlobMSBLong(image);
 
+  /* verify that seek position is in file */
+  if ((magick_off_t) hierarchy_offset >= GetBlobSize(image))
+    {
+      if (image->logging)
+        (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                              "Hierarchy offset %" MAGICK_OFF_F "d is outside file bounds",
+                              (magick_off_t) hierarchy_offset);
+      ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+    }
+  /*
+    Verify that seek position is not too small.
+    Seek position provides ample opportunity for abuse.
+  */
+  if ((magick_off_t) hierarchy_offset <= start_offset)
+    {
+      if (image->logging)
+        (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                              "Hierarchy offset %" MAGICK_OFF_F "d is unreasonable",
+                              (magick_off_t) hierarchy_offset);
+      ThrowBinaryException(CorruptImageError,ImproperImageHeader,image->filename);
+    }
+
   /* read in the hierarchy */
-  (void) SeekBlob(image, hierarchy_offset, SEEK_SET);
+  if (SeekBlob(image, hierarchy_offset, SEEK_SET) != (magick_off_t) hierarchy_offset)
+    ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+  if (image->logging)
+    (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                          "Hierarchy offset %" MAGICK_OFF_F "d",
+                          (magick_off_t) hierarchy_offset);
   if (load_hierarchy (image, inDocInfo, outLayer) == MagickFail)
     return MagickFail;
 
   /* read in the layer mask */
   if (layer_mask_offset != 0)
     {
-      (void) SeekBlob(image, layer_mask_offset, SEEK_SET);
+      /* verify that seek position is in file */
+      if ((magick_off_t) layer_mask_offset >= GetBlobSize(image))
+        {
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Layer mask offset %" MAGICK_OFF_F "d is outside file bounds",
+                                  (magick_off_t) layer_mask_offset);
+          ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
+        }
+      /*
+        Verify that seek position is not too small.
+        Seek position provides ample opportunity for abuse.
+      */
+      if ((magick_off_t) layer_mask_offset <= start_offset)
+        {
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Layer mask offset %" MAGICK_OFF_F "d is unreasonable",
+                                  (magick_off_t) hierarchy_offset);
+          ThrowBinaryException(CorruptImageError,ImproperImageHeader,image->filename);
+        }
+      if (SeekBlob(image, layer_mask_offset, SEEK_SET) != (magick_off_t) layer_mask_offset)
+        ThrowBinaryException(CorruptImageError,InsufficientImageDataInFile,image->filename);
 
 #if 0  /* BOGUS: support layer masks! */
       layer_mask = xcf_load_layer_mask (info, gimage);
@@ -1204,6 +1341,24 @@ static MagickPassFail ReadOneLayer( Image* image, XCFDocInfo* inDocInfo, XCFLaye
 %
 %
 */
+#define DestroyLayerInfo(number_layers,layer_info) \
+  do {                                                         \
+    size_t                                                     \
+      j;                                                       \
+                                                               \
+    if (layer_info != (XCFLayerInfo *) NULL)                   \
+      {                                                        \
+        for (j=0; j < number_layers; j++)       \
+          {                                                    \
+            if (layer_info[j].image != (Image *) NULL)         \
+              {                                                \
+                DestroyImage(layer_info[j].image);             \
+                layer_info[j].image = (Image *) NULL;          \
+              }                                                \
+          }                                                    \
+      }                                                        \
+    MagickFreeMemory(layer_info);                              \
+  } while (0);
 static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
 {
   char
@@ -1240,7 +1395,7 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
   if (status == MagickFail)
     ThrowReaderException(FileOpenError,UnableToOpenFile,image);
   count=ReadBlob(image,14,(char *) magick);
-  if ((count == 0) ||
+  if ((count != 14) ||
       (LocaleNCompare((char *) magick,"gimp xcf",8) != 0))
     ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
   /* clear the docinfo stuff */
@@ -1265,7 +1420,10 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                            (image_type == GIMP_GRAY ? "GRAY" :
                             (image_type == GIMP_INDEXED ? "INDEXED" :
                              "unknown"))));
-  
+
+  if ((image->columns == 0) || (image->rows == 0))
+    ThrowReaderException(CorruptImageError,NegativeOrZeroImageSize,image);
+
   /* setup some things about the image...*/
   image->compression=NoCompression;
   image->depth = 8;
@@ -1281,11 +1439,27 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
     {
       ThrowReaderException(CoderError,ColormapTypeNotSupported,image);
     }
+  else
+    {
+      ThrowReaderException(CorruptImageError,ImageTypeNotSupported,image);
+    }
+
+  if (CheckImagePixelLimits(image, exception) != MagickPass)
+    ThrowReaderException(ResourceLimitError,ImagePixelLimitExceeded,image);
+
   /*
-    SetImage can be very expensive and it is not clear that this one is
-    actually needed so comment it out for now.
+    SetImage can be very expensive but we do it here because it is
+    expected that the canvas is initialized to opaque-black and
+    operations may be done using uninitialized pixels if we don't
+    initialize here.
   */
-  /* (void) SetImage(image,OpaqueOpacity); */  /* until we know otherwise...*/
+  SetRedSample(&image->background_color,0);
+  SetGreenSample(&image->background_color,0);
+  SetBlueSample(&image->background_color,0);
+  SetOpacitySample(&image->background_color,OpaqueOpacity);
+  if (SetImage(image,OpaqueOpacity) != MagickPass)
+    ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,image); /* ??? */
+
   image->matte=True;  /* XCF always has a matte! */
 
   /* read properties */
@@ -1306,31 +1480,31 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
             if (ReadBlobByte(image) == EOF)
               ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
           /*
-            if (info->file_version == 0) 
+            if (info->file_version == 0)
             {
             gint i;
 
             g_message (_("XCF warning: version 0 of XCF file format\n"
             "did not save indexed colormaps correctly.\n"
             "Substituting grayscale map."));
-            info->cp += 
+            info->cp +=
             xcf_read_int32 (info->fp, (guint32*) &gimage->num_cols, 1);
             gimage->cmap = g_new (guchar, gimage->num_cols*3);
             xcf_seek_pos (info, info->cp + gimage->num_cols);
-            for (i = 0; i<gimage->num_cols; i++) 
+            for (i = 0; i<gimage->num_cols; i++)
             {
             gimage->cmap[i*3+0] = i;
             gimage->cmap[i*3+1] = i;
             gimage->cmap[i*3+2] = i;
             }
             }
-            else 
+            else
             {
-            info->cp += 
+            info->cp +=
             xcf_read_int32 (info->fp, (guint32*) &gimage->num_cols, 1);
             gimage->cmap = g_new (guchar, gimage->num_cols*3);
-            info->cp += 
-            xcf_read_int8 (info->fp, 
+            info->cp +=
+            xcf_read_int8 (info->fp,
             (guint8*) gimage->cmap, gimage->num_cols*3);
             }
           */
@@ -1378,9 +1552,9 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
               }
             */
 
-      
+
             /* BOGUS: we don't write these yet because we aren't
-                  reading them properly yet :( */
+               reading them properly yet :( */
             /* image->x_resolution = xres; */
             /* image->y_resolution = yres; */
           }
@@ -1488,7 +1662,7 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
         *layer_info;
 
       unsigned long
-	number_layers = 0,
+        number_layers = 0,
         num_layers = 0;
 
       long
@@ -1497,8 +1671,17 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
         last_layer = 0,
         T = 0;
 
-	MagickBool
-          foundAllLayers = MagickFalse;
+      MagickBool
+        foundAllLayers = MagickFalse;
+
+      magick_off_t
+        oldPos;
+
+      magick_uint32_t
+        previous_offset;
+
+      if (CheckImagePixelLimits(image, exception) != MagickPass)
+        ThrowReaderException(ResourceLimitError,ImagePixelLimitExceeded,image);
 
       /* BIG HACK
          because XCF doesn't include the layer count, and we
@@ -1506,20 +1689,52 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
          we have to scan the layer offset list, and then reposition
          the read pointer
       */
-      magick_off_t oldPos = TellBlob(image);
+      oldPos = TellBlob(image);
       if (oldPos < 0)
         ThrowReaderException(BlobError,UnableToObtainOffset,image);
+
+      previous_offset = 0;
       do
         {
-          long
-            offset = (long) ReadBlobMSBLong(image);
+          magick_uint32_t
+            offset = ReadBlobMSBLong(image);
+
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Layer Offset[%lu] = %" MAGICK_UINT32_F "u",
+                                  number_layers, offset);
+
+          if (offset >= doc_info.file_size)
+            {
+              if (image->logging)
+                (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                      "Layer Offset %" MAGICK_UINT32_F "u"
+                                      " is outside of file bounds",
+                                      offset);
+              ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
+            }
+          /*
+            Are layer offsets assured to be ascending?
+          */
+          if ((offset != 0) && (offset <= previous_offset))
+            {
+              if (image->logging)
+                (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                      "Layer Offset %" MAGICK_UINT32_F "u"
+                                      " is not ascending",
+                                      offset);
+              ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
+            }
 
           if ( offset == 0 )
             foundAllLayers = MagickTrue;
           else
             number_layers++;
+          previous_offset=offset;
         } while ( !foundAllLayers );
-      (void) SeekBlob(image, oldPos, SEEK_SET); /* restore the position! */
+
+      if (SeekBlob(image, oldPos, SEEK_SET) != oldPos) /* restore the position! */
+        ThrowReaderException(BlobError,UnableToSeekToOffset,image);
 
       first_layer = image_info->subimage;
       num_layers = number_layers;
@@ -1530,8 +1745,8 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
 
       if (image->logging)
         (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-			      "XCF number_layers=%lu first_layer=%ld last_layer=%ld",
-			      number_layers, first_layer, last_layer);
+                              "XCF number_layers=%lu first_layer=%ld last_layer=%ld",
+                              number_layers, first_layer, last_layer);
 
       /* XCF has layers backwards, so this gets a bit complicated */
       T = last_layer;
@@ -1541,8 +1756,8 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
 
       if (image->logging)
         (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-			      "XCF reading layers %ld to %ld inclusive", first_layer,
-			      last_layer);
+                              "XCF reading layers %ld to %ld inclusive", first_layer,
+                              last_layer);
 
       /* allocate our array of layer info blocks */
       layer_info=MagickAllocateArray(XCFLayerInfo *,
@@ -1580,90 +1795,148 @@ static Image *ReadXCFImage(const ImageInfo *image_info,ExceptionInfo *exception)
               ThrowReaderException(BlobError,UnableToObtainOffset,image);
             }
 
-          if( first_layer <= current_layer && current_layer <= last_layer )
-	    {
-	      /* seek to the layer offset */
-	      (void) SeekBlob(image, offset, SEEK_SET);
+          if ( first_layer <= current_layer && current_layer <= last_layer )
+            {
+              /* verify that seek position is in file */
+              if ((magick_off_t) offset >= GetBlobSize(image))
+                {
+                  if (image->logging)
+                    (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                          "Layer offset %" MAGICK_OFF_F "d is outside file bounds",
+                                          (magick_off_t) offset);
+                  DestroyLayerInfo(number_layers,layer_info);
+                  ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,image);
+                }
 
-	      /* read in the layer */
-	      layer_ok = ReadOneLayer( image, &doc_info, &layer_info[current_layer-first_layer] );
-	      if (!layer_ok)
-		{
-		  int
-		    j;
+              /* seek to the layer offset */
+              if (SeekBlob(image, offset, SEEK_SET) != offset)
+                {
+                  /* FIXME: CID 64064: leaks layer_info */
+                  DestroyLayerInfo(number_layers,layer_info);
+                  ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,image);
+                }
 
-		  for (j=0; j < (current_layer-first_layer); j++)
-		    DestroyImage(layer_info[j].image);
-		  MagickFreeMemory(layer_info);
-		  CopyException(exception,&image->exception);
-		  CloseBlob(image);
-		  DestroyImageList(image);
-		  return (Image *) NULL;
-		}
-	      /* restore the saved position so we'll be ready to
-	       *  read the next offset.
-	       */
-	      (void) SeekBlob(image, saved_pos, SEEK_SET);
-	    }
+              /* read in the layer */
+              layer_ok = ReadOneLayer( image, &doc_info, &layer_info[current_layer-first_layer] );
+              if (!layer_ok)
+                {
+#if 0
+                  int
+                    j;
+
+                  for (j=0; j <= (current_layer-first_layer); j++)
+                    {
+                      if (layer_info[j].image)
+                        {
+                          DestroyImage(layer_info[j].image);
+                          layer_info[j].image = (Image *) NULL;
+                        }
+                    }
+                  MagickFreeMemory(layer_info);
+#endif
+                  DestroyLayerInfo(number_layers,layer_info);
+                  CopyException(exception,&image->exception);
+                  CloseBlob(image);
+                  DestroyImageList(image);
+                  return (Image *) NULL;
+                }
+              /* restore the saved position so we'll be ready to
+               *  read the next offset.
+               */
+              if (SeekBlob(image, saved_pos, SEEK_SET) != saved_pos)
+                {
+                  /* FIXME: CID 64064: leaks layer_info */
+                  DestroyLayerInfo(number_layers,layer_info);
+                  ThrowReaderException(BlobError,UnableToSeekToOffset,image);
+                }
+            }
 
           current_layer++;
         }
 
       if ( number_layers == 1 )
-	{
-	  /* composite the layer data onto the main image & then dispose the layer */
-	  (void) CompositeImage(image, OverCompositeOp, layer_info[0].image,
-				layer_info[0].offset_x, layer_info[0].offset_y );
-	  DestroyImage( layer_info[0].image );
-	}
+        {
+          /* composite the layer data onto the main image & then dispose the layer */
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Composite Layer[0]: %lux%lu%+d%+d",
+                                    layer_info[0].image->columns,
+                                    layer_info[0].image->rows,
+                                    layer_info[0].offset_x,
+                                    layer_info[0].offset_y);
+          (void) CompositeImage(image, OverCompositeOp, layer_info[0].image,
+                                layer_info[0].offset_x, layer_info[0].offset_y );
+          DestroyImage( layer_info[0].image );
+          layer_info[0].image = (Image *) NULL;
+        }
       else
-	{
+        {
 #if 0
-	  {
-	    /* NOTE: XCF layers are REVERSED from composite order! */
-	    long
-	      j;
+          {
+            /* NOTE: XCF layers are REVERSED from composite order! */
+            long
+              j;
 
-	    for (j=number_layers-1; j>=0; j--) {
-	      /* BOGUS: need to consider layer blending modes!! */
-	      if ( layer_info[j].visible ) { /* only visible ones, please! */
-		CompositeImage(image, OverCompositeOp, layer_info[j].image,
-			       layer_info[j].offset_x, layer_info[j].offset_y );
-		DestroyImage( layer_info[j].image );
-	      }
-	    }
-	  }
+            for (j=number_layers-1; j>=0; j--)
+              {
+                /* BOGUS: need to consider layer blending modes!! */
+                if ( layer_info[j].visible )  /* only visible ones, please! */
+                  {
+                    if (image->logging)
+                      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                            "Composite Layer[%lu]: %lux%lu%+d%+d",
+                                            j,
+                                            layer_info[j].image->columns,
+                                            layer_info[j].image->rows,
+                                            layer_info[j].offset_x,
+                                            layer_info[j].offset_y);
+                    CompositeImage(image, OverCompositeOp, layer_info[j].image,
+                                   layer_info[j].offset_x, layer_info[j].offset_y );
+                    DestroyImage( layer_info[j].image );
+                    layer_info[j].image = (Image *) NULL;
+                  }
+              }
+          }
 #else
-	  {
-	    /* NOTE: XCF layers are REVERSED from composite order! */
-	    long
-	      j;
+          {
+            /* NOTE: XCF layers are REVERSED from composite order! */
+            long
+              j;
 
-	    /* first we copy the last layer on top of the main image */
-	    (void) CompositeImage(image, CopyCompositeOp, layer_info[number_layers-1].image,
-				  layer_info[number_layers-1].offset_x,
-				  layer_info[number_layers-1].offset_y );
-	    DestroyImage( layer_info[number_layers-1].image );
+            /* first we copy the last layer on top of the main image */
+            if (image->logging)
+              (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                    "Composite Layer[%lu]: %lux%lu%+d%+d",
+                                    number_layers-1,
+                                    layer_info[number_layers-1].image->columns,
+                                    layer_info[number_layers-1].image->rows,
+                                    layer_info[number_layers-1].offset_x,
+                                    layer_info[number_layers-1].offset_y);
+            (void) CompositeImage(image, CopyCompositeOp, layer_info[number_layers-1].image,
+                                  layer_info[number_layers-1].offset_x,
+                                  layer_info[number_layers-1].offset_y );
+            DestroyImage( layer_info[number_layers-1].image );
+            layer_info[number_layers-1].image = (Image *) NULL;
 
-	    /* now reverse the order of the layers as they are put
-	       into subimages
-	    */
-	    image->next=layer_info[number_layers-2].image;
-	    layer_info[number_layers-2].image->previous=image;
-	    for (j=(long) number_layers-2; j >= 0; j--)
-	      {
-		if (j > 0)
-		  layer_info[j].image->next=layer_info[j-1].image;
-		if (j < ((long) number_layers-1))
-		  layer_info[j].image->previous=layer_info[j+1].image;
-		layer_info[j].image->page.x = layer_info[j].offset_x;
-		layer_info[j].image->page.y = layer_info[j].offset_y;
-		layer_info[j].image->page.width = layer_info[j].width;
-		layer_info[j].image->page.height = layer_info[j].height;
-	      }
-	  }
+            /* now reverse the order of the layers as they are put
+               into subimages
+            */
+            image->next=layer_info[number_layers-2].image;
+            layer_info[number_layers-2].image->previous=image;
+            for (j=(long) number_layers-2; j >= 0; j--)
+              {
+                if (j > 0)
+                  layer_info[j].image->next=layer_info[j-1].image;
+                if (j < ((long) number_layers-1))
+                  layer_info[j].image->previous=layer_info[j+1].image;
+                layer_info[j].image->page.x = layer_info[j].offset_x;
+                layer_info[j].image->page.y = layer_info[j].offset_y;
+                layer_info[j].image->page.width = layer_info[j].width;
+                layer_info[j].image->page.height = layer_info[j].height;
+              }
+          }
 #endif
-	}
+        }
 
       MagickFreeMemory(layer_info);
 

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -917,10 +917,10 @@ MagickExport void MagickXAnimateBackgroundImage(Display *display,
 */
 MagickExport Image *
 MagickXAnimateImages(Display *display,
-		     MagickXResourceInfo *resource_info,
-		     char *argv[],
-		     const int argc,
-		     Image *images)
+                     MagickXResourceInfo *resource_info,
+                     char *argv[],
+                     const int argc,
+                     Image *images)
 {
 #define MagickMenus  4
 #define MaxWindows  8
@@ -1781,7 +1781,7 @@ MagickXAnimateImages(Display *display,
                       if (!(state & RepeatAnimationState))
                         state&=(~PlayAnimationState);
                       scene=first_scene;
-                      (void) sleep(resource_info->pause);
+                      (void) MagickSleep(resource_info->pause);
                     }
                 }
             }
@@ -1804,7 +1804,7 @@ MagickXAnimateImages(Display *display,
                     {
                       state|=ForwardAnimationState;
                       scene=first_scene;
-                      (void) sleep(resource_info->pause);
+                      (void) MagickSleep(resource_info->pause);
                     }
                   else
                     {
@@ -1830,7 +1830,7 @@ MagickXAnimateImages(Display *display,
               {
                 char
                   name[MaxTextExtent];
-                
+
                 FormatString(name,
                              "GraphicsMagick: %.1024s[%lu of %lu]",p,scene,
                              number_scenes);

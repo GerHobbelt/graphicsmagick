@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -752,7 +752,8 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
     c;
 
   size_t
-    length;
+    length,
+    compressed_length;
 
   long
     y;
@@ -1284,9 +1285,11 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
     (void) ReadBlobByte(image);
 
     (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-                          "id=\"%s\" version=%g class=%s compression=%s matte=%s "
-			  "columns=%lu rows=%lu depth=%u",
-                          id,version,ClassTypeToString(image->storage_class),
+                          "id=\"%s\" version=%g class=%s colorspace=%s compression=%s matte=%s "
+                          "columns=%lu rows=%lu depth=%u",
+                          id,version,
+                          ClassTypeToString(image->storage_class),
+                          ColorspaceTypeToString(image->colorspace),
                           CompressionTypeToString(image->compression),
                           MagickBoolToString(image->matte),
                           image->columns, image->rows, image->depth);
@@ -1296,7 +1299,9 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
     */
     if ((LocaleCompare(id,"ImageMagick") != 0) ||
         (image->storage_class == UndefinedClass) ||
-        (image->compression == UndefinedCompression) || (image->columns == 0) ||
+        (image->compression == UndefinedCompression) ||
+        (image->colorspace == UndefinedColorspace) ||
+        (image->columns == 0) ||
         (image->rows == 0))
       {
         if (image->previous)
@@ -1350,10 +1355,12 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
               p=image->directory+strlen(image->directory);
             }
           c=ReadBlobByte(image);
+          if (c == EOF)
+            break;
           *p++=c;
         } while (c != '\0');
       }
- 
+
     /*
       Attached profiles.
     */
@@ -1513,7 +1520,8 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
     length=(size_t) (1.01*MagickArraySize(packet_size,image->columns));
     if (length)
       length += 600;
-    compress_pixels=MagickAllocateMemory(unsigned char *,length);
+    compressed_length = length;
+    compress_pixels=MagickAllocateMemory(unsigned char *,compressed_length);
     if (compress_pixels == (unsigned char *) NULL)
       ThrowMIFFReaderException(ResourceLimitError,MemoryAllocationFailed,image);
     /*
@@ -1525,8 +1533,8 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
 #if defined(HasZLIB)
       case ZipCompression:
         {
-	  int
-	    code=0;
+          int
+            code=0;
 
           for (y=0; y < (long) image->rows; y++)
             {
@@ -1560,10 +1568,21 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
                       else
                         {
                           length=ReadBlobMSBLong(image);
+                          if (length > compressed_length)
+                            {
+                              (void) inflateEnd(&zip_info);
+                              ThrowMIFFReaderException(CorruptImageError,
+                                                       LengthAndFilesizeDoNotMatch,
+                                                       image);
+                            }
                           zip_info.avail_in=(uInt) ReadBlob(image,length,zip_info.next_in);
                           if ((size_t) zip_info.avail_in != length)
-                            ThrowMIFFReaderException(CorruptImageError,UnexpectedEndOfFile,
-                                                     image);
+                            {
+                              (void) inflateEnd(&zip_info);
+                              ThrowMIFFReaderException(CorruptImageError,
+                                                       UnexpectedEndOfFile,
+                                                       image);
+                            }
                         }
                     }
                   zip_status=inflate(&zip_info,Z_NO_FLUSH);
@@ -1591,7 +1610,7 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,exception,
                                               LoadImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
             }
           break;
@@ -1600,8 +1619,8 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
 #if defined(HasBZLIB)
       case BZipCompression:
         {
-	  int
-	    code=0;
+          int
+            code=0;
 
           for (y=0; y < (long) image->rows; y++)
             {
@@ -1668,7 +1687,7 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,exception,
                                               LoadImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
             }
           break;
@@ -1698,7 +1717,7 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,exception,
                                               LoadImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
 
             }
@@ -1720,7 +1739,7 @@ static Image *ReadMIFFImage(const ImageInfo *image_info,
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,exception,
                                               LoadImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
             }
           break;
@@ -2133,13 +2152,13 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
 
   ImageProfileIterator
     profile_iterator;
-  
+
   const char
     *profile_name;
-  
+
   const unsigned char
     *profile_info;
-  
+
   size_t
     profile_length;
 
@@ -2148,6 +2167,9 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
     zip_info;
 #endif
 
+  size_t
+    image_list_length;
+
   /*
     Open output image file.
   */
@@ -2155,6 +2177,7 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -2572,8 +2595,8 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
 #if defined(HasZLIB)
         case ZipCompression:
         {
-	  int
-	    code;
+          int
+            code;
 
           if (y == 0)
             {
@@ -2621,8 +2644,8 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
 #if defined(HasBZLIB)
         case BZipCompression:
         {
-	  int
-	    code;
+          int
+            code;
 
           if (y == 0)
             {
@@ -2709,7 +2732,7 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
         if (QuantumTick(y,image->rows))
           if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                       SaveImageText,image->filename,
-				      image->columns,image->rows))
+                                      image->columns,image->rows))
             break;
     }
     MagickFreeMemory(pixels);
@@ -2717,7 +2740,7 @@ static unsigned int WriteMIFFImage(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene++,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene++,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)

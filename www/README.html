@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.13.1: http://docutils.sourceforge.net/" />
 <title>Installing GraphicsMagick</title>
 <link rel="stylesheet" href="docutils-articles.css" type="text/css" />
 </head>
@@ -69,10 +69,10 @@ at <a class="reference external" href="http://sourceforge.net/projects/graphicsm
 possible.</p>
 <p>GraphicsMagick is a continual work in progress. The very latest code
 is available via the Mercurial distributed source control management
-tool (<a class="reference external" href="http://mercurial.selenic.com/">http://mercurial.selenic.com/</a>). GraphicsMagick may be retrieved
+tool (<a class="reference external" href="https://www.mercurial-scm.org/">https://www.mercurial-scm.org/</a>). GraphicsMagick may be retrieved
 via the following command:</p>
 <blockquote>
-hg clone <a class="reference external" href="http://graphicsmagick.hg.sourceforge.net/hgweb/graphicsmagick/graphicsmagick/">http://graphicsmagick.hg.sourceforge.net/hgweb/graphicsmagick/graphicsmagick/</a> GM</blockquote>
+hg clone <a class="reference external" href="http://hg.code.sf.net/p/graphicsmagick/code/">http://hg.code.sf.net/p/graphicsmagick/code/</a> GM</blockquote>
 <p>Mercurial provides a complete stand-alone repository which contains
 the full history of the GraphicsMagick project.  You may use the
 cloned repository for your own purposes related to GraphicsMagick
@@ -194,19 +194,12 @@ JPEG library (and lose compatibility with some Postscript files).</p>
 format. HP printers usually accept PCL format rather than HPGL
 format.  Ghostscript (see above) is also required.</p>
 </li>
-<li><p class="first">GraphicsMagick requires the lcms library (1.11 or later, including
-2.X) available from</p>
+<li><p class="first">GraphicsMagick requires the lcms library (2.0 or later) available
+from</p>
 <blockquote>
 <p><a class="reference external" href="http://www.littlecms.com/">http://www.littlecms.com/</a></p>
 </blockquote>
 <p>to perform ICC CMS color management.</p>
-</li>
-<li><p class="first">GraphicsMagick requires gnuplot available from</p>
-<blockquote>
-<p><a class="reference external" href="http://gnuplot.sourceforge.net/">http://gnuplot.sourceforge.net/</a></p>
-</blockquote>
-<p>to read GNUPLOT plot files (with extension gplt).  Ghostscript (see
-above) is also required.</p>
 </li>
 <li><p class="first">GraphicsMagick requires Graphviz available from</p>
 <blockquote>
@@ -282,34 +275,10 @@ Simulation Group, which are available via anonymous FTP as</p>
 <p>to read or write the PNG, MNG, or JNG image formats.  LIBPNG depends
 upon the ZLIB library (see below).</p>
 </li>
-<li><p class="first">GraphicsMagick requires ra_ppm from Greg Ward's Radiance software
-available from</p>
-<blockquote>
-<p><a class="reference external" href="http://radsite.lbl.gov/radiance/HOME.html">http://radsite.lbl.gov/radiance/HOME.html</a></p>
-</blockquote>
-<p>to read the Radiance image format.</p>
-</li>
-<li><p class="first">GraphicsMagick requires rawtorle from the Utah Raster Toolkit
-available via anonymous FTP as</p>
-<blockquote>
-<p><a class="reference external" href="ftp://ftp.graphicsmagick.org/pub/GraphicsMagick/delegates/urt-3.1b.tar.Z">ftp://ftp.graphicsmagick.org/pub/GraphicsMagick/delegates/urt-3.1b.tar.Z</a></p>
-</blockquote>
-<p>to write the RLE image format.</p>
-</li>
-<li><p class="first">GraphicsMagick requires scanimage from</p>
-<blockquote>
-<p><a class="reference external" href="http://www.sane-project.org/">http://www.sane-project.org/</a></p>
-</blockquote>
-<p>to import an image from a scanner device.</p>
-</li>
 <li><p class="first">GraphicsMagick requires Sam Leffler's TIFF software available via
-anonymous FTP at</p>
+HTTP at</p>
 <blockquote>
-<p><a class="reference external" href="ftp://ftp.remotesensing.org/libtiff/">ftp://ftp.remotesensing.org/libtiff/</a></p>
-</blockquote>
-<p>or via HTTP at</p>
-<blockquote>
-<p><a class="reference external" href="http://www.remotesensing.org/libtiff/">http://www.remotesensing.org/libtiff/</a></p>
+<p><a class="reference external" href="http://www.simplesystems.org/libtiff/">http://www.simplesystems.org/libtiff/</a></p>
 </blockquote>
 <p>to read the TIFF image format. It in turn optionally requires the
 JPEG and ZLIB libraries.  Libtiff 3.8.2 or later is recommended.</p>
@@ -406,7 +375,7 @@ distributed with &quot;.xz&quot; or &quot;.lzma&quot; extensions.</p>
 </li>
 </ul>
 <hr class="docutils" />
-<p>Copyright © GraphicsMagick Group 2002 - 2015</p>
+<p>Copyright © GraphicsMagick Group 2002 - 2018</p>
 </div>
 </div>
 </body>

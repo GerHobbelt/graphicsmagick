@@ -1,11 +1,11 @@
 /*
-  Copyright (C) 2003 - 2015 GraphicsMagick Group
+  Copyright (C) 2003 - 2016 GraphicsMagick Group
   Copyright (C) 2002 ImageMagick Studio
- 
+
   This program is covered by multiple licenses, which are described in
   Copyright.txt. You should have received a copy of Copyright.txt with this
   package; otherwise see http://www.graphicsmagick.org/www/Copyright.html.
- 
+
   Windows NT Utility Methods for GraphicsMagick.
 */
 #ifndef _MAGICK_NTBASE_H
@@ -62,11 +62,19 @@ extern "C" {
 #endif
 
 /*
+  Size type passed to read/write
+*/
+#define MAGICK_POSIX_IO_SIZE_T unsigned int
+
+/*
   libtiff features.
 */
 
 /* Define to 1 if you have the <tiffconf.h> header file. */
 #define HAVE_TIFFCONF_H 1
+
+/* Define to 1 if you have the `TIFFIsCODECConfigured' function. */
+#define HAVE_TIFFISCODECCONFIGURED 1
 
 /* Define to 1 if you have the `TIFFMergeFieldInfo' function. */
 #define HAVE_TIFFMERGEFIELDINFO 1
@@ -113,7 +121,7 @@ extern "C" {
 #endif
 
 #if !defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1500)
-#define vsnprintf _vsnprintf 
+#define vsnprintf _vsnprintf
 #endif
 
 #if defined(_MT) && defined(MSWINDOWS)
@@ -148,6 +156,13 @@ extern "C" {
     1310 Visual c++ .NET 2003
     1400 Visual C++ 2005
     1500 Visual C++ 2008
+    1600 Visual C++ 2010
+    1700 Visual C++ 2012
+    1800 Visual C++ 2013
+    1900 Visual C++ 2015
+
+  Should look at __CLR_VER ("Defines the version of the common language
+  runtime used when the application was compiled.") as well.
 */
 #if defined(_VISUALC_) && (_MSC_VER >= 1310)
 #  define HAVE_GLOBALMEMORYSTATUSEX 1
@@ -192,6 +207,42 @@ extern "C" {
 #if !defined(unlink)
 #  define unlink(path) _unlink(path)
 #endif /* !defined(unlink) */
+
+
+/*
+  I/O defines.
+*/
+#if !defined(Windows95) && !defined(__BORLANDC__)
+  /* Windows '95 and Borland C do not support _lseeki64 */
+#  define MagickSeek(fildes,offset,whence)  _lseeki64(fildes,/* __int64 */ offset,whence)
+#  define MagickTell(fildes) /* __int64 */ _telli64(fildes)
+#else
+#  define MagickSeek(fildes,offset,whence)  lseek(fildes,offset,whence)
+#  define MagickTell(fildes) (MagickSeek(fildes,0,SEEK_CUR))
+#endif
+
+
+#if !defined(Windows95) && !defined(__BORLANDC__) && \
+  !(defined(_MSC_VER) && _MSC_VER < 1400) && \
+  !(defined(__MSVCRT_VERSION__) && __MSVCRT_VERSION__ < 0x800)
+
+  /*
+    Windows '95 and Borland C do not support _lseeki64
+    Visual Studio does not support _fseeki64 and _ftelli64 until the 2005 release.
+    Without these interfaces, files over 2GB in size are not supported for Windows.
+  */
+#  define MagickFseek(stream,offset,whence) _fseeki64(stream,/* __int64 */ offset,whence)
+#  define MagickFstat(fildes,stat_buff) _fstati64(fildes,/* struct _stati64 */ stat_buff)
+#  define MagickFtell(stream) /* __int64 */ _ftelli64(stream)
+#  define MagickStatStruct_t struct _stati64
+#  define MagickStat(path,stat_buff) _stati64(path,/* struct _stati64 */ stat_buff)
+#else
+#  define MagickFseek(stream,offset,whence) fseek(stream,offset,whence)
+#  define MagickFstat(fildes,stat_buff) fstat(fildes,stat_buff)
+#  define MagickFtell(stream) ftell(stream)
+#  define MagickStatStruct_t struct stat
+#  define MagickStat(path,stat_buff) stat(path,stat_buff)
+#endif
 
 /*
   Typedef declarations.
@@ -342,6 +393,12 @@ extern MagickExport int
   NTmsync(void *addr, size_t len, int flags),
   NTmunmap(void *addr, size_t len);
 
+extern MagickExport int
+  MagickGetFileAttributes(const char *filename, MagickStatStruct_t *statbuf);
+
+extern MagickExport int
+  MagickSetFileAttributes(const char *filename, const MagickStatStruct_t *statbuf);
+
 #define MagickMmap(address,length,protection,access,file,offset) \
   NTmmap(address,length,protection,access,file,offset)
 #define MagickMsync(addr,len,flags) NTmsync(addr,len,flags)
@@ -373,7 +430,7 @@ extern MagickExport const char
 #define lt_dlsetsearchpath(path) NTdlsetsearchpath(path)
 #define lt_dlsym(handle,name) NTdlsym(handle,name)
 #endif /* !defined(HasLTDL) */
-  
+
 extern MagickExport unsigned char
   *NTResourceToBlob(const char *);
 

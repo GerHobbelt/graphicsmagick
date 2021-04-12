@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2003 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -97,6 +97,33 @@ MagickParseSubImageSpecification(const char *subimage_spec,
                                  unsigned long *subrange_ptr,
                                  MagickBool allow_geometry);
 
+/*
+  ImageExtra allows for expansion of Image without increasing its
+  size.  The internals are defined only in this source file.  Clients
+  outside of this source file can access the internals via the provided
+  access functions (see below).
+*/
+typedef struct _ImageExtra
+{
+  Image
+    *clip_mask,       /* Private, clipping mask to apply when updating pixels */
+    *composite_mask;  /* Private, compositing mask to apply when updating pixels */
+} ImageExtra;
+
+/* provide public access to the clip_mask member of Image */
+MagickExport Image **
+ImageGetClipMask(const Image * image)
+{
+  return(&image->extra->clip_mask);
+}
+
+/* provide public access to the composite_mask member of Image */
+MagickExport Image **
+ImageGetCompositeMask(const Image * image)
+{
+  return(&image->extra->composite_mask);
+}
+
 /* Round floating value to an integer */
 #define RndToInt(value) ((int)((value)+0.5))
 
@@ -181,7 +208,7 @@ MagickExport const char *AccessDefinition(const ImageInfo *image_info,
 */
 MagickExport MagickPassFail
 AddDefinition(ImageInfo *image_info,const char *magick, const char *key,
-	      const char *value, ExceptionInfo *exception)
+              const char *value, ExceptionInfo *exception)
 {
   MagickPassFail
     status = MagickFail;
@@ -191,16 +218,16 @@ AddDefinition(ImageInfo *image_info,const char *magick, const char *key,
 
   if (image_info->definitions == 0)
     image_info->definitions=MagickMapAllocateMap(MagickMapCopyString,
-						 MagickMapDeallocateString);
+                                                 MagickMapDeallocateString);
   if (image_info->definitions != 0)
     {
       /*
-	Format string like "magick:key"
+        Format string like "magick:key"
       */
       FormatString(search_key, "%.60s:%.1024s", magick, key);
-      
+
       /*
-	Add entry to map
+        Add entry to map
       */
       status = MagickMapAddEntry((MagickMap) image_info->definitions,search_key,value,0,exception);
     }
@@ -330,6 +357,9 @@ MagickExport Image *AllocateImage(const ImageInfo *image_info)
   Image
     *allocate_image;
 
+  ImageExtra
+    *ImgExtra;
+
   /*
     Allocate image structure.
   */
@@ -338,6 +368,14 @@ MagickExport Image *AllocateImage(const ImageInfo *image_info)
     MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
       UnableToAllocateImage);
   (void) memset(allocate_image,0,sizeof(Image));
+
+  /* allocate and initialize struct for extra Image members */
+  ImgExtra = MagickAllocateMemory(ImageExtra *,sizeof(ImageExtra));
+  if  ( ImgExtra == (ImageExtra *) NULL )
+    MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,UnableToAllocateImage);
+  memset(ImgExtra,0,sizeof(*ImgExtra));
+  allocate_image->extra = ImgExtra;
+
   /*
     Initialize Image structure.
   */
@@ -382,10 +420,10 @@ MagickExport Image *AllocateImage(const ImageInfo *image_info)
   if (image_info->size != (char *) NULL)
     {
       (void) GetGeometry(image_info->size,
-			 &allocate_image->tile_info.x,
-			 &allocate_image->tile_info.y,
-			 &allocate_image->columns,
-			 &allocate_image->rows);
+                         &allocate_image->tile_info.x,
+                         &allocate_image->tile_info.y,
+                         &allocate_image->columns,
+                         &allocate_image->rows);
       allocate_image->offset=allocate_image->tile_info.x;
       allocate_image->tile_info.width=allocate_image->columns;
       allocate_image->tile_info.height=allocate_image->rows;
@@ -394,14 +432,14 @@ MagickExport Image *AllocateImage(const ImageInfo *image_info)
     if (!IsSubimage(image_info->tile,False))
       {
         (void) GetGeometry(image_info->tile,
-			   &allocate_image->tile_info.x,
-			   &allocate_image->tile_info.y,
-			   &allocate_image->tile_info.width,
-			   &allocate_image->tile_info.height);
-	if (0 == allocate_image->columns)
-	  allocate_image->columns=allocate_image->tile_info.width;
-	if (0 == allocate_image->rows)
-	  allocate_image->rows=allocate_image->tile_info.height;
+                           &allocate_image->tile_info.x,
+                           &allocate_image->tile_info.y,
+                           &allocate_image->tile_info.width,
+                           &allocate_image->tile_info.height);
+        if (0 == allocate_image->columns)
+          allocate_image->columns=allocate_image->tile_info.width;
+        if (0 == allocate_image->rows)
+          allocate_image->rows=allocate_image->tile_info.height;
       }
   allocate_image->compression=image_info->compression;
   allocate_image->dither=image_info->dither;
@@ -547,7 +585,7 @@ MagickExport MagickPassFail AnimateImages(const ImageInfo *image_info,
   resource.image_info=CloneImageInfo(image_info);
   resource.immutable=True;
   (void) MagickXAnimateImages(display,&resource,(char **) &client_name,
-			      1,image);
+                              1,image);
   (void) XCloseDisplay(display);
   DestroyImageInfo(resource.image_info);
   return(image->exception.severity == UndefinedException);
@@ -660,10 +698,10 @@ MagickExport Image *AppendImages(const Image *image,const unsigned int stack,
       for (next=image; next != (Image *) NULL; next=next->next)
       {
         (void) CompositeImage(append_image,CopyCompositeOp,next,0,y);
-	if (append_image->columns > next->columns)
-	  SetImageColorRegion(append_image,next->columns,y,
-			      append_image->columns-next->columns,next->rows,
-			      &append_image->background_color);
+        if (append_image->columns > next->columns)
+          SetImageColorRegion(append_image,next->columns,y,
+                              append_image->columns-next->columns,next->rows,
+                              &append_image->background_color);
         y+=next->rows;
         status=MagickMonitorFormatted(scene,GetImageListLength(image),
                                       exception,AppendImageText,
@@ -683,9 +721,9 @@ MagickExport Image *AppendImages(const Image *image,const unsigned int stack,
     (void) CompositeImage(append_image,CopyCompositeOp,next,x,0);
     if (append_image->rows > next->rows)
       SetImageColorRegion(append_image,x,next->rows,
-			  next->columns,
-			  append_image->rows-next->rows,
-			  &append_image->background_color);
+                          next->columns,
+                          append_image->rows-next->rows,
+                          &append_image->background_color);
     x+=next->columns;
     status=MagickMonitorFormatted(scene++,GetImageListLength(image),
                                   exception,AppendImageText,
@@ -880,7 +918,147 @@ MagickExport MagickPassFail ClipPathImage(Image *image,const char *pathname,
   DestroyImage(clip_mask);
   return status;
 }
+
+/* code below for CompositePathImage() cloned/modified from ClipPathImage() */
 
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   C o m p o s i t e P a t h I m a g e                                                 %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  CompositePathImage() sets the image composite mask based any compositing path information
+%  if it exists.
+%
+%  The format of the CompositePathImage method is:
+%
+%      unsigned int CompositePathImage(Image *image,const char *pathname,
+%        const unsigned int inside)
+%
+%  A description of each parameter follows:
+%
+%    o image: The image.
+%
+%    o pathname: name of compositing path resource. If name is preceded by #, use
+%      compositing path numbered by name.
+%
+%    o inside: if non-zero, later operations take effect inside compositing path.
+%      Otherwise later operations take effect outside compositing path.
+%
+%
+*/
+MagickExport MagickPassFail CompositeMaskImage(Image *image)
+{
+  return(CompositePathImage(image,"#1",True));
+}
+
+#define CompositePathImageText "[%s] Creating composite mask..."
+static MagickPassFail
+CompositePathImageCallBack(void *mutable_data,    /* User provided mutable data */
+                      const void *immutable_data, /* User provided immutable data */
+                      Image *image,               /* Modify image */
+                      PixelPacket *pixels,        /* Pixel row */
+                      IndexPacket *indexes,       /* Pixel row indexes */
+                      const long npixels,         /* Number of pixels in row */
+                      ExceptionInfo *exception)   /* Exception report */
+{
+  /*
+    Force all pixel components to be the same (r == g == b)
+  */
+  const MagickBool
+    inside = *((MagickBool *) immutable_data);
+
+  register Quantum
+    intensity;
+
+  register long
+    i;
+
+  ARG_NOT_USED(mutable_data);
+  ARG_NOT_USED(image);
+  ARG_NOT_USED(indexes);
+  ARG_NOT_USED(exception);
+
+  for (i=0; i < npixels; i++)
+    {
+      intensity=PixelIntensityToQuantum(&pixels[i]);
+      if (!inside)
+        intensity=MaxRGB - intensity;	/* invert */
+      pixels[i].red=intensity;
+      pixels[i].green=intensity;
+      pixels[i].blue=intensity;
+      /* leave the opacity unchanged */
+    }
+
+  return MagickPass;
+}
+MagickExport MagickPassFail CompositePathImage(Image *image,const char *pathname,
+  const MagickBool inside)
+{
+
+  char
+    key[MaxTextExtent];
+
+  const ImageAttribute
+    *attribute;
+
+  Image
+    *composite_mask;
+
+  ImageInfo
+    *image_info;
+
+  MagickPassFail
+    status=MagickPass;
+
+  assert(image != (const Image *) NULL);
+  assert(image->signature == MagickSignature);
+  assert(pathname != NULL);
+  FormatString(key,"8BIM:1999,2998:%s",pathname);
+  attribute=GetImageAttribute(image,key);
+  if (attribute == (const ImageAttribute *) NULL)
+    return(MagickFail);
+  image_info=CloneImageInfo((ImageInfo *) NULL);
+  (void) QueryColorDatabase("#ffffffff",&image_info->background_color,
+    &image->exception);
+  composite_mask=BlobToImage(image_info,attribute->value,strlen(attribute->value),
+    &image->exception);
+  DestroyImageInfo(image_info);
+  if (composite_mask == (Image *) NULL)
+    return (MagickFail);
+  if (composite_mask->storage_class == PseudoClass)
+    {
+      if (SyncImage(composite_mask) == MagickFail)
+        return (MagickFail);
+      composite_mask->storage_class=DirectClass;
+    }
+  composite_mask->matte=True;
+  /*
+    Force all pixel components to be the same (r == g == b).
+  */
+  status=PixelIterateMonoModify(CompositePathImageCallBack,NULL,
+                                CompositePathImageText,
+                                NULL,&inside,0,0,composite_mask->columns,composite_mask->rows,
+                                composite_mask,&image->exception);
+  /*
+    Overload magick_filename to keep name of path that created image.
+    This is needed so we can get the path as postscript for PS coders
+    to create a postscript vector based compositing path.
+  */
+  FormatString(composite_mask->magick_filename,"8BIM:1999,2998:%s\nPS",pathname);
+
+  composite_mask->is_grayscale=True;
+  composite_mask->is_monochrome=True;
+  (void) SetImageCompositeMask(image,composite_mask);
+  DestroyImage(composite_mask);
+  return status;
+}
+
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                             %
@@ -928,6 +1106,9 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
   Image
     *clone_image;
 
+  ImageExtra
+    *ImgExtra;
+
   size_t
     length;
 
@@ -938,11 +1119,20 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
   assert(image->signature == MagickSignature);
   assert(exception != (ExceptionInfo *) NULL);
   assert(exception->signature == MagickSignature);
+
   clone_image=MagickAllocateMemory(Image *,sizeof(Image));
   if (clone_image == (Image *) NULL)
     ThrowImageException3(ResourceLimitError,MemoryAllocationFailed,
       UnableToCloneImage);
   (void) memset(clone_image,0,sizeof(Image));
+
+  /* allocate and initialize struct for extra Image members */
+  ImgExtra = MagickAllocateMemory(ImageExtra *,sizeof(ImageExtra));
+  if  ( ImgExtra == (ImageExtra *) NULL )
+    ThrowImageException3(ResourceLimitError,MemoryAllocationFailed,UnableToCloneImage);
+  memset(ImgExtra,0,sizeof(*ImgExtra));
+  clone_image->extra = ImgExtra;
+
   clone_image->storage_class=image->storage_class;
   clone_image->colorspace=image->colorspace;
   clone_image->compression=image->compression;
@@ -1027,7 +1217,8 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
   clone_image->previous=(Image *) NULL;
   clone_image->list=(Image *) NULL;
   clone_image->next=(Image *) NULL;
-  clone_image->clip_mask=(Image *) NULL;
+  clone_image->extra->clip_mask=(Image *) NULL;
+  clone_image->extra->composite_mask=(Image *) NULL;
   if (orphan)
     clone_image->blob=CloneBlobInfo((BlobInfo *) NULL);
   else
@@ -1051,8 +1242,10 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
         (void) CloneString(&clone_image->montage,image->montage);
       if (image->directory != (char *) NULL)
         (void) CloneString(&clone_image->directory,image->directory);
-      if (image->clip_mask != (Image *) NULL)
-        clone_image->clip_mask=CloneImage(image->clip_mask,0,0,True,exception);
+      if (image->extra->clip_mask != (Image *) NULL)
+        clone_image->extra->clip_mask=CloneImage(image->extra->clip_mask,0,0,True,exception);
+      if (image->extra->composite_mask != (Image *) NULL)
+        clone_image->extra->composite_mask=CloneImage(image->extra->composite_mask,0,0,True,exception);
       clone_image->ping=image->ping;
       clone_image->cache=ReferenceCache(image->cache);
       clone_image->default_views=AllocateThreadViewSet(clone_image,exception);
@@ -1060,8 +1253,10 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
            (clone_image->montage == ((char *) NULL))) ||
           ((image->directory != (char *) NULL) &&
            (clone_image->directory == (char *) NULL)) ||
-          ((image->clip_mask != (Image *) NULL) &&
-           (clone_image->clip_mask == (Image *) NULL)) ||
+          ((image->extra->clip_mask != (Image *) NULL) &&
+           (clone_image->extra->clip_mask == (Image *) NULL)) ||
+          ((image->extra->composite_mask != (Image *) NULL) &&
+           (clone_image->extra->composite_mask == (Image *) NULL)) ||
           (clone_image->cache == (_CacheInfoPtr_) NULL) ||
           (clone_image->default_views == (_ThreadViewSetPtr_) NULL))
         {
@@ -1070,6 +1265,12 @@ MagickExport Image *CloneImage(const Image *image,const unsigned long columns,
                                UnableToCloneImage);
         }
       return(clone_image);
+    }
+  if (CheckImagePixelLimits(clone_image, exception) != MagickPass)
+    {
+      DestroyImage(clone_image);
+      ThrowImageException3(ResourceLimitError,ImagePixelLimitExceeded,
+                           UnableToCloneImage);
     }
   clone_image->page.width=columns;
   clone_image->page.height=rows;
@@ -1207,7 +1408,8 @@ MagickExport ImageInfo *CloneImageInfo(const ImageInfo *image_info)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  DestroyImage() dereferences an image, deallocating memory associated with
-%  the image if the reference count becomes zero.
+%  the image if the reference count becomes zero.  There is no effect if the
+%  image pointer is null.
 %
 %  The format of the DestroyImage method is:
 %
@@ -1224,10 +1426,12 @@ MagickExport void DestroyImage(Image *image)
   int
     destroy;
 
+  if (image == (Image *) NULL)
+    return;
+
   /*
     Dereference image.
   */
-  assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
   destroy=False;
   LockSemaphoreInfo((SemaphoreInfo *) image->semaphore);
@@ -1256,9 +1460,13 @@ MagickExport void DestroyImage(Image *image)
     Destroy image pixel cache.
   */
   DestroyImagePixels(image);
-  if (image->clip_mask != (Image *) NULL)
-    DestroyImage(image->clip_mask);
-  image->clip_mask=(Image *) NULL;
+  if (image->extra->clip_mask != (Image *) NULL)
+    DestroyImage(image->extra->clip_mask);
+  image->extra->clip_mask=(Image *) NULL;
+  if (image->extra->composite_mask != (Image *) NULL)
+    DestroyImage(image->extra->composite_mask);
+  image->extra->composite_mask=(Image *) NULL;
+  MagickFreeMemory(image->extra);
   MagickFreeMemory(image->montage);
   MagickFreeMemory(image->directory);
   MagickFreeMemory(image->colormap);
@@ -1272,6 +1480,7 @@ MagickExport void DestroyImage(Image *image)
   MagickFreeMemory(image->ascii85);
   DestroyBlob(image);
   DestroySemaphoreInfo((SemaphoreInfo **) &image->semaphore);
+  image->signature=0;
   MagickFreeMemory(image);
 }
 
@@ -1301,7 +1510,9 @@ MagickExport void DestroyImage(Image *image)
 */
 MagickExport void DestroyImageInfo(ImageInfo *image_info)
 {
-  assert(image_info != (ImageInfo *) NULL);
+  if (image_info == (ImageInfo *) NULL)
+    return;
+
   assert(image_info->signature == MagickSignature);
   MagickFreeMemory(image_info->size);
   MagickFreeMemory(image_info->tile);
@@ -1319,6 +1530,7 @@ MagickExport void DestroyImageInfo(ImageInfo *image_info)
     DestroyCacheInfo(image_info->cache);
   if (image_info->definitions != (MagickMap) NULL)
     MagickMapDeallocateMap((MagickMap) image_info->definitions);
+  image_info->signature=0;
   MagickFreeMemory(image_info);
 }
 
@@ -1389,7 +1601,7 @@ MagickExport MagickPassFail DisplayImages(const ImageInfo *image_info,
   {
     state=DefaultState;
     (void) MagickXDisplayImage(display,&resource_info,(char **) &client_name,
-			       1,&next,&state);
+                               1,&next,&state);
     if (state & ExitState)
       break;
   }
@@ -1462,13 +1674,63 @@ MagickExport unsigned int DisplayImages(const ImageInfo *image_info,
 */
 MagickExport Image *GetImageClipMask(const Image *image, ExceptionInfo *exception)
 {
-  if (image->clip_mask)
-    return CloneImage(image->clip_mask,0,0,True,exception);
+  if (image->extra->clip_mask)
+    return CloneImage(image->extra->clip_mask,0,0,True,exception);
 
   ThrowException3(exception,ImageError,UnableToGetClipMask,NoImagesWereFound);
   return ((Image *) NULL);
 }
 
+/* code below for GetImageCompositeMask() cloned/modified from GetImageClipMask() */
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   G e t I m a g e C o m p o s i t e M a s k                                           %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  GetImageCompositeMask returns a reference-counted copy of the current image
+%  composite mask. This copy must be deallocated using DestroyImage() once it is
+%  no longer needed.  If the image does not have an associated composite mask,
+%  then NULL is returned.  Use SetImageCompositeMask() to add a composite mask to an
+%  image, or remove a composite mask.
+%
+%  If a component of the composite mask is set to TransparentOpacity (maximum
+%  value) then the corresponding image pixel component will not be updated
+%  when SyncImagePixels() is applied. The composite mask may be used to constrain
+%  the results of an image processing operation to a region of the image.
+%  Regions outside those allowed by the composite mask may be processed, but only
+%  pixel quantums allowed by the composite mask will actually be updated.
+%
+%  The composite mask protects the DirectClass pixels and PseudoClass pixel indexes
+%  from modification. The composite mask does *not* protect the image colormap since
+%  the image colormap is globally shared by all pixels in a PseudoClass image.
+%
+%  The format of the GetImageCompositeMask method is
+%
+%      Image *GetImageCompositeMask(const Image *image, ExceptionInfo *exception)
+%
+%  A descripton of each parameter follows:
+%
+%    o image: The image.
+%
+%    o exception: Reason for failure.
+%
+*/
+MagickExport Image *GetImageCompositeMask(const Image *image, ExceptionInfo *exception)
+{
+  if (image->extra->composite_mask)
+    return CloneImage(image->extra->composite_mask,0,0,True,exception);
+
+  ThrowException3(exception,ImageError,UnableToGetCompositeMask,NoImagesWereFound);
+  return ((Image *) NULL);
+}
+
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                             %
@@ -2008,8 +2270,8 @@ ResetImagePage(Image *image,const char *page)
   else
     {
       /* If values are not absolute, then use offset values, and page
-	 width and height based on image width and height plus page
-	 offsets */
+         width and height based on image width and height plus page
+         offsets */
       if (flags & XValue)
         {
           image->page.x=page_geometry.x;
@@ -2072,7 +2334,7 @@ SetImageColorCallBack(void *mutable_data,         /* User provided mutable data 
   */
   const PixelPacket
     background_color = *(const PixelPacket *) immutable_data;
-  
+
   register long
     i;
 
@@ -2120,11 +2382,11 @@ MagickExport MagickPassFail SetImageEx(Image *image,const Quantum opacity,
       image->storage_class=DirectClass;
     }
 
-  status=PixelIterateMonoModify(SetImageColorCallBack,NULL,
-                                SetImageColorText,
-                                NULL,&background_color,0,0,
-                                image->columns,image->rows,
-                                image,exception);
+  status=PixelIterateMonoSet(SetImageColorCallBack,NULL,
+                             SetImageColorText,
+                             NULL,&background_color,0,0,
+                             image->columns,image->rows,
+                             image,exception);
 
   image->is_grayscale=IsGray(image->background_color);
   image->is_monochrome=IsMonochrome(image->background_color);
@@ -2191,7 +2453,7 @@ MagickExport MagickPassFail SetImage(Image *image,const Quantum opacity)
 %
 */
 MagickExport MagickPassFail SetImageColor(Image *image,
-					  const PixelPacket *pixel)
+                                          const PixelPacket *pixel)
 {
   image->is_grayscale=IsGray(*pixel);
   image->is_monochrome=IsMonochrome(*pixel);
@@ -2232,11 +2494,11 @@ MagickExport MagickPassFail SetImageColor(Image *image,
 */
 MagickExport MagickPassFail
 SetImageColorRegion(Image *image,
-		    long x,
-		    long y,
-		    unsigned long width,
-		    unsigned long height,
-		    const PixelPacket *pixel)
+                    long x,
+                    long y,
+                    unsigned long width,
+                    unsigned long height,
+                    const PixelPacket *pixel)
 {
   MagickPassFail
     status;
@@ -2260,10 +2522,10 @@ SetImageColorRegion(Image *image,
   image->storage_class=DirectClass;
 
   status=PixelIterateMonoModify(SetImageColorCallBack,NULL,
-				SetImageColorText,
-				NULL,pixel,x,y,
-				width,height,
-				image,&image->exception);
+                                SetImageColorText,
+                                NULL,pixel,x,y,
+                                width,height,
+                                image,&image->exception);
 
   image->is_grayscale=is_grayscale;
   image->is_monochrome=is_monochrome;
@@ -2314,17 +2576,75 @@ MagickExport MagickPassFail SetImageClipMask(Image *image,const Image *clip_mask
     if ((clip_mask->columns != image->columns) ||
         (clip_mask->rows != image->rows))
       ThrowBinaryException3(ImageError,UnableToSetClipMask,ImageSizeDiffers);
-  if (image->clip_mask != (Image *) NULL)
-    DestroyImage(image->clip_mask);
-  image->clip_mask=(Image *) NULL;
+  if (image->extra->clip_mask != (Image *) NULL)
+    DestroyImage(image->extra->clip_mask);
+  image->extra->clip_mask=(Image *) NULL;
   if (clip_mask == (Image *) NULL)
     return(MagickPass);
-  image->clip_mask=CloneImage(clip_mask,0,0,True,&image->exception);
-  if (image->clip_mask)
+  image->extra->clip_mask=CloneImage(clip_mask,0,0,True,&image->exception);
+  if (image->extra->clip_mask)
     return (MagickPass);
   return (MagickFail);
 }
+
+/* code below for SetImageCompositeMask() cloned/modified from SetImageClipMask() */
 
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   S e t I m a g e C o m p o s i t e M a s k                                                   %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  SetImageCompositeMask() associates a composite mask with the image.  The mask
+%  must be the same dimensions as the image.
+%
+%  If a component of the composite mask is set to TransparentOpacity (maximum
+%  value) then the corresponding image pixel component will not be updated
+%  when SyncImagePixels() is applied. The composite mask may be used to composite
+%  the results of an image processing operation to a region of the image.
+%  Regions outside those allowed by the composite mask may be processed, but only
+%  pixel quantums covered by the composite mask will actually be updated.
+%
+%  The composite mask protects the DirectClass pixels and PseudoClass pixel indexes
+%  from modification. The composite mask does *not* protect the image colormap since
+%  the image colormap is globally shared by all pixels in a PseudoClass image.
+%
+%  The format of the SetImageCompositeMask method is:
+%
+%      unsigned int SetImageCompositeMask(Image *image,const Image *composite_mask)
+%
+%  A description of each parameter follows:
+%
+%    o image: The image.
+%
+%    o composite_mask: The image composite mask.
+%
+%
+*/
+MagickExport MagickPassFail SetImageCompositeMask(Image *image,const Image *composite_mask)
+{
+  assert(image != (Image *) NULL);
+  assert(image->signature == MagickSignature);
+  if (composite_mask != (const Image *) NULL)
+    if ((composite_mask->columns != image->columns) ||
+        (composite_mask->rows != image->rows))
+      ThrowBinaryException3(ImageError,UnableToSetCompositeMask,ImageSizeDiffers);
+  if (image->extra->composite_mask != (Image *) NULL)
+    DestroyImage(image->extra->composite_mask);
+  image->extra->composite_mask=(Image *) NULL;
+  if (composite_mask == (Image *) NULL)
+    return(MagickPass);
+  image->extra->composite_mask=CloneImage(composite_mask,0,0,True,&image->exception);
+  if (image->extra->composite_mask)
+    return (MagickPass);
+  return (MagickFail);
+}
+
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                             %
@@ -2470,7 +2790,7 @@ MagickParseSubImageSpecification(const char *subimage_spec,
   assert(subrange_ptr != (unsigned long *) NULL);
 
   (void) strlcpy(spec,subimage_spec,sizeof(spec));
-  
+
   do
     {
       const char
@@ -2545,14 +2865,14 @@ MagickParseSubImageSpecification(const char *subimage_spec,
           long
             x,
             y;
-          
+
           unsigned int
             flags;
-          
+
           unsigned long
             height,
             width;
-          
+
           /* Require Width and Height */
           flags=GetGeometry((char *) spec,&x,&y,&width,&height);
           if ((flags & WidthValue) && (flags & HeightValue))
@@ -2599,7 +2919,7 @@ ParseSubImageFileSpecification(char *filename,
       ((spec_start=strrchr(filename,'[')) != (const char *) NULL))
     {
       char
-	spec[MaxTextExtent];
+        spec[MaxTextExtent];
 
       /*
         Example of supported formats (as per documentation):
@@ -2623,18 +2943,18 @@ ParseSubImageFileSpecification(char *filename,
         {
           status=MagickFail;
           ThrowException(exception,OptionError,
-			 InvalidSubimageSpecification,spec);
+                         InvalidSubimageSpecification,spec);
         }
       if (status == MagickPass)
-	{
-	  /* Truncate filename */
-	  *(spec_start-1)='\0';
+        {
+          /* Truncate filename */
+          *(spec_start-1)='\0';
           (void) CloneString(tile_ptr,spec);
-	}
+        }
 #if 0
       fprintf(stderr,"subimage=%lu subrange=%lu tile=\"%s\"\n",
-	      *subimage_ptr,*subrange_ptr,
-	      (*tile_ptr ? *tile_ptr : "(null)"));
+              *subimage_ptr,*subrange_ptr,
+              (*tile_ptr ? *tile_ptr : "(null)"));
 #endif
     }
 
@@ -2643,7 +2963,7 @@ ParseSubImageFileSpecification(char *filename,
 
 MagickExport MagickPassFail
 SetImageInfo(ImageInfo *image_info,const unsigned int flags,
-	     ExceptionInfo *exception)
+             ExceptionInfo *exception)
 {
   static const char
     *virtual_delegates[] =
@@ -2706,10 +3026,10 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
 
 #if 0
   fprintf(stderr,"SetImageInfo \"%s\" Read=%d Write=%d Rectify=%d\n",
-	  image_info->filename,
-	  ((lflags & SETMAGICK_READ) > 0),
-	  ((lflags & SETMAGICK_WRITE) > 0),
-	  ((lflags & SETMAGICK_RECTIFY) > 0));
+          image_info->filename,
+          ((lflags & SETMAGICK_READ) > 0),
+          ((lflags & SETMAGICK_WRITE) > 0),
+          ((lflags & SETMAGICK_RECTIFY) > 0));
 #endif
 
   *magic='\0';
@@ -2717,23 +3037,23 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
   if (lflags & SETMAGICK_READ)
     {
       /*
-	Look for sub-image specification (e.g. img0001.pcd[4]).
+        Look for sub-image specification (e.g. img0001.pcd[4]).
       */
       p=image_info->filename+Max((long) strlen(image_info->filename)-1,0);
       /*
-	Sometimes the provided argument is a real file and we need to
-	account for that.  If it is not a real file and the argument ends
-	with ']' then the trailing part is likely a sub-image or size
-	specification.
+        Sometimes the provided argument is a real file and we need to
+        account for that.  If it is not a real file and the argument ends
+        with ']' then the trailing part is likely a sub-image or size
+        specification.
       */
       if (*p == ']' && !IsAccessibleNoLogging(image_info->filename))
-	{
-	  (void) ParseSubImageFileSpecification(image_info->filename,
+        {
+          (void) ParseSubImageFileSpecification(image_info->filename,
                                                 &image_info->tile,
                                                 &image_info->subimage,
                                                 &image_info->subrange,
                                                 exception);
-	}
+        }
     }
 
   /*
@@ -2746,7 +3066,8 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
       p=image_info->filename;
       while (isalnum((int) *p))
         p++;
-      if ((*p == ':') && ((p-image_info->filename) < (long) sizeof(magic)))
+      if ((p != image_info->filename) && (*p == ':') &&
+          ((p-image_info->filename) < (long) sizeof(magic)))
         {
           char
             format[MaxTextExtent];
@@ -2767,6 +3088,9 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
             (void) strcpy(format,"IMAGE");
 
           LocaleUpper(format);
+          /*
+            If format does not conflict with a Windows logical drive
+          */
           if (!IsMagickConflict(format))
             {
               /*
@@ -2780,9 +3104,6 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
               (void) strlcpy(image_info->magick,magic,MaxTextExtent);
               if (LocaleCompare(magic,"TMP") != 0)
                 image_info->affirm=MagickTrue;
-              else
-                /* input file will be automatically removed */
-                image_info->temporary=MagickTrue;
             }
         }
     }
@@ -2800,7 +3121,7 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
       while ((*p != '.') && (p > (image_info->filename+1)))
         p--;
       if ((LocaleCompare(p,".gz") == 0) ||
-	  (LocaleCompare(p,".Z") == 0) ||
+          (LocaleCompare(p,".Z") == 0) ||
           (LocaleCompare(p,".bz2") == 0))
         do
           {
@@ -2813,10 +3134,10 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
           */
           unsigned int
             i;
-          
+
           MagickBool
             exclude;
-          
+
           (void) strlcpy(magic,p+1,MaxTextExtent);
           for (q=magic; *q != '\0'; q++)
             if (*q == '.')
@@ -2873,56 +3194,56 @@ SetImageInfo(ImageInfo *image_info,const unsigned int flags,
   if (lflags & SETMAGICK_READ)
     {
       /*
-	Determine the file format from the first few bytes of the
-	file.
+        Determine the file format from the first few bytes of the
+        file.
       */
       image=AllocateImage(image_info);
       if (image == (Image *) NULL)
-	return(MagickFail);
+        return(MagickFail);
       (void) strlcpy(image->filename,image_info->filename,MaxTextExtent);
       status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
       if (status == MagickFail)
-	{
-	  DestroyImage(image);
-	  return(MagickFail);
-	}
+        {
+          DestroyImage(image);
+          return(MagickFail);
+        }
       if (!BlobIsSeekable(image))
-	{
-	  /*
-	    Copy standard input or pipe to temporary file.
-	  */
-	  if(!AcquireTemporaryFileName(filename))
-	    {
-	      CloseBlob(image);
-	      DestroyImage(image);
-	      return(MagickFail);
-	    }
-	  (void) ImageToFile(image,filename,exception);
-	  CloseBlob(image);
-	  (void) strcpy(image->filename,filename);
-	  status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
-	  if (status == MagickFail)
-	    {
-	      DestroyImage(image);
-	      return(MagickFail);
-	    }
-	  (void) strcpy(image_info->filename,filename);
-	  image_info->temporary=MagickTrue;
-	}
+        {
+          /*
+            Copy standard input or pipe to temporary file.
+          */
+          if(!AcquireTemporaryFileName(filename))
+            {
+              CloseBlob(image);
+              DestroyImage(image);
+              return(MagickFail);
+            }
+          (void) ImageToFile(image,filename,exception);
+          CloseBlob(image);
+          (void) strcpy(image->filename,filename);
+          status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
+          if (status == MagickFail)
+            {
+              DestroyImage(image);
+              return(MagickFail);
+            }
+          (void) strcpy(image_info->filename,filename);
+          image_info->temporary=MagickTrue;
+        }
       magick[0]='\0';
       magick_length = ReadBlob(image,2*MaxTextExtent,magick);
       (void) SeekBlob(image,-(magick_off_t) magick_length,SEEK_CUR);
       CloseBlob(image);
       DestroyImage(image);
       /*
-	Check format using magic.mgk configuration file.  Use of an
-	external config file is absolutely necessary when using loadable
-	modules since otherwise the code necessary to perform the test
-	might not be available yet.
+        Check format using magic.mgk configuration file.  Use of an
+        external config file is absolutely necessary when using loadable
+        modules since otherwise the code necessary to perform the test
+        might not be available yet.
       */
       if (GetMagickFileFormat(magick,magick_length,image_info->magick,
-			      MaxTextExtent,exception))
-	return(MagickPass);
+                              MaxTextExtent,exception))
+        return(MagickPass);
     }
 
   return(MagickPass);
@@ -3108,7 +3429,7 @@ MagickExport MagickPassFail SetImageType(Image *image,const ImageType image_type
     {
       MagickBool
         is_monochrome;
-      
+
       if (!IsRGBColorspace(image->colorspace))
         {
           if (logging)

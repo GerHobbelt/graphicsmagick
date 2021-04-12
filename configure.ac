@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2015 GraphicsMagick Group
+# Copyright (C) 2003-2018 GraphicsMagick Group
 # Copyright (C) 2002 ImageMagick Studio
 # Copyright (C) 1998, 1999 E. I. du Pont de Nemours and Company
 #
@@ -393,6 +393,19 @@ fi
 AC_SUBST(LFS_CPPFLAGS)
 
 #
+# Decide if setjmp/longjmp is thread safe based on host OS
+#
+case "${host_os}" in
+  solaris2* )
+    # Documented not to be MT safe
+
+    ;;
+  *)
+    AC_DEFINE(SETJMP_IS_THREAD_SAFE,1,[Setjmp/longjmp are thread safe])
+    ;;
+esac
+
+#
 # Configure libtool
 #
 
@@ -457,6 +470,19 @@ then
 else
   DISTCHECK_CONFIG_FLAGS="${DISTCHECK_CONFIG_FLAGS} --disable-installed "
 fi
+
+# Enable broken/dangerous coders
+# EnableBrokenCoders CPP define and ENABLE_BROKEN_CODERS Automake conditional)
+AC_ARG_ENABLE(broken-coders,
+	      AS_HELP_STRING([--enable-broken-coders],
+                             [enable broken/dangerous file formats support]),
+	      [with_broken_coders=$enableval],
+	      [with_broken_coders='no'])
+if test "$with_broken_coders" = 'yes'
+then
+  AC_DEFINE(EnableBrokenCoders,1,[Enable broken/dangerous file formats support])
+fi
+AM_CONDITIONAL(ENABLE_BROKEN_CODERS, test "$with_broken_coders" != 'no')
 
 # Add configure option --enable-maintainer-mode which enables dependency
 # checking and generation useful to package maintainers.  This is made an
@@ -660,16 +686,6 @@ AC_ARG_WITH(jp2,
 	      [with_jp2='yes'])
 if test "$with_jp2" != 'yes' ; then
     DISTCHECK_CONFIG_FLAGS="${DISTCHECK_CONFIG_FLAGS} --with-jp2=$with_jp2 "
-fi
-
-# Disable LCMS.
-AC_ARG_WITH(lcms,
-	      AS_HELP_STRING([--without-lcms],
-                             [disable lcms (v1.1X) support]),
-	      [with_lcms=$withval],
-	      [with_lcms='yes'])
-if test "$with_lcms" != 'yes' ; then
-    DISTCHECK_CONFIG_FLAGS="${DISTCHECK_CONFIG_FLAGS} --with-lcms=$with_lcms "
 fi
 
 # Disable LCMS2.
@@ -1169,7 +1185,7 @@ AC_SUBST(MAGICK_SSIZE_T_F)
 ########
 GM_FUNC_MMAP_FILEIO
 AC_CHECK_FUNCS([atoll CryptGenRandom \
-  ctime_r _exit fcntl fstatvfs ftime getexecname \
+  clock_getres clock_gettime ctime_r _exit fcntl fstatvfs ftime getexecname \
   getc_unlocked getpagesize getrlimit getpid lltostr localtime_r madvise \
   _NSGetExecutablePath _pclose pclose poll _popen popen posix_fadvise \
   posix_fallocate posix_madvise posix_memalign posix_spawnp pread pwrite \
@@ -1451,6 +1467,12 @@ then
     if test "x$LIB_OMP" = x ; then
       if $CC --version 2>&1 | grep Open64 > /dev/null ; then
         AC_CHECK_LIB(openmp,omp_get_num_procs,LIB_OMP="-lopenmp",,)
+      fi
+    fi
+    # Clang (passes for GCC but uses different OpenMP implementation)
+    if test "x$LIB_OMP" = x ; then
+      if $CC --version 2>&1 | grep clang > /dev/null ; then
+        AC_CHECK_LIB(omp,GOMP_parallel_start,LIB_OMP="-lomp",,)
       fi
     fi
     # GCC
@@ -1891,74 +1913,11 @@ then
     fi
 fi
 
-#
-# Check for LCMS v1 (1.11 or later)
-#
-if test $have_lcms2 = 'yes'
+
+AM_CONDITIONAL(HasLCMS, test "$have_lcms2" = 'yes')
+if test "$have_lcms2" = 'yes'
 then
-  with_lcms='no'
-fi
-
-have_lcms='no'
-if test "$with_lcms" != 'no'
-then
-    AC_MSG_CHECKING([for lcms v1.1X support])
-    AC_MSG_RESULT()
-    failed=0
-    passed=0
-    have_lcms_header='no'
-
-    # Check for <lcms.h>
-    if test "$have_lcms_header" != 'yes'
-    then
-      AC_CHECK_HEADER(lcms.h,have_lcms_header='yes',,)
-      if test "$have_lcms_header" = 'yes'
-      then
-        passed=`expr $passed + 1`
-        AC_DEFINE(HAVE_LCMS_H,1,Define if you have the <lcms.h> header file.)
-      fi
-    fi
-
-    # Check for <lcms/lcms.h>
-    if test "$have_lcms_header" != 'yes'
-    then
-      AC_CHECK_HEADER(lcms/lcms.h,have_lcms_header='yes',,)
-      if test "$have_lcms_header" = 'yes'
-      then
-        passed=`expr $passed + 1`
-        AC_DEFINE(HAVE_LCMS_LCMS_H,1,Define if you have the <lcms/lcms.h> header file.)
-      fi
-    fi
-
-    # Failed to find lcms header?
-    if test "$have_lcms_header" != 'yes'
-    then
-      failed=`expr $failed + 1`
-    fi
-
-    AC_CHECK_LIB(lcms,cmsSetErrorHandler,passed=`expr $passed + 1`,failed=`expr $failed + 1`,)
-    AC_MSG_CHECKING(if LCMS package is complete)
-    if test $passed -gt 0
-    then
-      if test $failed -gt 0
-      then
-        AC_MSG_RESULT(no -- some components failed test)
-        have_lcms='no (failed tests)'
-      else
-        LIB_LCMS='-llcms'
-        LIBS="$LIB_LCMS $LIBS"
-        AC_MSG_RESULT(yes)
-        have_lcms='yes'
-      fi
-    else
-      AC_MSG_RESULT(no)
-    fi
-fi
-
-AM_CONDITIONAL(HasLCMS, test "$have_lcms2" = 'yes' -o "$have_lcms" = 'yes')
-if test "$have_lcms2" = 'yes' -o "$have_lcms" = 'yes'
-then
-  AC_DEFINE(HasLCMS,1,[Define if you have LCMS (v1.11 or later) library])
+  AC_DEFINE(HasLCMS,1,[Define if you have LCMS (v2.0 or later) library])
 fi
 AC_SUBST(LIB_LCMS)
 
@@ -2479,22 +2438,23 @@ then
     AC_MSG_RESULT()
     failed=0
     passed=0
-    AC_CHECK_HEADER(webp/decode.h,passed=`expr $passed + 1`,failed=`expr $failed + 1`,)
-    AC_CHECK_LIB(webp,WebPDecodeRGB,passed=`expr $passed + 1`,failed=`expr $failed + 1`,)
+    AC_CHECK_HEADER([webp/decode.h],[passed=`expr $passed + 1`],[failed=`expr $failed + 1`],[])
+    AC_CHECK_HEADER([webp/encode.h],[passed=`expr $passed + 1`],[failed=`expr $failed + 1`],[])
+    AC_CHECK_LIB([webp],[WebPDecodeRGB],[passed=`expr $passed + 1`; LIB_WEBP='-lwebp'],[failed=`expr $failed + 1`],[])
+    AC_CHECK_LIB([webpmux],[WebPMuxSetImage],[LIB_WEBP="$LIB_WEBP -lwebpmux"; echo "Hello world"],[],[-lwebp])
     AC_MSG_CHECKING(if WEBP package is complete)
     if test $passed -gt 0
     then
-    if test $failed -gt 0
-    then
-  AC_MSG_RESULT(no -- some components failed test)
-        have_webp='no (failed tests)'
-    else
-  LIB_WEBP='-lwebp'
-  LIBS="$LIB_WEBP $LIBS"
-  AC_DEFINE(HasWEBP,1,Define if you have WEBP library)
-  AC_MSG_RESULT(yes)
-        have_webp='yes'
-    fi
+        if test $failed -gt 0
+        then
+            AC_MSG_RESULT(no -- some components failed test)
+            have_webp='no (failed tests)'
+        else
+            LIBS="$LIB_WEBP $LIBS"
+            AC_DEFINE(HasWEBP,1,Define if you have WEBP library)
+            AC_MSG_RESULT(yes)
+            have_webp='yes'
+        fi
     else
         AC_MSG_RESULT(no)
     fi
@@ -2811,19 +2771,19 @@ AC_SUBST(MagickShareConfigPath)
 configure_transform_name=`echo ${program_transform_name} | sed 's,\\$\\$,$,'`
 
 # Default delegate definitions
-AutotraceDecodeDelegateDefault='autotrace'
-BZIPDelegateDefault='bzip2'
+dnl AutotraceDecodeDelegateDefault='autotrace'
+dnl BZIPDelegateDefault='bzip2'
 BrowseDelegateDefault='xdg-open'
 CGMDecodeDelegateDefault='ralcgm'
-CatDelegateDefault='cat'
+dnl CatDelegateDefault='cat'
 DCRAWDecodeDelegateDefault='dcraw'
 DOTDecodeDelegateDefault='dot'
 DVIDecodeDelegateDefault='dvips'
-EchoDelegateDefault='echo'
+dnl EchoDelegateDefault='echo'
 EditorDelegateDefault='xterm'
 FIGDecodeDelegateDefault='fig2dev'
 GMDelegateDefault=`echo gm | sed ${configure_transform_name}`
-GnuplotDecodeDelegateDefault='gnuplot'
+dnl GnuplotDecodeDelegateDefault='gnuplot'
 HPGLDecodeDelegateDefault='hp2xx'
 HTMLDecodeDelegateDefault='html2ps'
 ILBMDecodeDelegateDefault='ilbmtoppm'
@@ -2831,40 +2791,40 @@ ILBMEncodeDelegateDefault='ppmtoilbm'
 LPDelegateDefault='lp'
 LPRDelegateDefault='lpr'
 LaunchDelegateDefault='gimp'
-MANDelegateDefault='groff'
+dnl MANDelegateDefault='groff'
 MPEGDecodeDelegateDefault='mpeg2decode'
 MPEGEncodeDelegateDefault='mpeg2encode'
 MVDelegateDefault='mv'
-PGPDecodeDelegateDefault='pgpv'
-POVDelegateDefault='povray'
+dnl PGPDecodeDelegateDefault='pgpv'
+dnl POVDelegateDefault='povray'
 if test "$native_win32_build" = 'yes' ; then
   PSDelegateDefault='gswin32c'
 else
   PSDelegateDefault='gs'
 fi
-RADDecodeDelegateDefault='ra_ppm'
-RLEEncodeDelegateDefault='rawtorle'
-RMDelegateDefault='rm'
-SCANDecodeDelegateDefault='scanimage'
-TXTDelegateDefault='enscript'
-WMFDecodeDelegateDefault='wmf2eps'
-WWWDecodeDelegateDefault='wget'
-ZipDelegateDefault='gzip'
+dnl RADDecodeDelegateDefault='ra_ppm'
+dnl RLEEncodeDelegateDefault='rawtorle'
+dnl RMDelegateDefault='rm'
+dnl SCANDecodeDelegateDefault='scanimage'
+dnl TXTDelegateDefault='enscript'
+dnl WMFDecodeDelegateDefault='wmf2eps'
+dnl WWWDecodeDelegateDefault='wget'
+dnl ZipDelegateDefault='gzip'
 
 # Search for delegates
-AC_PATH_PROG(AutotraceDecodeDelegate, "$AutotraceDecodeDelegateDefault", "$AutotraceDecodeDelegateDefault")
-AC_PATH_PROG(BZIPDelegate, "$BZIPDelegateDefault", "$BZIPDelegateDefault")
+dnl AC_PATH_PROG(AutotraceDecodeDelegate, "$AutotraceDecodeDelegateDefault", "$AutotraceDecodeDelegateDefault")
+dnl AC_PATH_PROG(BZIPDelegate, "$BZIPDelegateDefault", "$BZIPDelegateDefault")
 AC_PATH_PROGS(BrowseDelegate, "$BrowseDelegateDefault" firefox konqueror google-chrome mozilla lynx, "$BrowseDelegateDefault")
 AC_PATH_PROG(CGMDecodeDelegate, "$CGMDecodeDelegateDefault", "$CGMDecodeDelegateDefault")
-AC_PATH_PROG(CatDelegate, "$CatDelegateDefault", "$CatDelegateDefault")
+dnl AC_PATH_PROG(CatDelegate, "$CatDelegateDefault", "$CatDelegateDefault")
 AC_PATH_PROG(DCRAWDecodeDelegate, "$DCRAWDecodeDelegateDefault", "$DCRAWDecodeDelegateDefault")
 AC_PATH_PROG(DOTDecodeDelegate, "$DOTDecodeDelegateDefault", "$DOTDecodeDelegateDefault")
 AC_PATH_PROG(DVIDecodeDelegate, "$DVIDecodeDelegateDefault", "$DVIDecodeDelegateDefault")
-AC_PATH_PROG(EchoDelegate, "$EchoDelegateDefault", "$EchoDelegateDefault")
+dnl AC_PATH_PROG(EchoDelegate, "$EchoDelegateDefault", "$EchoDelegateDefault")
 AC_PATH_PROG(EditorDelegate, "$EditorDelegateDefault", "$EditorDelegateDefault")
 AC_PATH_PROG(FIGDecodeDelegate, "$FIGDecodeDelegateDefault", "$FIGDecodeDelegateDefault")
 AC_PATH_PROG(GMDelegate, "$GMDelegateDefault", "$GMDelegateDefault")
-AC_PATH_PROG(GnuplotDecodeDelegate, "$GnuplotDecodeDelegateDefault", "$GnuplotDecodeDelegateDefault")
+dnl AC_PATH_PROG(GnuplotDecodeDelegate, "$GnuplotDecodeDelegateDefault", "$GnuplotDecodeDelegateDefault")
 AC_PATH_PROG(HPGLDecodeDelegate, "$HPGLDecodeDelegateDefault", "$HPGLDecodeDelegateDefault")
 AC_PATH_PROG(HTMLDecodeDelegate, "$HTMLDecodeDelegateDefault", "$HTMLDecodeDelegateDefault")
 AC_PATH_PROG(ILBMDecodeDelegate, "$ILBMDecodeDelegateDefault", "$ILBMDecodeDelegateDefault")
@@ -2872,21 +2832,21 @@ AC_PATH_PROG(ILBMEncodeDelegate, "$ILBMEncodeDelegateDefault", "$ILBMEncodeDeleg
 AC_PATH_PROG(LPDelegate, "$LPDelegateDefault", no)
 AC_PATH_PROG(LPRDelegate, "$LPRDelegateDefault", no)
 AC_PATH_PROG(LaunchDelegate, "$LaunchDelegateDefault", "$LaunchDelegateDefault")
-AC_PATH_PROG(MANDelegate, "$MANDelegateDefault", "$MANDelegateDefault")
+dnl AC_PATH_PROG(MANDelegate, "$MANDelegateDefault", "$MANDelegateDefault")
 AC_PATH_PROG(MPEGDecodeDelegate, "$MPEGDecodeDelegateDefault", "$MPEGDecodeDelegateDefault")
 AC_PATH_PROG(MPEGEncodeDelegate, "$MPEGEncodeDelegateDefault", "$MPEGEncodeDelegateDefault")
 AC_PATH_PROG(MVDelegate, "$MVDelegateDefault", "$MVDelegateDefault")
-AC_PATH_PROG(PGPDecodeDelegate, "$PGPDecodeDelegateDefault", "$PGPDecodeDelegateDefault")
-AC_PATH_PROG(POVDelegate, "$POVDelegateDefault", "$POVDelegateDefault")
+dnl AC_PATH_PROG(PGPDecodeDelegate, "$PGPDecodeDelegateDefault", "$PGPDecodeDelegateDefault")
+dnl AC_PATH_PROG(POVDelegate, "$POVDelegateDefault", "$POVDelegateDefault")
 AC_PATH_PROG(PSDelegate, "$PSDelegateDefault", "$PSDelegateDefault")
-AC_PATH_PROG(RADDecodeDelegate, "$RADDecodeDelegateDefault", "$RADDecodeDelegateDefault")
-AC_PATH_PROG(RLEEncodeDelegate, "$RLEEncodeDelegateDefault", "$RLEEncodeDelegateDefault")
-AC_PATH_PROG(RMDelegate, "$RMDelegateDefault", "$RMDelegateDefault")
-AC_PATH_PROG(SCANDecodeDelegate, "$SCANDecodeDelegateDefault", "$SCANDecodeDelegateDefault")
-AC_PATH_PROG(TXTDelegate, "$TXTDelegateDefault", "$TXTDelegateDefault")
-AC_PATH_PROG(WMFDecodeDelegate, "$WMFDecodeDelegateDefault", "$WMFDecodeDelegateDefault")
-AC_PATH_PROG(WWWDecodeDelegate, "$WWWDecodeDelegateDefault", "$WWWDecodeDelegateDefault")
-AC_PATH_PROG(ZipDelegate, "$ZipDelegateDefault", "$ZipDelegateDefault")
+dnl AC_PATH_PROG(RADDecodeDelegate, "$RADDecodeDelegateDefault", "$RADDecodeDelegateDefault")
+dnl AC_PATH_PROG(RLEEncodeDelegate, "$RLEEncodeDelegateDefault", "$RLEEncodeDelegateDefault")
+dnl AC_PATH_PROG(RMDelegate, "$RMDelegateDefault", "$RMDelegateDefault")
+dnl AC_PATH_PROG(SCANDecodeDelegate, "$SCANDecodeDelegateDefault", "$SCANDecodeDelegateDefault")
+dnl AC_PATH_PROG(TXTDelegate, "$TXTDelegateDefault", "$TXTDelegateDefault")
+dnl AC_PATH_PROG(WMFDecodeDelegate, "$WMFDecodeDelegateDefault", "$WMFDecodeDelegateDefault")
+dnl AC_PATH_PROG(WWWDecodeDelegate, "$WWWDecodeDelegateDefault", "$WWWDecodeDelegateDefault")
+dnl AC_PATH_PROG(ZipDelegate, "$ZipDelegateDefault", "$ZipDelegateDefault")
 
 # Prefer lpr to lp; lp needs options tacked on.
 if test "$LPRDelegate" != no
@@ -2908,7 +2868,7 @@ have_ilbmtoppm='no' ; if test "$ILBMDecodeDelegate" != "$ILBMDecodeDelegateDefau
 have_ppmtoilbm='no' ; if test "$ILBMEncodeDelegate" != "$ILBMEncodeDelegateDefault" ; then have_ppmtoilbm='yes' ; fi
 have_mpeg2decode='no' ; if test "$MPEGDecodeDelegate" != "$MPEGDecodeDelegateDefault" ; then have_mpeg2decode='yes' ; fi
 have_mpeg2encode='no' ; if test "$MPEGEncodeDelegate" != "$MPEGEncodeDelegateDefault" ; then have_mpeg2encode='yes' ; fi
-have_ra_ppm='no'  ; if test "$RADDecodeDelegate" != "$RADDecodeDelegateDefault" ; then have_ra_ppm='yes' ; fi
+dnl have_ra_ppm='no'  ; if test "$RADDecodeDelegate" != "$RADDecodeDelegateDefault" ; then have_ra_ppm='yes' ; fi
 have_ralcgm='no'  ; if test "$CGMDecodeDelegate" != "$CGMDecodeDelegateDefault" ; then have_ralcgm='yes' ; fi
 
 # Automake conditional to support test suite
@@ -2981,6 +2941,11 @@ else
     # prevent that translation?
     #
     #   reg query "HKLM\Software\GPL Ghostscript" /s
+    #
+    # This seems to work without translation:
+    #
+    #   cmd /c "reg query \"HKLM\Software\GPL Ghostscript\" /v GS_LIB /s"
+    #
     for font_dir in "c:\\Program Files\\gs\\fonts\\" "c:\\gs\\fonts\\"
     do
       if test -f "${font_dir}a010013l.pfb"
@@ -3043,80 +3008,80 @@ AC_SUBST(type_include_files)
 if test "$with_frozenpaths" != 'yes'
 then
   # Re-set delegate definitions to default (no paths)
-  AutotraceDecodeDelegate="$AutotraceDecodeDelegateDefault"
-  BZIPDelegate="$BZIPDelegateDefault"
+dnl  AutotraceDecodeDelegate="$AutotraceDecodeDelegateDefault"
+dnl  BZIPDelegate="$BZIPDelegateDefault"
   BrowseDelegate="$BrowseDelegateDefault"
   CGMDecodeDelegate="$CGMDecodeDelegateDefault"
-  CatDelegate="$CatDelegateDefault"
+dnl  CatDelegate="$CatDelegateDefault"
   ConvertDelegate="$ConvertDelegateDefault"
   DOTDecodeDelegate="$DOTDecodeDelegateDefault"
   DVIDecodeDelegate="$DVIDecodeDelegateDefault"
-  EchoDelegate="$EchoDelegateDefault"
+dnl  EchoDelegate="$EchoDelegateDefault"
   EditorDelegate="$EditorDelegateDefault"
   FIGDecodeDelegate="$FIGDecodeDelegateDefault"
   GMDelegate="${GMDelegateDefault}"
-  GnuplotDecodeDelegate="$GnuplotDecodeDelegateDefault"
+dnl  GnuplotDecodeDelegate="$GnuplotDecodeDelegateDefault"
   HPGLDecodeDelegate="$HPGLDecodeDelegateDefault"
   HTMLDecodeDelegate="$HTMLDecodeDelegateDefault"
   ILBMDecodeDelegate="$ILBMDecodeDelegateDefault"
   ILBMEncodeDelegate="$ILBMEncodeDelegateDefault"
   LPDelegate="$LPDelegateDefault"
   LaunchDelegate="$LaunchDelegateDefault"
-  MANDelegate="$MANDelegateDefault"
+dnl  MANDelegate="$MANDelegateDefault"
   MPEGDecodeDelegate="$MPEGDecodeDelegateDefault"
   MPEGEncodeDelegate="$MPEGEncodeDelegateDefault"
-  MVDelegate="$MVDelegateDefault"
+dnl  MVDelegate="$MVDelegateDefault"
   MogrifyDelegate="$MogrifyDelegateDefault"
-  PGPDecodeDelegate="$PGPDecodeDelegateDefault"
-  POVDelegate="$POVDelegateDefault"
+dnl  PGPDecodeDelegate="$PGPDecodeDelegateDefault"
+dnl  POVDelegate="$POVDelegateDefault"
   PSDelegate="$PSDelegateDefault"
-  RADDecodeDelegate="$RADDecodeDelegateDefault"
-  RLEEncodeDelegate="$RLEEncodeDelegateDefault"
-  RMDelegate="$RMDelegateDefault"
-  SCANDecodeDelegate="$SCANDecodeDelegateDefault"
+dnl  RADDecodeDelegate="$RADDecodeDelegateDefault"
+dnl  RLEEncodeDelegate="$RLEEncodeDelegateDefault"
+dnl  RMDelegate="$RMDelegateDefault"
+dnl  SCANDecodeDelegate="$SCANDecodeDelegateDefault"
   ShowImageDelegate="$ShowImageDelegateDefault"
-  TXTDelegate="$TXTDelegateDefault"
+dnl  TXTDelegate="$TXTDelegateDefault"
   WMFDecodeDelegate="$WMFDecodeDelegateDefault"
-  WWWDecodeDelegate="$WWWDecodeDelegateDefault"
-  ZipDelegate="$ZipDelegateDefault"
+dnl  WWWDecodeDelegate="$WWWDecodeDelegateDefault"
+dnl  ZipDelegate="$ZipDelegateDefault"
 fi
 
 # Delegate substitutions
-AC_SUBST(AutotraceDecodeDelegate)
-AC_SUBST(BZIPDelegate)
+dnl AC_SUBST(AutotraceDecodeDelegate)
+dnl AC_SUBST(BZIPDelegate)
 AC_SUBST(BrowseDelegate)
-AC_SUBST(CGMDecodeDelegate)
-AC_SUBST(CatDelegate)
+dnl AC_SUBST(CGMDecodeDelegate)
+dnl AC_SUBST(CatDelegate)
 AC_SUBST(ConvertDelegate)
 AC_SUBST(DOTDecodeDelegate)
 AC_SUBST(DVIDecodeDelegate)
-AC_SUBST(EchoDelegate)
+dnl AC_SUBST(EchoDelegate)
 AC_SUBST(EditorDelegate)
 AC_SUBST(FIGDecodeDelegate)
-AC_SUBST(GnuplotDecodeDelegate)
+dnl AC_SUBST(GnuplotDecodeDelegate)
 AC_SUBST(HPGLDecodeDelegate)
 AC_SUBST(HTMLDecodeDelegate)
 AC_SUBST(ILBMDecodeDelegate)
 AC_SUBST(ILBMEncodeDelegate)
 AC_SUBST(LPDelegate)
 AC_SUBST(LaunchDelegate)
-AC_SUBST(MANDelegate)
+dnl AC_SUBST(MANDelegate)
 AC_SUBST(MPEGDecodeDelegate)
 AC_SUBST(MPEGEncodeDelegate)
-AC_SUBST(MVDelegate)
+dnl AC_SUBST(MVDelegate)
 AC_SUBST(MogrifyDelegate)
-AC_SUBST(PGPDecodeDelegate)
-AC_SUBST(POVDelegate)
+dnl AC_SUBST(PGPDecodeDelegate)
+dnl AC_SUBST(POVDelegate)
 AC_SUBST(PSDelegate)
-AC_SUBST(RADDecodeDelegate)
-AC_SUBST(RLEEncodeDelegate)
-AC_SUBST(RMDelegate)
-AC_SUBST(SCANDecodeDelegate)
+dnl AC_SUBST(RADDecodeDelegate)
+dnl AC_SUBST(RLEEncodeDelegate)
+dnl AC_SUBST(RMDelegate)
+dnl AC_SUBST(SCANDecodeDelegate)
 AC_SUBST(ShowImageDelegate)
-AC_SUBST(TXTDelegate)
-AC_SUBST(WMFDecodeDelegate)
-AC_SUBST(WWWDecodeDelegate)
-AC_SUBST(ZipDelegate)
+dnl AC_SUBST(TXTDelegate)
+dnl AC_SUBST(WMFDecodeDelegate)
+dnl AC_SUBST(WWWDecodeDelegate)
+dnl AC_SUBST(ZipDelegate)
 
 #
 # RedHat RPM support (http://rpm5.org/)
@@ -3247,22 +3212,28 @@ then
 
   # GSPSDevice
   AC_MSG_CHECKING([for gs PS writing device])
-  if $PSDelegate -q -dBATCH -sDEVICE=pswrite -sOutputFile=/dev/null < /dev/null 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
-  then
-    GSPSDevice=pswrite
-  else
-    GSPSDevice=nodevice
-  fi
+  GSPSDevice=nodevice
+  for device in ps2write pswrite
+  do
+    if $PSDelegate -q -dBATCH -sDEVICE=$device -sOutputFile=/dev/null < /dev/null 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+    then
+      GSPSDevice=$device
+      break
+    fi
+  done
   AC_MSG_RESULT($GSPSDevice)
 
   # GSEPSDevice
   AC_MSG_CHECKING([for gs EPS writing device])
-  if $PSDelegate -q -dBATCH -sDEVICE=epswrite -sOutputFile=/dev/null < /dev/null 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
-  then
-    GSEPSDevice=epswrite
-  else
-    GSEPSDevice=nodevice
-  fi
+  GSEPSDevice=nodevice
+  for device in eps2write epswrite
+  do
+    if $PSDelegate -q -dBATCH -sDEVICE=$device -sOutputFile=/dev/null < /dev/null 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+    then
+      GSEPSDevice=$device
+      break
+    fi
+  done
   AC_MSG_RESULT($GSEPSDevice)
 
 fi
@@ -3358,14 +3329,18 @@ AC_SUBST(MAGICKLIBDIR)
 # MAGICK_FEATURES is used to declare required features in the test suite
 DELEGATES=''
 MAGICK_FEATURES=''
+if test "$with_broken_coders" = yes; then
+   # Add the list of broken coders to feature options
+   MAGICK_FEATURES="$MAGICK_FEATURES PSD"
+fi
 if test "$have_bzlib"  = 'yes' ; then
    DELEGATES="$DELEGATES bzlib"
    MAGICK_FEATURES="$MAGICK_FEATURES BZLIB"
 fi
-if test "$have_ralcgm" = 'yes' ; then
-   DELEGATES="$DELEGATES cgm"
-   MAGICK_FEATURES="$MAGICK_FEATURES CGM"
-fi
+dnl if test "$have_ralcgm" = 'yes' ; then
+dnl    DELEGATES="$DELEGATES cgm"
+dnl    MAGICK_FEATURES="$MAGICK_FEATURES CGM"
+dnl fi
 if test "$have_fpx"    = 'yes' ; then
    DELEGATES="$DELEGATES fpx"
    MAGICK_FEATURES="$MAGICK_FEATURES FPX"
@@ -3394,7 +3369,7 @@ if test "$have_jpeg"   = 'yes' ; then
    DELEGATES="$DELEGATES jpeg"
    MAGICK_FEATURES="$MAGICK_FEATURES JPEG"
 fi
-if test "$have_lcms" = 'yes' || test "$have_lcms2" = 'yes' ; then
+if test "$have_lcms2" = 'yes' ; then
    DELEGATES="$DELEGATES lcms"
    MAGICK_FEATURES="$MAGICK_FEATURES LCMS"
 fi
@@ -3426,10 +3401,10 @@ if test "$have_ps"     = 'yes' ; then
    MAGICK_FEATURES="$MAGICK_FEATURES PS"
 fi
 
-if test "$have_ra_ppm" = 'yes' ; then
-   DELEGATES="$DELEGATES rad"
-   MAGICK_FEATURES="$MAGICK_FEATURES RAD"
-fi
+dnl if test "$have_ra_ppm" = 'yes' ; then
+dnl    DELEGATES="$DELEGATES rad"
+dnl    MAGICK_FEATURES="$MAGICK_FEATURES RAD"
+dnl fi
 if test "$have_tiff"   = 'yes' ; then
    DELEGATES="$DELEGATES tiff"
    MAGICK_FEATURES="$MAGICK_FEATURES TIFF"
@@ -3512,50 +3487,6 @@ fi
 AC_SUBST(MAGICK_DEP_LIBS)
 
 #
-# Deduplicate LDFLAGS
-#
-LDFLAGS_NEW=''
-for flag in $LDFLAGS
-do
-    add=yes
-    for test_flag in $LDFLAGS_NEW
-    do
-        if test $flag = $test_flag
-        then
-            add=no
-            break
-        fi
-    done
-    if test $add = yes
-    then
-        LDFLAGS_NEW="$LDFLAGS_NEW $flag"
-    fi
-done
-LDFLAGS=$LDFLAGS_NEW
-
-#
-# Deduplicate CFLAGS
-#
-CFLAGS_NEW=''
-for flag in $CFLAGS
-do
-    add=yes
-    for test_flag in $CFLAGS_NEW
-    do
-        if test $flag = $test_flag
-        then
-            add=no
-            break
-        fi
-    done
-    if test $add = yes
-    then
-        CFLAGS_NEW="$CFLAGS_NEW $flag"
-    fi
-done
-CFLAGS=$CFLAGS_NEW
-
-#
 # Remove extraneous spaces from output variables (asthetic)
 #
 X_CFLAGS=`echo $X_CFLAGS | sed -e 's/  */ /g'`
@@ -3617,6 +3548,7 @@ AC_CONFIG_FILES(\
         PerlMagick/Magick.pm \
         PerlMagick/Makefile.PL \
 	PerlMagick/PerlMagickCheck.sh \
+        PerlMagick/t/features.pl \
         config/delegates.mgk \
         config/type-ghostscript.mgk \
         config/type-solaris.mgk \
@@ -3675,7 +3607,6 @@ echo "Ghostscript lib   --with-gslib=$with_gslib       	$have_gslib"
 echo "JBIG              --with-jbig=$with_jbig        	$have_jbig"
 echo "JPEG v1           --with-jpeg=$with_jpeg        	$have_jpeg"
 echo "JPEG-2000         --with-jp2=$with_jp2          	$have_jp2"
-echo "LCMS v1           --with-lcms=$with_lcms        	$have_lcms"
 echo "LCMS v2           --with-lcms2=$with_lcms2        	$have_lcms2"
 # echo "MPEG v2           --with-mpeg2=$with_mpeg2      	$have_mpeg2"
 echo "LZMA              --with-lzma=$with_lzma        	$have_lzma"

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2008 - 2015 GraphicsMagick Group
+% Copyright (C) 2008 - 2016 GraphicsMagick Group
 %
 % This program is covered by multiple licenses, which are described in
 % Copyright.txt. You should have received a copy of Copyright.txt with this
@@ -60,7 +60,7 @@ MagickExport const char *ChannelTypeToString(const ChannelType channel)
     case RedChannel:
       channel_type="red";
       break;
-    case CyanChannel: 
+    case CyanChannel:
       channel_type="cyan";
       break;
     case GreenChannel:
@@ -157,7 +157,7 @@ MagickExport const char *ColorspaceTypeToString(const ColorspaceType colorspace)
 {
   const char
     *colorspace_type = "?";
-  
+
   switch (colorspace)
     {
     case UndefinedColorspace:
@@ -507,7 +507,8 @@ MagickExport CompositeOperator StringToCompositeOperator(const char *option)
     composite_op = UndefinedCompositeOp;
 
   unsigned int
-    index;
+    index,
+    mindex;
 
   char
     c;
@@ -519,13 +520,14 @@ MagickExport CompositeOperator StringToCompositeOperator(const char *option)
     Handle dash or underscore separated values like the major brand by
     stripping them out.
   */
-  for (index = 0; option[index] != 0; index++)
+  for (index = 0, mindex =0; option[index] != 0; index++)
     {
       c=option[index];
-      if ((c != '_') || (c != '-'))
-        match_string[index]=c;
+      if ((c != '_') && (c != '-'))
+        if (mindex < sizeof(match_string)-2)
+          match_string[mindex++]=c;
     }
-  match_string[index]='\0';
+  match_string[mindex]='\0';
 
   /*
     Find a match
@@ -631,12 +633,12 @@ MagickExport CompressionType StringToCompressionType(const char *option)
   else if (LocaleCompare("GZip",option) == 0)
     compression_type=ZipCompression;
   else if ((LocaleCompare("LZMA",option) == 0) ||
-	   (LocaleCompare("LZMA2",option) == 0))
+           (LocaleCompare("LZMA2",option) == 0))
     compression_type=LZMACompression;
   else if (LocaleCompare("JPEG2000",option) == 0)
     compression_type=JPEG2000Compression;
   else if ((LocaleCompare("JBIG",option) == 0) ||
-	   (LocaleCompare("JBIG1",option) == 0))
+           (LocaleCompare("JBIG1",option) == 0))
     compression_type=JBIG1Compression;
   else if (LocaleCompare("JBIG2",option) == 0)
     compression_type=JBIG2Compression;
@@ -1740,7 +1742,7 @@ MagickExport VirtualPixelMethod StringToVirtualPixelMethod(const char *option)
 {
   VirtualPixelMethod
     virtual_pixel_method = UndefinedVirtualPixelMethod;
-  
+
   if (LocaleCompare("Constant",option) == 0)
     virtual_pixel_method=ConstantVirtualPixelMethod;
   else if (LocaleCompare("Edge",option) == 0)

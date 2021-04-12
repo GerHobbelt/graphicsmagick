@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2004-2015 GraphicsMagick Group
+# Copyright (C) 2004-2018 GraphicsMagick Group
 . ./common.shi
 . ${top_srcdir}/tests/common.shi
 
@@ -10,7 +10,7 @@ rwblob=./rwblob
 check_types='bilevel gray pallette truecolor'
 
 # Number of tests we plan to run
-test_plan_fn 192
+test_plan_fn 208
 
 # ART format
 for type in ${check_types}
@@ -28,6 +28,18 @@ done
 for type in ${check_types}
 do
   test_command_fn "BMP ${type}" ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" BMP
+done
+
+# BMP2 format
+for type in ${check_types}
+do
+  test_command_fn "BMP2 ${type}" ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" BMP2
+done
+
+# BMP3 format
+for type in ${check_types}
+do
+  test_command_fn "BMP3 ${type}" ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" BMP3
 done
 
 # CALS format
@@ -180,6 +192,12 @@ do
   test_command_fn "PGM ${type}" ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" PGM
 done
 
+# PGX format
+for type in ${check_types}
+do
+  test_command_fn "PGX ${type}" -F JP2 ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" PGX
+done
+
 # PICON format
 for type in ${check_types}
 do
@@ -202,6 +220,12 @@ done
 for type in ${check_types}
 do
   test_command_fn "PPM ${type}" ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" PPM
+done
+
+# PTIF format
+for type in ${check_types}
+do
+  test_command_fn "PTIF ${type}" -F TIFF ${MEMCHECK} ${rwblob} "${SRCDIR}/input_${type}.miff" PTIF
 done
 
 # RAS format

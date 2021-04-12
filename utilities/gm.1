@@ -1,4 +1,4 @@
-.TH gm 1 "2015/03/22" "GraphicsMagick"
+.TH gm 1 "2018/06/17" "GraphicsMagick"
 .TP
 .in 15
 .in 15
@@ -381,11 +381,6 @@ respectively.
 If \fIoutput_file\fP has the extension \fB.Z\fP or \fB.gz\fP,
 the file is compressed using with \fIcompress\fP or \fIgzip\fP respectively.
 
-Finally, when running on platforms that allow it, precede the image file name
-with \fB|\fP to pipe to or from a system command (this feature is not
-available on VMS, Win32 and Macintosh platforms). Use a backslash or
-quotation marks to prevent your shell from interpreting the \fB|\fP.
-
 Use an optional index enclosed in brackets after an input file name to
 specify a desired subimage of a multi-resolution image format like
 Photo CD (e.g. "img0001.pcd[4]") or a range for MPEG images
@@ -491,14 +486,16 @@ numbers comprising a single color decision. The tenth number
 The argument string is comma delimited and is in the following form
 (but without invervening spaces or line breaks)
 
-  redslope,redoffset,redpower:
-  greenslope,greenoffset,greenpower:
-  blueslope,blueoffset,bluepower:
-  saturation
+    redslope,redoffset,redpower:
+    greenslope,greenoffset,greenpower:
+    blueslope,blueoffset,bluepower:
+    saturation
 
 
 with the unity (no change) specification being:
-"1.0,0.0,1.0:1.0,0.0,1.0:1.0,0.0,1.0:1.0"
+
+    "1.0,0.0,1.0:1.0,0.0,1.0:1.0,0.0,1.0:1.0"
+
 .TP
 .B "-authenticate \fI<string>"\fP
 \fRdecrypt image with this password
@@ -734,7 +731,8 @@ image filename, type, width, height, or other image attribute by embedding
 special format characters listed under the \fB-format\fP option.
 The comment is not drawn on the image, but is embedded in the image
 datastream via a "Comment" tag or similar mechanism.  If you want the
-comment to be visible on the image itself, use the \fB-draw\fP option.
+comment to be visible on the image itself, use the \fB-draw\fP option
+instead.
 
 For example,
 
@@ -746,6 +744,12 @@ titled \fBbird.miff\fP and whose width is 512 and height is 480.
 
 If the first character of \fIstring\fP is \fI@\fP, the image comment
 is read from a file titled by the remaining characters in the string.
+
+If the -comment option appears multiple times, only the last comment is
+stored.
+
+In PNG images, the comment is stored in a \fBtEXt\fP or \fBzTXt\fP chunk
+with the keyword "comment".
 .TP
 .B "-compose \fI<operator>"\fP
 \fRthe type of image composition
@@ -806,6 +810,7 @@ composite operators are available:
 
 
 The behavior of each operator is described below.
+
 .in 15
 
 .in 15
@@ -1029,6 +1034,7 @@ space, then the change-image pixel intensities are used.
 
 .in 15
 
+
 .TP
 .B "-compress \fI<type>"\fP
 \fRthe type of image compression
@@ -1170,6 +1176,7 @@ that name. This is used to control on/off options. Use +define
 +define "*" to remove all existing definitions.
 
 The following definitions may be created:
+
 .in 15
 
 .in 15
@@ -1290,6 +1297,16 @@ Enables or disables fancy upsampling when reading a JPEG file
 
 .in 15
 .in 15
+.B "jpeg:max-warnings=<value>"
+.in 20
+ \fR
+.in 20
+Specifies an integer value for how many warnings are allowed for
+any given error type before being promoted to a hard error.  JPEG
+files producing excessive warnings indicate a problem with the file.
+
+.in 15
+.in 15
 .B "jpeg:optimize-coding={true|false}"
 .in 20
  \fR
@@ -1326,6 +1343,17 @@ requested to scale the image to fit the page size (width and/or
 height).
 .in 15
 .in 15
+.B "mng:maximum-loops=<value>"
+.in 20
+ \fR
+.in 20
+mng:maximum-loops specifies the maximum number of loops allowed to
+be specified by a MNG LOOP chunk. Without an imposed limit, a MNG file
+could request up to 2147483647 loops, which could run for a very long
+time.  The current default limit is 512 loops.
+
+.in 15
+.in 15
 .B "pdf:use-cropbox={true|false}"
 .in 20
  \fR
@@ -1353,6 +1381,17 @@ requested pages.
 If the ps:imagemask flag is defined, the PS3 and EPS3 coders will
 create Postscript files that render bilevel images with the Postscript
 imagemask operator instead of the image operator.
+
+.in 15
+.in 15
+.B "ptif:minimum-geometry=<geometry>"
+.in 20
+ \fR
+.in 20
+If the ptif:minimum-geometry key is defined, GraphicsMagick will
+use it to determine the minimum frame size to output when writing a
+pyramid TIFF file (a TIFF file containing a succession of reduced
+versions of the first frame). The default minimum geometry is 32x32.
 
 .in 15
 .in 15
@@ -1747,6 +1786,7 @@ If set, reduce memory usage (but increase CPU use)
 .in 15
 
 
+
 For example, to create a postscript file that will render only the black
 pixels of a bilevel image, use:
 
@@ -2094,15 +2134,15 @@ which falls outside the bounds of the new image dimensions is
 discarded.
 
 For example, this command creates a thumbnail of an image, and centers
-it on a red color backdrop image:
+it on a red color backdrop image, offsetting the canvas ten pixels to
+the left and five pixels up, with respect to the thumbnail:
 
     gm convert infile.jpg -thumbnail 120x80 -background red -gravity center \\
-              -extent 140x100 outfile.jpg
+              -extent 140x100-10-5 outfile.jpg
 
 
 This command reduces or expands a JPEG image to fit on an 800x600
 display: 
-
 
     gm convert -size 800x600 input.jpg \\
               -resize 800x600 -background black \\
@@ -2113,8 +2153,6 @@ display:
 
 If the aspect ratio of the input image isn't exactly 4:3, then the
 image is centered on an 800x600 black canvas. 
-
-
 .TP
 .B "-file \fI<filename>"\fP
 \fRwrite annotated difference image to file
@@ -2219,8 +2257,6 @@ black canvas image:
 and this flattens a Photoshop PSD file:
 
     gm convert input.psd -flatten output.png
-
-
 
 .TP
 .B "-flip"
@@ -2516,7 +2552,7 @@ Use the given radius and standard deviation (sigma).
 
 The \fB-geometry\fP option is used for a number of different
 purposes, depending on the utility it is used with.
-<pp
+
 For the X11 commands ('animate', 'display', and 'import'), it
 specifies the preferred size and location of the Image window.  By
 default, the window size is the image size and the location is chosen
@@ -2535,11 +2571,11 @@ By default, the width and height are maximum values. That is, the
 image is expanded or contracted to fit the width and height value
 while maintaining the aspect ratio of the image.
 
-Append a ^ to the geometry so that the image is resized while
-maintaining the aspect ratio of the image, but the resulting width or
+Append a ^ to the geometry so that the image aspect ratio is
+maintained when the image is resized, but the resulting width or
 height are treated as minimum values rather than maximum values.
 
-Append an exclamation point to the geometry to force the image size to
+Append a ! (exclamation point) to the geometry to force the image size to
 exactly the size you specify. For example, if you specify
 640x480! the image width is set to 640 pixels and height to
 480.
@@ -2657,8 +2693,6 @@ order for the \fBIDENTITY\fP CLUT generator is 8.  Interpolation is
 used so it is not usually necessary for CLUT images to be very large.
 The PNG file format is ideal for storing Hald CLUT images because it
 compresses them very well.
-
-
 .TP
 .B "-help"
 \fRprint usage instructions
@@ -2667,8 +2701,6 @@ compresses them very well.
 \fRpixel annotation color
 
 Specifies the color to use when annotating difference pixels.
-
-
 .TP
 .B "-highlight-style \fI<style>"\fP
 \fRpixel annotation style
@@ -2687,8 +2719,6 @@ and \fBXOR\fP does an XOR between the pixel and the highlight color.
 Offsets, if present in the geometry specification, are handled in
 the same manner as the \fB-geometry\fP option, using X11 style to handle
 negative offsets.
-
-
 .TP
 .B "-iconic"
 \fRiconic animation
@@ -2708,8 +2738,6 @@ Choose from these intents:
 \fBAbsolute, Perceptual, Relative, Saturation\fP.
 
 The default intent is undefined.
-
-
 .TP
 .B "-interlace \fI<type>"\fP
 \fRthe type of interlacing scheme
@@ -2733,8 +2761,6 @@ is like plane except the different planes are saved to individual files
 
 Use \fBLine\fP to create an \fBinterlaced PNG\fP or \fB GIF\fP or
 \fBprogressive JPEG\fP image.
-
-
 .TP
 .B "-label \fI<name>"\fP
 \fRassign a label to an image
@@ -2759,6 +2785,12 @@ and whose width is 512 and height is 480.
 
 If the first character of \fIstring\fP is \fI@\fP, the image label is
 read from a file titled by the remaining characters in the string.
+
+If the -label option appears multiple times, only the last label is
+stored.
+
+In PNG images, the label is stored in a \fBtEXt\fP or \fBzTXt\fP chunk
+with the keyword "label".
 
 When converting to \fIPostScript\fP, use this option to specify a header
 string to print above the image. Specify the label font with
@@ -2788,8 +2820,6 @@ For example,
 
 will help clarify a scanned grayscale or color document, producing a
 bi-level equivalent.
-
-
 .TP
 .B "-level \fI<black_point>{,<gamma>}{,<white_point>}{%}"\fP
 \fRadjust the level of image contrast
@@ -3193,6 +3223,7 @@ integral value prior to use. If a percent (\fB%\fP) symbol is appended
 to the argument, then the argument has a range of 0 to 100 percent.
 
 The following is a description of the operators:
+
 .in 15
 
 .in 15
@@ -3461,6 +3492,7 @@ the intensity specified by rvalue.
 .in 15
 
 
+
 As an example, the \fBAssign\fP operator assigns a fixed value to a
 channel. For example, this command sets the red channel to the mid-range
 value:
@@ -3512,12 +3544,21 @@ first, e.g., with the "-gamma 0.45455" option.
 \fRoutput files to directory
 
 Use -output-directory to specify a directory under which to write the
-output files. Normally mogrify overwrites the input files but with this
-option the output files may be written to a different directory so that
-the input files are preserved. The algorithm used preserves all of the
-input path specification in the output path so that the user-specified
-input path (including any directory part) is appended to the output path.
-The user is responsible for creating the output directory.
+output files. Normally mogrify overwrites the input files, but with
+this option the output files may be written to a different directory
+tree so that the input files are preserved. The algorithm used
+preserves all of the input path specification in the output path so
+that the user-specified input path (including any sub-directory part)
+is appended to the output path. If the input file lacks an extension,
+then a suitable extension is automatically added to the output file.
+The user is responsible for creating the output directory specified as
+an argument, but subdirectories will be created as needed if the
+\fB-create-directories\fP option is supplied.  This option may be
+used to apply transformations on files from one directory and write
+the transformed files to a different directory.  In conjunction with
+\fB-create-directories\fP, this option is designed to support
+transforming whole directory trees of files provided that the relative
+path of the input file is included as part the list of filenames.
 .TP
 .B "-orient \fI<orientation>"\fP
 \fRSet the image orientation attribute
@@ -3740,6 +3781,12 @@ Note that GraphicsMagick does not attempt to update any profile to
 reflect changes made to the image, e.g., rotation from portrait to landscape
 orientation, so it is possible that the preserved profile may contain
 invalid data.
+.TP
+.B "-preserve-timestamp"
+\fRpreserve the original timestamps of the file
+
+Use this option to preserve the original modification and access
+timestamps of the file, even if it has been modified.
 .TP
 .B "+progress"
 \fRdisable progress monitor and busy cursor
@@ -4259,6 +4306,10 @@ glasses are required to properly view the stereo image.
 All embedded profiles and text attributes are stripped from the image.
 This is useful for images used for the web, or when output files need
 to be as small as possible
+
+Be careful not to use this option to remove author, copyright, and
+license information that you are required to retain when redistributing
+an image.
 .TP
 .B "-stroke \fI<color>"\fP
 \fRcolor to use when stroking a graphic primitive
@@ -4456,6 +4507,7 @@ with a Gaussian operator of the given radius and standard deviation
 a radius of 0 to have the method select a suitable radius.
 
 The parameters are:
+
 .in 15
 
 .in 15
@@ -4497,6 +4549,7 @@ amount (default 0.05).
 
 .in 15
 
+
 .TP
 .B "-use-pixmap"
 \fRuse the pixmap
@@ -4532,6 +4585,7 @@ defines "virtual pixels" for use in operations that can access pixels outside
 the boundaries of an image.
 
 Choose from these methods:
+
 .in 15
 
 .in 15
@@ -4570,6 +4624,7 @@ Mirror the image.
 Tile the image.
 
 .in 15
+
 
 
 This option affects operations that use
@@ -9844,6 +9899,9 @@ Options, above.
 .B "-profile \fI<filename>"\fP
 \fRadd ICM, IPTC, or generic profile  to image
 .TP
+.B "-preserve-timestamp"
+\fRpreserve the original timestamps of the file
+.TP
 .B "-quality \fI<value>"\fP
 \fRJPEG/MIFF/PNG/TIFF compression level
 .TP
@@ -10413,35 +10471,35 @@ software was configured and the host system.
 .SH EXAMPLES
 To display the version information:
 
-  % gm -version
-  GraphicsMagick 1.3.19 2013-12-31 Q16 http://www.GraphicsMagick.org/
-  Copyright (C) 2002-2013 GraphicsMagick Group.
+  GraphicsMagick 1.3.27a 2017-12-11 Q16 http://www.GraphicsMagick.org/
+  Copyright (C) 2002-2017 GraphicsMagick Group.
   Additional copyrights and licenses apply to this software.
   See http://www.GraphicsMagick.org/www/Copyright.html for details.
   Feature Support:
-    Thread Safe              yes
+    Native Thread Safe       yes
     Large Files (> 32 bit)   yes
-    Large Memory (> 32 bit)  no
+    Large Memory (> 32 bit)  yes
     BZIP                     yes
     DPS                      no
     FlashPix                 no
     FreeType                 yes
     Ghostscript (Library)    no
-    JBIG                     no
+    JBIG                     yes
     JPEG-2000                yes
     JPEG                     yes
     Little CMS               yes
     Loadable Modules         no
-    OpenMP                   yes (201107)
+    OpenMP                   yes (201307)
     PNG                      yes
     TIFF                     yes
     TRIO                     no
-    UMEM                     yes
-    WMF                      no
+    UMEM                     no
+    WebP                     yes
+    WMF                      yes
     X11                      yes
     XML                      yes
     ZLIB                     yes
-  Host type: i386-pc-solaris2.11
+  Host type: x86_64-unknown-linux-gnu
   Configured using the command:
     ./configure  ...
   Final Build Parameters:

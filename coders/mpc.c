@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -476,8 +476,8 @@ static Image *ReadMPCImage(const ImageInfo *image_info,ExceptionInfo *exception)
                   }
                 if (LocaleCompare(keyword,"grayscale") == 0)
                   {
-		    if (LocaleCompare(values,"True") == 0)
-		      image->is_grayscale=MagickTrue;
+                    if (LocaleCompare(values,"True") == 0)
+                      image->is_grayscale=MagickTrue;
                     break;
                   }
                 if (LocaleCompare(keyword,"green-primary") == 0)
@@ -535,8 +535,8 @@ static Image *ReadMPCImage(const ImageInfo *image_info,ExceptionInfo *exception)
                   }
                 if (LocaleCompare(keyword,"monochrome") == 0)
                   {
-		    if (LocaleCompare(values,"True") == 0)
-		      image->is_monochrome=MagickTrue;
+                    if (LocaleCompare(values,"True") == 0)
+                      image->is_monochrome=MagickTrue;
                     break;
                   }
                 if (LocaleCompare(keyword,"montage") == 0)
@@ -715,7 +715,7 @@ static Image *ReadMPCImage(const ImageInfo *image_info,ExceptionInfo *exception)
 
     (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                           "id=\"%s\" class=%s compression=%s matte=%s "
-			  "columns=%lu rows=%lu depth=%u",
+                          "columns=%lu rows=%lu depth=%u",
                           id,ClassTypeToString(image->storage_class),
                           CompressionTypeToString(image->compression),
                           MagickBoolToString(image->matte),
@@ -759,6 +759,8 @@ static Image *ReadMPCImage(const ImageInfo *image_info,ExceptionInfo *exception)
               p=image->directory+strlen(image->directory);
             }
           c=ReadBlobByte(image);
+          if (c == EOF)
+            break;
           *p++=c;
         } while (c != '\0');
       }
@@ -930,6 +932,7 @@ ModuleExport void RegisterMPCImage(void)
   entry->encoder=(EncoderHandler) WriteMPCImage;
   entry->magick=(MagickHandler) IsMPC;
   entry->description="Magick Persistent Cache image format";
+  entry->seekable_stream=MagickTrue;
   entry->module="MPC";
   entry->coder_class=UnstableCoderClass;
   (void) RegisterMagickInfo(entry);
@@ -1012,15 +1015,18 @@ static MagickPassFail WriteMPCImage(const ImageInfo *image_info,Image *image)
 
   ImageProfileIterator
     profile_iterator;
-  
+
   const char
     *profile_name;
-  
+
   const unsigned char
     *profile_info;
-  
+
   size_t
     profile_length;
+
+  size_t
+    image_list_length;
 
   /*
     Open persistent cache.
@@ -1029,6 +1035,7 @@ static MagickPassFail WriteMPCImage(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFail)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -1229,7 +1236,7 @@ static MagickPassFail WriteMPCImage(const ImageInfo *image_info,Image *image)
       }
     /*
       Attached profiles.
-    */    
+    */
     profile_iterator=AllocateImageProfileIterator(image);
     if (profile_iterator)
       {
@@ -1352,7 +1359,7 @@ static MagickPassFail WriteMPCImage(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene++,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene++,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)

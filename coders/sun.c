@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -162,13 +162,13 @@ static unsigned int IsSUN(const unsigned char *magick,const size_t length)
 %
 %  The format of the DecodeImage method is:
 %
-%      unsigned int DecodeImage(const unsigned char *compressed_pixels,
+%      MagickPassFail DecodeImage(const unsigned char *compressed_pixels,
 %        const size_t length,unsigned char *pixels)
 %
 %  A description of each parameter follows:
 %
-%    o status:  Method DecodeImage returns True if all the pixels are
-%      uncompressed without error, otherwise False.
+%    o status:  Method DecodeImage returns True (MagickPass) if all the
+%      pixels are uncompressed without error, otherwise False (MagickFail).
 %
 %    o compressed_pixels:  The address of a byte (8 bits) array of compressed
 %      pixel data.
@@ -209,26 +209,37 @@ DecodeImage(const unsigned char *compressed_pixels,
   q=pixels;
   while (((size_t) (p-compressed_pixels) < compressed_size) &&
          ((size_t) (q-pixels) < pixels_size))
-  {
-    byte=(*p++);
-    if (byte != 128U)
-      *q++=byte;
-    else
-      {
-        /*
-          Runlength-encoded packet: <count><byte>
-        */
-        count=(*p++);
-        if (count > 0)
-          byte=(*p++);
-        while ((count >= 0) && ((size_t) (q-pixels) < pixels_size))
+    {
+      byte=(*p++);
+      if (byte != 128U)
         {
+          /*
+            Stand-alone byte
+          */
           *q++=byte;
-          count--;
         }
-     }
-  }
-  return (((size_t) (q-pixels) == pixels_size) ? MagickTrue : MagickFalse);
+      else
+        {
+          /*
+            Runlength-encoded packet: <count><byte>
+          */
+          if (((size_t) (p-compressed_pixels) >= compressed_size))
+            break;
+          count=(*p++);
+          if (count > 0)
+            {
+              if (((size_t) (p-compressed_pixels) >= compressed_size))
+                break;
+              byte=(*p++);
+            }
+          while ((count >= 0) && ((size_t) (q-pixels) < pixels_size))
+            {
+              *q++=byte;
+              count--;
+            }
+        }
+    }
+  return (((size_t) (q-pixels) == pixels_size) ? MagickPass : MagickFail);
 }
 
 /*
@@ -479,13 +490,19 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
       }
       default:
         ThrowReaderException(CoderError,ColormapTypeNotSupported,image)
-    } 
+    }
     image->matte=(sun_info.depth == 32);
     image->columns=sun_info.width;
     image->rows=sun_info.height;
     image->depth=8;
     if (sun_info.depth < 8)
       image->depth=sun_info.depth;
+
+    if (image_info->ping)
+      {
+        CloseBlob(image);
+        return(image);
+      }
 
     /*
       Compute bytes per line and bytes per image for an unencoded
@@ -511,15 +528,38 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
       if (bytes_per_image > sun_info.length)
         ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
 
-    if (image_info->ping)
-      {
-        CloseBlob(image);
-        return(image);
-      }
     if (sun_info.type == RT_ENCODED)
       sun_data_length=(size_t) sun_info.length;
     else
       sun_data_length=bytes_per_image;
+
+    /*
+      Verify that data length claimed by header is supported by file size
+    */
+    if (sun_info.type == RT_ENCODED)
+      {
+        if (sun_data_length < bytes_per_image/255U)
+          {
+            ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
+          }
+      }
+    if (BlobIsSeekable(image))
+      {
+        const magick_off_t file_size = GetBlobSize(image);
+        const magick_off_t current_offset = TellBlob(image);
+        if ((file_size > 0) &&
+            (current_offset > 0) &&
+            (file_size >= current_offset))
+        {
+          const magick_off_t remaining = file_size-current_offset;
+
+          if ((remaining == 0) || (remaining < (magick_off_t) sun_data_length))
+            {
+              ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+            }
+        }
+      }
+
     sun_data=MagickAllocateMemory(unsigned char *,sun_data_length);
     if (sun_data == (unsigned char *) NULL)
       ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,image);
@@ -537,8 +577,11 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
         */
         sun_pixels=MagickAllocateMemory(unsigned char *,bytes_per_image);
         if (sun_pixels == (unsigned char *) NULL)
-          ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,
-            image);
+          {
+            MagickFreeMemory(sun_data);
+            ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,
+                                 image);
+          }
         status &= DecodeImage(sun_data,sun_data_length,sun_pixels,bytes_per_image);
         MagickFreeMemory(sun_data);
         if (status != MagickPass)
@@ -566,6 +609,7 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
           for (bit=7; bit >= 0; bit--)
             {
               index=((*p) & (0x01 << bit) ? 0x01 : 0x00);
+              VerifyColormapIndex(image,index);
               indexes[x+7-bit]=index;
               q[x+7-bit]=image->colormap[index];
             }
@@ -576,6 +620,7 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
             for (bit=7; bit >= (long) (8-(image->columns % 8)); bit--)
               {
                 index=((*p) & (0x01 << bit) ? 0x01 : 0x00);
+                VerifyColormapIndex(image,index);
                 indexes[x+7-bit]=index;
                 q[x+7-bit]=image->colormap[index];
               }
@@ -589,7 +634,7 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
           if (QuantumTick(y,image->rows))
             if (!MagickMonitorFormatted(y,image->rows,exception,
                                         LoadImageText,image->filename,
-					image->columns,image->rows))
+                                        image->columns,image->rows))
               break;
       }
     else
@@ -619,10 +664,10 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
               if (QuantumTick(y,image->rows))
                 if (!MagickMonitorFormatted(y,image->rows,exception,
                                             LoadImageText,image->filename,
-					    image->columns,image->rows))
+                                            image->columns,image->rows))
                   break;
           }
-	}
+        }
       else
         {
           /*
@@ -665,10 +710,10 @@ static Image *ReadSUNImage(const ImageInfo *image_info,ExceptionInfo *exception)
               if (QuantumTick(y,image->rows))
                 if (!MagickMonitorFormatted(y,image->rows,exception,
                                             LoadImageText,image->filename,
-					    image->columns,image->rows))
+                                            image->columns,image->rows))
                   break;
           }
-	}
+        }
     MagickFreeMemory(sun_pixels);
     if (EOFBlob(image))
       {
@@ -832,6 +877,9 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
     number_pixels,
     scene;
 
+  size_t
+    image_list_length;
+
   /*
     Open output image file.
   */
@@ -839,6 +887,7 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -927,15 +976,19 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
           *q;
 
         size_t
-          length;
+          length,
+          pad;
 
         unsigned char
           *pixels;
 
         /*
           Allocate memory for pixels.
+
+          Scanlines are padded to 16-bit boundary so account for padding.
         */
-        length=image->columns*sizeof(PixelPacket);
+        pad=(image->columns & 0x01 ? 1 : 0);
+        length=(image->columns + pad) *sizeof(PixelPacket);
         pixels=MagickAllocateMemory(unsigned char *,length);
         if (pixels == (unsigned char *) NULL)
           ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,
@@ -965,7 +1018,7 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
             if (QuantumTick(y,image->rows))
               if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                           SaveImageText,image->filename,
-					  image->columns,image->rows))
+                                          image->columns,image->rows))
                 break;
         }
         MagickFreeMemory(pixels);
@@ -1017,7 +1070,7 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
               if (QuantumTick(y,image->rows))
                 if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                             SaveImageText,image->filename,
-					    image->columns,image->rows))
+                                            image->columns,image->rows))
                   break;
           }
         }
@@ -1052,14 +1105,14 @@ static unsigned int WriteSUNImage(const ImageInfo *image_info,Image *image)
               if (QuantumTick(y,image->rows))
                 if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                             SaveImageText,image->filename,
-					    image->columns,image->rows))
+                                            image->columns,image->rows))
                   break;
           }
         }
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    if (!MagickMonitorFormatted(scene++,GetImageListLength(image),
+    if (!MagickMonitorFormatted(scene++,image_list_length,
                                 &image->exception,SaveImagesText,
                                 image->filename))
       break;

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2017 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -436,12 +436,14 @@ MSLUnparsedEntityDeclaration(void *context,const xmlChar *name,
 }
 
 static void
-MSLSetDocumentLocator(void *ARGUNUSED(context),
-                      xmlSAXLocatorPtr ARGUNUSED(location))
+MSLSetDocumentLocator(void *context,
+                      xmlSAXLocatorPtr location)
 {
   /*   MSLInfo */
   /*     *msl_info; */
 
+  ARG_NOT_USED(context);
+  ARG_NOT_USED(location);
   /*
     Receive the document locator at startup, actually xmlDefaultSAXLocator.
   */
@@ -476,11 +478,12 @@ MSLStartDocument(void *context)
 }
 
 static void
-MSLEndDocument(void *ARGUNUSED(context))
+MSLEndDocument(void *context)
 {
   /*   MSLInfo */
   /*     *msl_info; */
 
+  ARG_NOT_USED(context);
   /*
     Called when the document end has been detected.
   */
@@ -668,7 +671,7 @@ MSLStartElement(void *context,const xmlChar *name,
             {
               Image
                 *newImage;
-          
+
               newImage=BlurImage(msl_info->image[n],radius,sigma,
                                  &msl_info->image[n]->exception);
               if (newImage == (Image *) NULL)
@@ -2651,18 +2654,19 @@ MSLStartElement(void *context,const xmlChar *name,
           }
         else if (LocaleCompare((char *) name,"resize") == 0)
           {
-            /* init the values */
-            width=msl_info->image[n]->columns;
-            height=msl_info->image[n]->rows;
-            x=0;
-            y=0;
-
             if (msl_info->image[n] == (Image *) NULL)
               {
                 ThrowException(msl_info->exception,OptionError,
                                NoImagesDefined,(char *) name);
                 break;
               }
+
+            /* init the values */
+            width=msl_info->image[n]->columns;
+            height=msl_info->image[n]->rows;
+            x=0;
+            y=0;
+
             if (attributes == (const xmlChar **) NULL)
               break;
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
@@ -4210,7 +4214,7 @@ MSLEndElement(void *context,const xmlChar *name)
                         DestroyImage(msl_info->image[msl_info->n]);
                         msl_info->image[msl_info->n]=(Image *) NULL;
                       }
-                    
+
                     DestroyDrawInfo(msl_info->draw_info[msl_info->n]);
                     msl_info->draw_info[msl_info->n]=(DrawInfo *) NULL;
 
@@ -4256,11 +4260,12 @@ MSLEndElement(void *context,const xmlChar *name)
 }
 
 static void
-MSLCharacters(void *ARGUNUSED(context),const xmlChar *c,int length)
+MSLCharacters(void *context,const xmlChar *c,int length)
 {
 /*   MSLInfo */
 /*     *msl_info; */
 
+  ARG_NOT_USED(context);
   /*
     Receiving some characters from the parser.
   */
@@ -4292,11 +4297,12 @@ MSLReference(void *context,const xmlChar *name)
 }
 
 static void
-MSLIgnorableWhitespace(void *ARGUNUSED(context),const xmlChar *c,int length)
+MSLIgnorableWhitespace(void *context,const xmlChar *c,int length)
 {
   /*   MSLInfo */
   /*     *msl_info; */
 
+  ARG_NOT_USED(context);
   /*
     Receiving some ignorable whitespaces from the parser.
   */
@@ -4306,12 +4312,13 @@ MSLIgnorableWhitespace(void *ARGUNUSED(context),const xmlChar *c,int length)
 }
 
 static void
-MSLProcessingInstructions(void *ARGUNUSED(context),const xmlChar *target,
+MSLProcessingInstructions(void *context,const xmlChar *target,
                           const xmlChar *data)
 {
   /*   MSLInfo */
   /*     *msl_info; */
 
+  ARG_NOT_USED(context);
   /*
     A processing instruction has been parsed.
   */
@@ -4322,11 +4329,12 @@ MSLProcessingInstructions(void *ARGUNUSED(context),const xmlChar *target,
 }
 
 static void
-MSLComment(void *ARGUNUSED(context),const xmlChar *value)
+MSLComment(void *context,const xmlChar *value)
 {
 /*   MSLInfo */
 /*     *msl_info; */
 
+  ARG_NOT_USED(context);
   /*
     A comment has been parsed.
   */
@@ -4536,7 +4544,7 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
                      msl_image->filename);
       return(False);
     }
-    
+
   /*
     Parse MSL file.
   */
@@ -4649,7 +4657,9 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
   MagickFreeMemory(msl_info.image);
   MagickFreeMemory(msl_info.group_info);
 
-  return((*image != (Image *) NULL) && 
+  CloseBlob(*image);
+
+  return((*image != (Image *) NULL) &&
          ((*image)->exception.severity == UndefinedException));
 }
 
@@ -4707,6 +4717,7 @@ RegisterMSLImage(void)
   entry->encoder=(EncoderHandler) WriteMSLImage;
   entry->description="Magick Scripting Language";
   entry->module="MSL";
+  entry->extension_treatment=IgnoreExtensionTreatment;
   (void) RegisterMagickInfo(entry);
 #endif /* defined(HasXML) */
 }

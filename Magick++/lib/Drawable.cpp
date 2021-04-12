@@ -1,6 +1,6 @@
 // This may look like C code, but it is really -*- C++ -*-
 //
-// Copyright Bob Friesenhahn, 1999 - 2013
+// Copyright Bob Friesenhahn, 1999 - 2016
 //
 // Implementation of Drawable (Graphic objects)
 //
@@ -299,7 +299,7 @@ Magick::DrawableBase* Magick::DrawableBezier::copy() const
 }
 
 //
-//Clip Path 
+//Clip Path
 //
 
 // Pop (terminate) Clip path definition
@@ -358,7 +358,7 @@ Magick::DrawableClipPath::~DrawableClipPath( void )
 }
 void Magick::DrawableClipPath::operator()( MagickLib::DrawContext context_ ) const
 {
-	DrawSetClipPath( context_, _id.c_str());
+        DrawSetClipPath( context_, _id.c_str());
 }
 Magick::DrawableBase* Magick::DrawableClipPath::copy() const
 {
@@ -1709,8 +1709,9 @@ void Magick::PathSmoothCurvetoAbs::operator()
       double x2 = p->x();
       double y2 = p->y();
       p++;
-      if(p != _coordinates.end() )
-        DrawPathCurveToSmoothAbsolute( context_, x2, y2, p->x(), p->y() );
+      if (p == _coordinates.end())
+        break;
+      DrawPathCurveToSmoothAbsolute( context_, x2, y2, p->x(), p->y() );
     }
 }
 Magick::VPathBase* Magick::PathSmoothCurvetoAbs::copy() const
@@ -1745,8 +1746,9 @@ void Magick::PathSmoothCurvetoRel::operator()
       double x2 = p->x();
       double y2 = p->y();
       p++;
-      if(p != _coordinates.end() )
-        DrawPathCurveToSmoothRelative( context_, x2, y2, p->x(), p->y() );
+      if (p == _coordinates.end())
+        break;
+      DrawPathCurveToSmoothRelative( context_, x2, y2, p->x(), p->y() );
     }
 }
 Magick::VPathBase* Magick::PathSmoothCurvetoRel::copy() const
@@ -1775,7 +1777,7 @@ MagickDLLDecl int Magick::operator >
 {
   return ( 0 );
 }
-MagickDLLDecl int Magick::operator < 
+MagickDLLDecl int Magick::operator <
 ( const Magick::PathQuadraticCurvetoArgs& /*left_*/,
   const Magick::PathQuadraticCurvetoArgs& /*right_*/ )
 {
@@ -1830,7 +1832,7 @@ Magick::PathQuadraticCurvetoAbs::PathQuadraticCurvetoAbs
   : _args(1,args_)
 {
 }
-Magick::PathQuadraticCurvetoAbs::PathQuadraticCurvetoAbs 
+Magick::PathQuadraticCurvetoAbs::PathQuadraticCurvetoAbs
 ( const PathQuadraticCurvetoArgsList &args_ )
   : _args(args_)
 {

@@ -10,21 +10,21 @@ GraphicsMagick Change Logs
    :description: GraphicsMagick is a robust collection of tools and
                  libraries to read, write, and manipulate an image in any
                  of the more popular image formats including GIF, JPEG,
-                 PNG, PDF, and Photo CD. With GraphicsMagick you can
+                 PNG, PDF, and WebP. With GraphicsMagick you can
                  create GIFs dynamically making it suitable for Web
                  applications. You can also resize, rotate, sharpen,
                  color reduce, or add special effects to an image and
                  save your completed work in the same or differing image
                  format.
 
-   :keywords: GraphicsMagick, Image Magick, Image Magic, PerlMagick,
-              Perl Magick, Perl Magic, CineMagick, PixelMagick, Pixel
-              Magic, WebMagick, Web Magic, visualization, image
-              processing, software development, simulation, image,
-              software, AniMagick, Animagic, Magick++
+   :keywords: GraphicsMagick, GM, PerlMagick, Perl Magick, Perl Magic,
+              image processing, software development, TclMagick, Magick++
 
 .. _GraphicsMagick : index.html
-.. _`This Year` : Changelog.html
+.. _2018 : Changelog.html
+.. _2017 : ChangeLog-2017.html
+.. _2016 : ChangeLog-2016.html
+.. _2015 : ChangeLog-2015.html
 .. _2014 : ChangeLog-2014.html
 .. _2013 : ChangeLog-2013.html
 .. _2012 : ChangeLog-2012.html
@@ -42,7 +42,13 @@ GraphicsMagick Change Logs
 
 The following are the ``GraphicsMagick`` change logs since 2001:
 
-  * `This Year`_ (1.3.21 released)
+  * 2018_ (1.3.28, 1.3.29, 1.3.30 released)
+
+  * 2017_ (1.3.26, 1.3.27, 1.3.27a released)
+
+  * 2016_ (1.3.24, 1.3.25 released)
+
+  * 2015_ (1.3.21 - 1.3.23 released)
 
   * 2014_ (1.3.20 released)
 
@@ -77,4 +83,4 @@ The following are the ``GraphicsMagick`` change logs since 2001:
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2018

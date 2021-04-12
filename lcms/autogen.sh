@@ -5,6 +5,7 @@ srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
 DIE=0
+ACLOCAL_FLAGS="-I m4"
 
 (test -f $srcdir/configure.ac) || {
     echo -n "**Error**: Directory $srcdir does not look like the"
@@ -76,8 +77,8 @@ esac
 	echo "Running autoheader..."
 	autoheader
       fi
-      echo "Running automake --add-missing --gnu -Wno-portability $am_opt ..."
-      automake --add-missing --gnu -Wno-portability $am_opt
+      echo "Running automake --add-missing -copy --gnu -Wno-portability $am_opt ..."
+      automake --add-missing --copy --gnu -Wno-portability $am_opt
       echo "Running autoconf ..."
       autoconf
 

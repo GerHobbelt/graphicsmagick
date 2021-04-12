@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.13.1: http://docutils.sourceforge.net/" />
 <title>error</title>
 <link rel="stylesheet" href="../docutils-api.css" type="text/css" />
 </head>
@@ -392,6 +392,8 @@ void ThrowLoggedException( <a class="reference external" href="../api/types.html
 <p>ThrowLoggedException() throws an exception with the specified severity code,
 reason, optional description, source filename, function name, and line
 number. If logging is enabled, the exception is also logged.</p>
+<p>If the exception already contains an ErrorException (or greater) or the
+existing exception is more severe, then it is ignored.</p>
 <p>The format of the ThrowLoggedException method is:</p>
 <pre class="literal-block">
 void ThrowLoggedException( <a class="reference external" href="../api/types.html#exceptioninfo">ExceptionInfo</a> *exception, const <a class="reference external" href="../api/types.html#exceptiontype">ExceptionType</a> severity,

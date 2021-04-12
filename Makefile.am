@@ -95,6 +95,10 @@ XFAIL_TESTS = \
 # should want to concatenate them.
 CHANGELOGS = \
 	ChangeLog \
+	ChangeLog.2017 \
+	ChangeLog.2016 \
+	ChangeLog.2015 \
+	ChangeLog.2014 \
 	ChangeLog.2013 \
 	ChangeLog.2012 \
 	ChangeLog.2011 \
@@ -366,6 +370,8 @@ SNAPSHOT_DIRECTORY=/ftp/pub/GraphicsMagick/snapshots
 snapshot: distcheck
 	$(MAKE) $(DIST_ARCHIVE_SRPM)
 	$(MAKE) $(DIST_WINDOWS_SRC_7ZIP)
+	$(RM) $(SNAPSHOT_DIRECTORY)/$(PACKAGE_NAME)-*.tar.*
+	$(RM) $(SNAPSHOT_DIRECTORY)/$(PACKAGE_NAME)-*-windows.7z
 	mv $(DIST_ARCHIVES) $(DIST_WINDOWS_SRC_7ZIP) $(DIST_ARCHIVE_SRPM) $(SNAPSHOT_DIRECTORY)/
 	cp $(top_srcdir)/ChangeLog $(SNAPSHOT_DIRECTORY)/ChangeLog.txt
 	cp $(top_srcdir)/www/Changelog.html $(SNAPSHOT_DIRECTORY)/ChangeLog.html
@@ -374,6 +380,7 @@ COVERITY_EMAIL=bfriesen@simple.dallas.tx.us
 COVERITY_TARBALL=GraphicsMagick.xz
 COVERITY_VERSION=snapshot-@PACKAGE_CHANGE_DATE@
 COVERITY_DESCRIPTION='Ubuntu Q@QuantumDepth@'
+# New URL is https://brb.synopsys.com/?project=GraphicsMagick
 coverity:
 	$(MAKE) clean
 	cov-build --dir cov-int $(MAKE)
@@ -397,3 +404,12 @@ coverity:
 #	$(MAKE) CFLAGS="$(CFLAGS) -fprofile-use"
 #
 #CLEANFILES = *.gcda *.gcno
+
+# Generate magick/symbols.h and wand/wand_symbols.h based on archive
+# library symbols
+GMMAGICKSYMBOLS=$(srcdir)/magick/symbols.h
+GMWANDSYMBOLS=$(srcdir)/wand/wand_symbols.h
+
+gmsymbols:
+	$(srcdir)/scripts/gmsymbols.sh magick/.libs/libGraphicsMagick.a MAGICK > $(GMMAGICKSYMBOLS)
+	$(srcdir)/scripts/gmsymbols.sh wand/.libs/libGraphicsMagickWand.a MAGICK_WAND > $(GMWANDSYMBOLS)

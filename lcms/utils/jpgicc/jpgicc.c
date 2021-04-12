@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------
 //
 //  Little Color Management System
-//  Copyright (c) 1998-2010 Marti Maria Saguer
+//  Copyright (c) 1998-2016 Marti Maria Saguer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -71,13 +71,6 @@ static struct my_error_mgr {
 
 
 cmsUInt16Number Alarm[4] = {128,128,128,0};
-
-// Out of mem
-static
-void OutOfMem(size_t size)
-{
-    FatalError("Out of memory on allocating %d bytes.", size);
-}
 
 
 static
@@ -840,7 +833,7 @@ void DoEmbedProfile(const char* ProfileFile)
         fclose(f);
         EmbedBuffer[EmbedLen] = 0;
 
-        write_icc_profile (&Compressor, EmbedBuffer, EmbedLen);
+        write_icc_profile (&Compressor, EmbedBuffer, (unsigned int) EmbedLen);
         free(EmbedBuffer);
 }
 
@@ -898,7 +891,7 @@ int DoTransform(cmsHTRANSFORM hXForm, int OutputColorSpace)
 // Transform one image
 
 static
-int TransformImage(char *cDefInpProf, char *cOutProf)
+int TransformImage(char *cDefInpProf, char *cOutputProf)
 {
        cmsHPROFILE hIn, hOut, hProof;
        cmsHTRANSFORM xform;
@@ -970,10 +963,10 @@ int TransformImage(char *cDefInpProf, char *cOutProf)
                 hIn = OpenStockProfile(0, cDefInpProf);
        }
 
-        if (cOutProf != NULL && cmsstrcasecmp(cOutProf, "*lab") == 0)
+        if (cOutputProf != NULL && cmsstrcasecmp(cOutputProf, "*lab") == 0)
             hOut = CreatePCS2ITU_ICC();
         else
-        hOut = OpenStockProfile(0, cOutProf);
+        hOut = OpenStockProfile(0, cOutputProf);
 
        hProof = NULL;
        if (cProofing != NULL) {
@@ -988,7 +981,7 @@ int TransformImage(char *cDefInpProf, char *cOutProf)
 
         if (!hIn)
             FatalError("Input profile couldn't be read.");
-        if (!hOut)
+        if (!lIsDeviceLink && !hOut)
             FatalError("Output profile couldn't be read.");
 
        // Assure both, input profile and input JPEG are on same colorspace

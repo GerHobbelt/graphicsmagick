@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2017 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -44,6 +44,12 @@
 % Add -rle or -scanline to add compression.  Add -transparent color to make color transparent.
 %
 */
+/*
+  Disable PALM writer by default since it is a work in progress.
+*/
+#if !defined(ENABLE_PALM_WRITER)
+#  define ENABLE_PALM_WRITER 0
+#endif /* if !defined(ENABLE_PALM_WRITER) */
 
 /*
   Include declarations.
@@ -85,7 +91,7 @@
 /*
   2 color (1 bit) palette
 */
-static unsigned char
+static const unsigned char
 PalmPalette1[2][3] =
   {
     {  0,  0,  0},
@@ -95,7 +101,7 @@ PalmPalette1[2][3] =
 /*
   4 color (2 bit) palette
 */
-static unsigned char
+static const unsigned char
 PalmPalette2[4][3] =
   {
     {  0,  0,  0},
@@ -107,7 +113,7 @@ PalmPalette2[4][3] =
 /*
   16 color (4 bit) palette
 */
-static unsigned char
+static const unsigned char
 PalmPalette4[16][3] =
   {
     {  0,  0,  0},
@@ -128,7 +134,7 @@ PalmPalette4[16][3] =
     {255,255,255}
   };
 
-static unsigned char
+static const unsigned char
 PalmPalette8[256][3] =
   {
     {   0,   0,   0 },
@@ -388,10 +394,11 @@ PalmPalette8[256][3] =
     { 255, 204, 255 },
     { 255, 255, 255 }
   };
+#if ENABLE_PALM_WRITER
 /*
  The 256 color system palette for Palm Computing Devices.
 */
-static unsigned char
+static const unsigned char
   PalmPalette[256][3] =
   {
     {255, 255,255},
@@ -651,6 +658,7 @@ static unsigned char
     {  0,   0,  0},
     {  0,   0,  0}
   };
+#endif /* ENABLE_PALM_WRITER */
 
 typedef struct _PalmHeader
 {
@@ -671,7 +679,7 @@ typedef struct _PalmHeader
   /* Version:
      0: Palm OS 1
      1: Palm OS 3, no transparency, no RLE compression.
-     2: Palm OS 3.5; transparency and RLE compression supported 
+     2: Palm OS 3.5; transparency and RLE compression supported
   */
   magick_uint8_t  version;
   /* Offset (in four byte words) to start of next image frame. */
@@ -710,10 +718,12 @@ typedef struct _PalmHeader
 /*
   Forward declarations.
 */
+#if ENABLE_PALM_WRITER
 static unsigned int
   WritePALMImage(const ImageInfo *,Image *);
+#endif /* #if ENABLE_PALM_WRITER */
 
-void LogPALMHeader(const PalmHeader* palm_header)
+static void LogPALMHeader(const PalmHeader* palm_header)
 {
   static const struct
   {
@@ -777,29 +787,29 @@ void LogPALMHeader(const PalmHeader* palm_header)
 
 static const unsigned char *
 GetPalmPaletteGivenBits(const unsigned int bits,
-                        size_t *size)
+                       size_t *entries)
 {
   const unsigned char
     *palette = (const unsigned char *) NULL;
 
-  *size=0;
+  *entries=0;
   switch (bits)
     {
     case 1:
       palette=(const unsigned char *) PalmPalette1;
-      *size=sizeof(PalmPalette1);
+      *entries=sizeof(PalmPalette1)/3U;
       break;
     case 2:
       palette=(const unsigned char *) PalmPalette2;
-      *size=sizeof(PalmPalette2);
+      *entries=sizeof(PalmPalette2)/3U;
       break;
     case 4:
       palette=(const unsigned char *) PalmPalette4;
-      *size=sizeof(PalmPalette4);
+      *entries=sizeof(PalmPalette4)/3U;
       break;
     case 8:
       palette=(const unsigned char *) PalmPalette8;
-      *size=sizeof(PalmPalette8);
+      *entries=sizeof(PalmPalette8)/3U;
       break;
     }
   return palette;
@@ -849,7 +859,7 @@ static Image *ReadPALMImage(const ImageInfo *image_info,
   Image
     *image;
 
-  IndexPacket
+  unsigned int
     index;
 
   long
@@ -871,6 +881,9 @@ static Image *ReadPALMImage(const ImageInfo *image_info,
     *lastrow,
     *one_row,
     *ptr;
+
+  size_t
+    alloc_size;
 
   unsigned int
     status;
@@ -983,141 +996,85 @@ static Image *ReadPALMImage(const ImageInfo *image_info,
   /*
     Initialize image colormap.
   */
-  if ((palm_header.bits_per_pixel < 16) &&
-      !AllocateImageColormap(image,1L << palm_header.bits_per_pixel))
-    ThrowPALMReaderException(ResourceLimitError,MemoryAllocationFailed,image);
-
   if ((palm_header.bits_per_pixel == 1) ||
       (palm_header.bits_per_pixel == 2) ||
       (palm_header.bits_per_pixel == 4) ||
-      ((palm_header.bits_per_pixel == 8) &&
-       !(palm_header.flags & PALM_HAS_COLORMAP_FLAG)))
+      (palm_header.bits_per_pixel == 8))
     {
-      const unsigned char
-        *palette;
-
       size_t
-        size;
+        palette_entries=0;
 
-      palette=GetPalmPaletteGivenBits(palm_header.bits_per_pixel,
-                                      &size);
-      if (palette)
+      const unsigned char
+        *fixed_palette = NULL;
+
+      if (!AllocateImageColormap(image,1UL << palm_header.bits_per_pixel))
+        ThrowPALMReaderException(ResourceLimitError,MemoryAllocationFailed,image);
+
+      if ((palm_header.bits_per_pixel == 8) &&
+          (palm_header.flags & PALM_HAS_COLORMAP_FLAG))
         {
-          if (image->logging)
-            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-                                  "Default %u bit palette of %"
-                                  MAGICK_SIZE_T_F "u bytes...",
-                                  palm_header.bits_per_pixel,
-                                  (MAGICK_SIZE_T) size);
-          for (index=0; index < image->colors; index++)
+          palette_entries = ReadBlobMSBShort(image);
+
+          if (EOFBlob(image))
+            ThrowPALMReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+          if (palette_entries > image->colors)
+            ThrowPALMReaderException(CorruptImageError,ColormapExceedsColorsLimit,image);
+        }
+
+      if (palette_entries == 0)
+        fixed_palette=GetPalmPaletteGivenBits(palm_header.bits_per_pixel, &palette_entries);
+      if (palette_entries == 0)
+        palette_entries=image->colors;
+
+      if (image->logging)
+        (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                              "%s %u bit palette with %" MAGICK_SIZE_T_F "u colors",
+                              fixed_palette ? "Default" : "Custom",
+                              palm_header.bits_per_pixel,
+                              (MAGICK_SIZE_T) palette_entries);
+
+      if (fixed_palette)
+        {
+          const unsigned char
+            *palette = fixed_palette;
+          for (index=0; index < palette_entries; index++)
             {
               image->colormap[index].red=ScaleCharToQuantum(*palette++);
               image->colormap[index].green=ScaleCharToQuantum(*palette++);
               image->colormap[index].blue=ScaleCharToQuantum(*palette++);
             }
         }
-    }
-
-  else if (palm_header.bits_per_pixel == 8)
-    {
-      i = 0;
-      if (palm_header.flags & PALM_HAS_COLORMAP_FLAG)
+      else if (palm_header.flags & PALM_HAS_COLORMAP_FLAG)
         {
-          unsigned int
-            count;
-
-          count = ReadBlobMSBShort(image);
-
-          if (image->logging)
-            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-                                  "Custom %u bit palette with %u colors (%"
-                                  MAGICK_SIZE_T_F "u bytes)...",
-                                  palm_header.bits_per_pixel,
-                                  count,
-                                  (MAGICK_SIZE_T) count*3);
-
-          if (count > image->colors)
-            ThrowPALMReaderException(CorruptImageError,ColormapExceedsColorsLimit,image);
-
           /*
             Is palette really written reversed?
           */
-          for (i = 0; i < count; i++)
+          for (i = 0; i < palette_entries; i++)
             {
               /* unsigned int r, g, b; */
               (void) ReadBlobByte(image);
-              index=255 - i;
+              index=(image->colors-1) - i;
               VerifyColormapIndex(image,index);
-#if 0
-              r=ReadBlobByte(image);
-              g=ReadBlobByte(image);
-              b=ReadBlobByte(image);
-              fprintf(stdout,"{ %3u, %3u, %3u },\n", r, g, b);
-#endif
-#if 1
               image->colormap[index].red = ScaleCharToQuantum(ReadBlobByte(image));
               image->colormap[index].green = ScaleCharToQuantum(ReadBlobByte(image));
               image->colormap[index].blue = ScaleCharToQuantum(ReadBlobByte(image));
-#endif
               if (EOFBlob(image))
                 ThrowPALMReaderException(CorruptImageError,UnexpectedEndOfFile,image);
             }
           /*
             Initialize remaining range ???.
           */
-          for (; i < (1U << palm_header.bits_per_pixel); i++)
+          for (; i < image->colors; i++)
             {
-              index=255 - i;
+              index=(image->colors-1) - i;
               image->colormap[index].red = 0;
               image->colormap[index].green = 0;
               image->colormap[index].blue = 0;
             }
         }
-#if 0
-      for (; i < (1U << palm_header.bits_per_pixel); i++)
-        {
-          index=255 - i;
-          VerifyColormapIndex(image,index);
-          image->colormap[index].red = ScaleCharToQuantum(PalmPalette[i][0]);
-          image->colormap[index].green = ScaleCharToQuantum(PalmPalette[i][1]);
-          image->colormap[index].blue = ScaleCharToQuantum(PalmPalette[i][2]);
-        }
-#endif
-#if 0
-      for (i=0; i < (1U << palm_header.bits_per_pixel); i++)
-        {
-          fprintf(stdout,"{ %3u, %3u, %3u },\n",
-                  ScaleQuantumToChar(image->colormap[i].red),
-                  ScaleQuantumToChar(image->colormap[i].green),
-                  ScaleQuantumToChar(image->colormap[i].blue));
-        }
-#endif
     }
 
-image->depth = 8;
-#if 0
-  if (palm_header.bits_per_pixel < 16)
-    {
-      image->storage_class = PseudoClass;
-      image->depth = 8;
-    }
-  else
-    {
-      image->storage_class = DirectClass;
-      image->depth = 8;
-    }
-#endif
-
-#if 0
-  if (image->storage_class == PseudoClass)
-    for (i=0; i < image->colors; i++)
-      fprintf(stderr,"%03u: %3u, %3u, %3u\n",
-              i,
-              ScaleQuantumToChar(image->colormap[i].red),
-              ScaleQuantumToChar(image->colormap[i].green),
-              ScaleQuantumToChar(image->colormap[i].blue));
-#endif
-
+  image->depth = 8;
   image->compression = NoCompression;
   if (palm_header.flags & PALM_IS_COMPRESSED_FLAG)
     {
@@ -1139,11 +1096,19 @@ image->depth = 8;
   if (CheckImagePixelLimits(image, exception) != MagickPass)
     ThrowPALMReaderException(ResourceLimitError,ImagePixelLimitExceeded,image);
 
-  one_row = MagickAllocateMemory(unsigned char *,Max(palm_header.bytes_per_row,2*image->columns));
+  alloc_size = Max(palm_header.bytes_per_row,MagickArraySize(2,image->columns));
+  one_row = MagickAllocateMemory(unsigned char *,alloc_size);
   if (one_row == (unsigned char *) NULL)
     ThrowPALMReaderException(ResourceLimitError,MemoryAllocationFailed,image);
+  (void) memset(one_row,0,alloc_size);
   if (palm_header.compression_type == PALM_COMPRESSION_SCANLINE)
-    lastrow = MagickAllocateMemory(unsigned char *,Max(palm_header.bytes_per_row,2*image->columns));
+    {
+      alloc_size = Max(palm_header.bytes_per_row,MagickArraySize(2,image->columns));
+      lastrow = MagickAllocateMemory(unsigned char *,alloc_size);
+      if (lastrow == (unsigned char *) NULL)
+        ThrowPALMReaderException(ResourceLimitError,MemoryAllocationFailed,image);
+      (void) memset(lastrow,0,alloc_size);
+    }
 
   mask = (1l << palm_header.bits_per_pixel) - 1;
 
@@ -1213,7 +1178,7 @@ image->depth = 8;
       indexes=AccessMutableIndexes(image);
       if (palm_header.bits_per_pixel == 16)
         {
-          if (image->columns > 2*palm_header.bytes_per_row)
+          if (image->columns > 2U*palm_header.bytes_per_row)
             ThrowPALMReaderException(CorruptImageError,CorruptImage,image);
           for (x=0; x < (long) image->columns; x++)
             {
@@ -1323,7 +1288,9 @@ ModuleExport void RegisterPALMImage(void)
 
   entry=SetMagickInfo("PALM");
   entry->decoder=ReadPALMImage;
+#if ENABLE_PALM_WRITER
   entry->encoder=WritePALMImage;
+#endif /* #if ENABLE_PALM_WRITER */
   entry->adjoin=False;
   entry->seekable_stream=True;
   entry->description="Palm pixmap";
@@ -1385,7 +1352,7 @@ ModuleExport void UnregisterPALMImage(void)
 %
 %
 */
-#if 1
+#if ENABLE_PALM_WRITER
 static Image *
 CreatePALMMapImage(const unsigned int depth)
 {
@@ -1480,7 +1447,9 @@ OptimizePALMImage(const ImageInfo *image_info,
     {
       for (depth = 1; depth <= 8; depth *= 2)
         {
-          fprintf(stderr,"Depth %u\n",depth);
+          if (image->logging)
+                (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                      "Trying depth %u",depth);
           /*
             Get PALM map image for depth.
           */
@@ -1497,13 +1466,13 @@ OptimizePALMImage(const ImageInfo *image_info,
           /*
             Make sure that image is in an RGB type space.
           */
-          if (!TransformColorspace(palm_image,RGBColorspace))
+          if (TransformColorspace(palm_image,RGBColorspace) == MagickFail)
             break;
 
           /*
             Map optimize image to colormap without dithering.
           */
-          if (!MapImage(palm_image, map_image, False))
+          if (MapImage(palm_image, map_image, False) == MagickFail)
             break;
 
           /*
@@ -1543,8 +1512,8 @@ OptimizePALMImage(const ImageInfo *image_info,
           /*
             Replace colormap in optimize image with map image palette.
           */
-          if (!ReplaceImageColormap(palm_image,map_image->colormap,
-                                    map_image->colors))
+          if (ReplaceImageColormap(palm_image,map_image->colormap,
+                                    map_image->colors) == MagickFail)
             break;
 
           DestroyImage(map_image);
@@ -1589,7 +1558,7 @@ OptimizePALMImage(const ImageInfo *image_info,
               /*
                 Make sure that image is in an RGB type space.
               */
-              if (!TransformColorspace(palm_image,RGBColorspace))
+              if (TransformColorspace(palm_image,RGBColorspace) == MagickFail)
                 break;
 
               GetQuantizeInfo(&quantize_info);
@@ -1617,7 +1586,7 @@ OptimizePALMImage(const ImageInfo *image_info,
 
                   DestroyImage(palm_image);
                   palm_image = (Image *) NULL;
- 
+
                   break;
                 }
 
@@ -1672,7 +1641,7 @@ OptimizePALMImage(const ImageInfo *image_info,
 
   return palm_image;
 }
-#endif
+
 static unsigned int WritePALMImage(const ImageInfo *image_info,Image *image)
 {
   int
@@ -1840,10 +1809,17 @@ static unsigned int WritePALMImage(const ImageInfo *image_info,Image *image)
     }
 
   if (palm_image->compression == FaxCompression)
-    lastrow = MagickAllocateMemory(unsigned char *,bytes_per_row);
+    {
+      lastrow = MagickAllocateMemory(unsigned char *,bytes_per_row);
+      if (lastrow == (unsigned char *) NULL)
+        ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,image);
+    }
   one_row = MagickAllocateMemory(unsigned char *,bytes_per_row);
   if (one_row == (unsigned char *) NULL)
-    ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,image);
+    {
+      MagickFreeMemory(lastrow);
+      ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,image);
+    }
 
   ClearPixelPacket(&transpix);
   for (y=0; y < (int) palm_image->rows; y++)
@@ -1882,7 +1858,7 @@ static unsigned int WritePALMImage(const ImageInfo *image_info,Image *image)
             {
               if (bits_per_pixel < 8) /* Make sure we use the entire colorspace for bits_per_pixel */
                 color = (unsigned char) (indexes[x] * ((1 << bits_per_pixel) - 1) /
-                                         (palm_image->colors - 1));
+                                         (palm_image->colors - 1)); /* FIXME: /0 */
               else
                 color = (unsigned char) indexes[x];
               byte |= color << bit;
@@ -1908,7 +1884,7 @@ static unsigned int WritePALMImage(const ImageInfo *image_info,Image *image)
             {
               byte = one_row[x];
               count = 1;
-              while (one_row[++x] == byte && count < 255 && x < (long) bytes_per_row)
+              while (one_row[++x] == byte && count < 255 && x < (long) bytes_per_row) /* FIXME: overrun */
                 count++;
               (void) WriteBlobByte(image, count);
               (void) WriteBlobByte(image, byte);
@@ -1979,3 +1955,4 @@ static unsigned int WritePALMImage(const ImageInfo *image_info,Image *image)
   MagickFreeMemory(lastrow);
   return(True);
 }
+#endif /* if ENABLE_PALM_WRITER */

@@ -45,6 +45,15 @@
 #undef LoadImagesText
 #undef SaveImagesText
 
+#if defined(PREFIX_MAGICK_SYMBOLS)
+
+#define LoadImageText GmLoadImageText
+#define LoadImagesText GmLoadImagesText
+#define SaveImageText GmSaveImageText
+#define SaveImagesText GmSaveImagesText
+
+#endif /* defined(PREFIX_MAGICK_SYMBOLS) */
+
 extern MagickExport const char
   *LoadImageText,
   *LoadImagesText,
@@ -283,7 +292,7 @@ MagickExport unsigned int PopImagePixels(const Image *image,
 {
   unsigned int
     quantum_size;
-  
+
   quantum_size=image->depth;
 
   if (quantum_size <= 8)
@@ -306,7 +315,7 @@ MagickExport unsigned int PopImagePixels(const Image *image,
   if (image->logging)
     (void) LogMagickEvent(DeprecateEvent,GetMagickModule(),
                           "Method has been deprecated");
-  
+
   return ExportImagePixelArea(image,quantum_type,quantum_size,destination,0,0);
 }
 

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------
 //
 //  Little Color Management System
-//  Copyright (c) 1998-2011 Marti Maria Saguer
+//  Copyright (c) 1998-2016 Marti Maria Saguer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -30,9 +30,9 @@
 // This file implements every single tag and tag type as described in the ICC spec. Some types
 // have been deprecated, like ncl and Data. There is no implementation for those types as there
 // are no profiles holding them. The programmer can also extend this list by defining his own types
-// by using the appropiate plug-in. There are three types of plug ins regarding that. First type
+// by using the appropriate plug-in. There are three types of plug ins regarding that. First type
 // allows to define new tags using any existing type. Next plug-in type allows to define new types
-// and the third one is very specific: allows to extend the number of elements in the multiprofile
+// and the third one is very specific: allows to extend the number of elements in the multiprocessing
 // elements special type.
 //--------------------------------------------------------------------------------------------------
 
@@ -60,54 +60,49 @@ typedef struct _cmsTagTypeLinkedList_st {
 // Helper macro to define a MPE handler. Callbacks do have a fixed naming convention
 #define TYPE_MPE_HANDLER(t, x)  { (t), READ_FN(x), WRITE_FN(x), GenericMPEdup, GenericMPEfree, NULL, 0 }
 
-// Register a new type handler. This routine is shared between normal types and MPE
+// Register a new type handler. This routine is shared between normal types and MPE. LinkedList points to the optional list head
 static
-cmsBool RegisterTypesPlugin(cmsContext id, cmsPluginBase* Data, _cmsTagTypeLinkedList* LinkedList, cmsUInt32Number DefaultListCount)
+cmsBool RegisterTypesPlugin(cmsContext id, cmsPluginBase* Data, _cmsMemoryClient pos)
 {
     cmsPluginTagType* Plugin = (cmsPluginTagType*) Data;
-    _cmsTagTypeLinkedList *pt, *Anterior = NULL;
+    _cmsTagTypePluginChunkType* ctx = ( _cmsTagTypePluginChunkType*) _cmsContextGetClientChunk(id, pos);
+    _cmsTagTypeLinkedList *pt;
 
     // Calling the function with NULL as plug-in would unregister the plug in.
     if (Data == NULL) {
 
-        LinkedList[DefaultListCount-1].Next = NULL;
+        // There is no need to set free the memory, as pool is destroyed as a whole.
+        ctx ->TagTypes = NULL;
         return TRUE;
     }
 
-    pt = Anterior = LinkedList;
-    while (pt != NULL) {
-
-        if (Plugin->Handler.Signature == pt -> Handler.Signature) {
-            pt ->Handler = Plugin ->Handler;    // Replace old behaviour.
-            // Note that since no memory is allocated, unregister does not
-            // reset this action.
-            return TRUE;
-        }
-
-        Anterior = pt;
-        pt = pt ->Next;
-    }
-
-    // Registering happens in plug-in memory pool
+    // Registering happens in plug-in memory pool.
     pt = (_cmsTagTypeLinkedList*) _cmsPluginMalloc(id, sizeof(_cmsTagTypeLinkedList));
     if (pt == NULL) return FALSE;
 
     pt ->Handler   = Plugin ->Handler;
-    pt ->Next      = NULL;
+    pt ->Next      = ctx ->TagTypes;
 
-    if (Anterior)
-        Anterior -> Next = pt;
-
+    ctx ->TagTypes = pt;
+     
     return TRUE;
 }
 
-// Return handler for a given type or NULL if not found. Shared between normal types and MPE
+// Return handler for a given type or NULL if not found. Shared between normal types and MPE. It first tries the additons 
+// made by plug-ins and then the built-in defaults.
 static
-cmsTagTypeHandler* GetHandler(cmsTagTypeSignature sig, _cmsTagTypeLinkedList* LinkedList)
+cmsTagTypeHandler* GetHandler(cmsTagTypeSignature sig, _cmsTagTypeLinkedList* PluginLinkedList, _cmsTagTypeLinkedList* DefaultLinkedList)
 {
     _cmsTagTypeLinkedList* pt;
 
-    for (pt = LinkedList;
+    for (pt = PluginLinkedList;
+         pt != NULL;
+         pt = pt ->Next) {
+
+            if (sig == pt -> Handler.Signature) return &pt ->Handler;
+    }
+
+    for (pt = DefaultLinkedList;
          pt != NULL;
          pt = pt ->Next) {
 
@@ -118,7 +113,7 @@ cmsTagTypeHandler* GetHandler(cmsTagTypeSignature sig, _cmsTagTypeLinkedList* Li
 }
 
 
-// Auxiliar to convert UTF-32 to UTF-16 in some cases
+// Auxiliary to convert UTF-32 to UTF-16 in some cases
 static
 cmsBool _cmsWriteWCharArray(cmsIOHANDLER* io, cmsUInt32Number n, const wchar_t* Array)
 {
@@ -134,6 +129,7 @@ cmsBool _cmsWriteWCharArray(cmsIOHANDLER* io, cmsUInt32Number n, const wchar_t* 
     return TRUE;
 }
 
+// Auxiliary to read an array of wchar_t
 static
 cmsBool _cmsReadWCharArray(cmsIOHANDLER* io, cmsUInt32Number n, wchar_t* Array)
 {
@@ -164,7 +160,7 @@ typedef cmsBool (* PositionTableEntryFn)(struct _cms_typehandler_struct* self,
                                              cmsUInt32Number n,
                                              cmsUInt32Number SizeOfTag);
 
-// Helper function to deal with position tables as decribed in ICC spec 4.3
+// Helper function to deal with position tables as described in ICC spec 4.3
 // A table of n elements is readed, where first comes n records containing offsets and sizes and
 // then a block containing the data itself. This allows to reuse same data in more than one entry
 static
@@ -748,6 +744,8 @@ cmsBool Type_Text_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, 
 
     // Create memory
     Text = (char*) _cmsMalloc(self ->ContextID, size);
+    if (Text == NULL) return FALSE;
+
     cmsMLUgetASCII(mlu, cmsNoLanguage, cmsNoCountry, Text, size);
 
     // Write it, including separator
@@ -953,7 +951,7 @@ cmsBool  Type_Text_Description_Write(struct _cms_typehandler_struct* self, cmsIO
     cmsMLU* mlu = (cmsMLU*) Ptr;
     char *Text = NULL;
     wchar_t *Wide = NULL;
-    cmsUInt32Number len, len_aligned, len_filler_alignment;
+    cmsUInt32Number len, len_text, len_tag_requirement, len_aligned;
     cmsBool  rc = FALSE;
     char Filler[68];
 
@@ -963,17 +961,18 @@ cmsBool  Type_Text_Description_Write(struct _cms_typehandler_struct* self, cmsIO
     // Get the len of string
     len = cmsMLUgetASCII(mlu, cmsNoLanguage, cmsNoCountry, NULL, 0);
 
-    // From ICC3.4: It has been found that textDescriptionType can contain misaligned data
+    // Specification ICC.1:2001-04 (v2.4.0): It has been found that textDescriptionType can contain misaligned data
     //(see clause 4.1 for the definition of “aligned”). Because the Unicode language
     // code and Unicode count immediately follow the ASCII description, their
     // alignment is not correct if the ASCII count is not a multiple of four. The
     // ScriptCode code is misaligned when the ASCII count is odd. Profile reading and
     // writing software must be written carefully in order to handle these alignment
     // problems.
-
-    // Compute an aligned size
-    len_aligned = _cmsALIGNLONG(len);
-    len_filler_alignment = len_aligned - len;
+    //
+    // The above last sentence suggest to handle alignment issues in the
+    // parser. The provided example (Table 69 on Page 60) makes this clear. 
+    // The padding only in the ASCII count is not sufficient for a aligned tag
+    // size, with the same text size in ASCII and Unicode.
 
     // Null strings
     if (len <= 0) {
@@ -994,6 +993,12 @@ cmsBool  Type_Text_Description_Write(struct _cms_typehandler_struct* self, cmsIO
         cmsMLUgetWide(mlu,  cmsNoLanguage, cmsNoCountry,  Wide, len * sizeof(wchar_t));
     }
 
+    // Tell the real text len including the null terminator and padding
+    len_text = (cmsUInt32Number) strlen(Text) + 1;
+    // Compute an total tag size requirement
+    len_tag_requirement = (8+4+len_text+4+4+2*len_text+2+1+67);
+    len_aligned = _cmsALIGNLONG(len_tag_requirement);
+
   // * cmsUInt32Number       count;          * Description length
   // * cmsInt8Number         desc[count]     * NULL terminated ascii string
   // * cmsUInt32Number       ucLangCode;     * UniCode language code
@@ -1003,26 +1008,24 @@ cmsBool  Type_Text_Description_Write(struct _cms_typehandler_struct* self, cmsIO
   // * cmsUInt8Number        scCount;        * ScriptCode count
   // * cmsInt8Number         scDesc[67];     * ScriptCode Description
 
-    if (!_cmsWriteUInt32Number(io, len_aligned)) goto Error;
-    if (!io ->Write(io, len, Text)) goto Error;
-    if (!io ->Write(io, len_filler_alignment, Filler)) goto Error;
+    if (!_cmsWriteUInt32Number(io, len_text)) goto Error;
+    if (!io ->Write(io, len_text, Text)) goto Error;
 
     if (!_cmsWriteUInt32Number(io, 0)) goto Error;  // ucLanguageCode
 
-    // This part is tricky: we need an aligned tag size, and the ScriptCode part
-    // takes 70 bytes, so we need 2 extra bytes to do the alignment
-
-    if (!_cmsWriteUInt32Number(io, len_aligned+1)) goto Error;
-
+    if (!_cmsWriteUInt32Number(io, len_text)) goto Error;
     // Note that in some compilers sizeof(cmsUInt16Number) != sizeof(wchar_t)
-    if (!_cmsWriteWCharArray(io, len, Wide)) goto Error;
-    if (!_cmsWriteUInt16Array(io, len_filler_alignment+1, (cmsUInt16Number*) Filler)) goto Error;
+    if (!_cmsWriteWCharArray(io, len_text, Wide)) goto Error;
 
     // ScriptCode Code & count (unused)
     if (!_cmsWriteUInt16Number(io, 0)) goto Error;
     if (!_cmsWriteUInt8Number(io, 0)) goto Error;
 
     if (!io ->Write(io, 67, Filler)) goto Error;
+
+    // possibly add pad at the end of tag
+    if(len_aligned - len_tag_requirement > 0)
+      if (!io ->Write(io, len_aligned - len_tag_requirement, Filler)) goto Error;
 
     rc = TRUE;
 
@@ -1456,7 +1459,7 @@ void *Type_MLU_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cmsU
         if (!_cmsReadUInt32Number(io, &Offset)) goto Error;
 
         // Check for overflow
-        if (Offset < (SizeOfHeader + 8)) goto Error;
+        if ((Offset + Len) > SizeOfTag + 8) goto Error;
 
         // True begin of the string
         BeginOfThisString = Offset - SizeOfHeader - 8;
@@ -1471,7 +1474,7 @@ void *Type_MLU_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cmsU
             LargestPosition = EndOfThisString;
     }
 
-    // Now read the remaining of tag and fill all strings. Substract the directory
+    // Now read the remaining of tag and fill all strings. Subtract the directory
     SizeOfTag   = (LargestPosition * sizeof(wchar_t)) / sizeof(cmsUInt16Number);
     if (SizeOfTag == 0)
     {
@@ -1505,7 +1508,7 @@ cmsBool  Type_MLU_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, 
     cmsMLU* mlu =(cmsMLU*) Ptr;
     cmsUInt32Number HeaderSize;
     cmsUInt32Number  Len, Offset;
-    int i;
+    cmsUInt32Number i;
 
     if (Ptr == NULL) {
 
@@ -1691,10 +1694,7 @@ cmsBool Write8bitTables(cmsContext ContextID, cmsIOHANDLER* io, cmsUInt32Number 
                 else
                     for (j=0; j < 256; j++) {
 
-                        if (Tables != NULL)
-                            val = (cmsUInt8Number) FROM_16_TO_8(Tables->TheCurves[i]->Table16[j]);
-                        else
-                            val = (cmsUInt8Number) j;
+                        val = (cmsUInt8Number) FROM_16_TO_8(Tables->TheCurves[i]->Table16[j]);
 
                         if (!_cmsWriteUInt8Number(io, val)) return FALSE;
                     }
@@ -1754,7 +1754,6 @@ void *Type_LUT8_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cms
     if (!_cmsReadUInt8Number(io, NULL)) goto Error;
 
     // Do some checking
-
     if (InputChannels > cmsMAXCHANNELS)  goto Error;
     if (OutputChannels > cmsMAXCHANNELS) goto Error;
 
@@ -1795,9 +1794,16 @@ void *Type_LUT8_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cms
         if (T  == NULL) goto Error;
 
         Temp = (cmsUInt8Number*) _cmsMalloc(self ->ContextID, nTabSize);
-        if (Temp == NULL) goto Error;
+        if (Temp == NULL) {
+            _cmsFree(self ->ContextID, T);
+            goto Error;
+        }
 
-        if (io ->Read(io, Temp, nTabSize, 1) != 1) goto Error;
+        if (io ->Read(io, Temp, nTabSize, 1) != 1) {
+            _cmsFree(self ->ContextID, T);
+            _cmsFree(self ->ContextID, Temp);
+            goto Error;
+        }
 
         for (i = 0; i < nTabSize; i++) {
 
@@ -2342,27 +2348,30 @@ cmsStage* ReadCLUT(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cmsUI
     // Precision can be 1 or 2 bytes
     if (Precision == 1) {
 
-       cmsUInt8Number  v;
+        cmsUInt8Number  v;
 
         for (i=0; i < Data ->nEntries; i++) {
 
-                if (io ->Read(io, &v, sizeof(cmsUInt8Number), 1) != 1) return NULL;
-                Data ->Tab.T[i] = FROM_8_TO_16(v);
+            if (io ->Read(io, &v, sizeof(cmsUInt8Number), 1) != 1) return NULL;
+            Data ->Tab.T[i] = FROM_8_TO_16(v);
         }
 
     }
     else
         if (Precision == 2) {
 
-            if (!_cmsReadUInt16Array(io, Data->nEntries, Data ->Tab.T)) return NULL;
-    }
-    else {
-        cmsSignalError(self ->ContextID, cmsERROR_UNKNOWN_EXTENSION, "Unknown precision of '%d'", Precision);
-        return NULL;
-    }
+            if (!_cmsReadUInt16Array(io, Data->nEntries, Data ->Tab.T)) {
+                cmsStageFree(CLUT);
+                return NULL;
+            }
+        }
+        else {
+            cmsStageFree(CLUT);
+            cmsSignalError(self ->ContextID, cmsERROR_UNKNOWN_EXTENSION, "Unknown precision of '%d'", Precision);
+            return NULL;
+        }
 
-
-    return CLUT;
+        return CLUT;
 }
 
 static
@@ -3100,6 +3109,8 @@ void *Type_NamedColor_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* i
 
         memset(Colorant, 0, sizeof(Colorant));
         if (io -> Read(io, Root, 32, 1) != 1) return NULL;
+        Root[32] = 0;  // To prevent exploits
+
         if (!_cmsReadUInt16Array(io, 3, PCS)) goto Error;
         if (!_cmsReadUInt16Array(io, nDeviceCoords, Colorant)) goto Error;
 
@@ -3122,8 +3133,8 @@ static
 cmsBool Type_NamedColor_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, void* Ptr, cmsUInt32Number nItems)
 {
     cmsNAMEDCOLORLIST* NamedColorList = (cmsNAMEDCOLORLIST*) Ptr;
-    char                prefix[32];     // Prefix for each color name
-    char                suffix[32];     // Suffix for each color name
+    char                prefix[33];     // Prefix for each color name
+    char                suffix[33];     // Suffix for each color name
     int i, nColors;
 
     nColors = cmsNamedColorCount(NamedColorList);
@@ -3135,7 +3146,7 @@ cmsBool Type_NamedColor_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER
     strncpy(prefix, (const char*) NamedColorList->Prefix, 32);
     strncpy(suffix, (const char*) NamedColorList->Suffix, 32);
 
-    suffix[31] = prefix[31] = 0;
+    suffix[32] = prefix[32] = 0;
 
     if (!io ->Write(io, 32, prefix)) return FALSE;
     if (!io ->Write(io, 32, suffix)) return FALSE;
@@ -3147,6 +3158,7 @@ cmsBool Type_NamedColor_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER
        char Root[33];
 
         if (!cmsNamedColorInfo(NamedColorList, i, Root, NULL, NULL, PCS, Colorant)) return 0;
+        Root[32] = 0;
         if (!io ->Write(io, 32 , Root)) return FALSE;
         if (!_cmsWriteUInt16Array(io, 3, PCS)) return FALSE;
         if (!_cmsWriteUInt16Array(io, NamedColorList ->ColorantCount, Colorant)) return FALSE;
@@ -3597,7 +3609,7 @@ country varies for each element:
 
 
 
-// Auxiliar, read an string specified as count + string
+// Auxiliary, read an string specified as count + string
 static
 cmsBool  ReadCountAndSting(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, cmsMLU* mlu, cmsUInt32Number* SizeOfTag, const char* Section)
 {
@@ -3846,7 +3858,7 @@ cmsBool Type_ViewingConditions_Write(struct _cms_typehandler_struct* self, cmsIO
 static
 void* Type_ViewingConditions_Dup(struct _cms_typehandler_struct* self, const void *Ptr, cmsUInt32Number n)
 {
-   return _cmsDupMem(self ->ContextID, Ptr, sizeof(cmsScreening));
+   return _cmsDupMem(self->ContextID, Ptr, sizeof(cmsICCViewingConditions));
 
    cmsUNUSED_PARAMETER(n);
 }
@@ -4300,13 +4312,13 @@ Error:
 static
 cmsBool  Type_MPEclut_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, void* Ptr, cmsUInt32Number nItems)
 {
-    cmsUInt8Number Dimensions8[16];
+    cmsUInt8Number Dimensions8[16];  // 16 because the spec says 16 and not max number of channels
     cmsUInt32Number i;
     cmsStage* mpe = (cmsStage*) Ptr;
     _cmsStageCLutData* clut = (_cmsStageCLutData*) mpe ->Data;
 
-    // Check for maximum number of channels
-    if (mpe -> InputChannels > 15) return FALSE;
+    // Check for maximum number of channels supported by lcms
+    if (mpe -> InputChannels > MAX_INPUT_DIMENSIONS) return FALSE;
 
     // Only floats are supported in MPE
     if (clut ->HasFloatValues == FALSE) return FALSE;
@@ -4345,7 +4357,7 @@ static _cmsTagTypeLinkedList SupportedMPEtypes[] = {
 {TYPE_MPE_HANDLER((cmsTagTypeSignature) cmsSigCLutElemType,         MPEclut),        NULL },
 };
 
-#define DEFAULT_MPE_TYPE_COUNT  (sizeof(SupportedMPEtypes) / sizeof(_cmsTagTypeLinkedList))
+_cmsTagTypePluginChunkType _cmsMPETypePluginChunk = { NULL };
 
 static
 cmsBool ReadMPEElem(struct _cms_typehandler_struct* self,
@@ -4358,6 +4370,8 @@ cmsBool ReadMPEElem(struct _cms_typehandler_struct* self,
     cmsTagTypeHandler* TypeHandler;
     cmsUInt32Number nItems;
     cmsPipeline *NewLUT = (cmsPipeline *) Cargo;
+    _cmsTagTypePluginChunkType* MPETypePluginChunk  = ( _cmsTagTypePluginChunkType*) _cmsContextGetClientChunk(self->ContextID, MPEPlugin);
+
 
     // Take signature and channels for each element.
     if (!_cmsReadUInt32Number(io, (cmsUInt32Number*) &ElementSig)) return FALSE;
@@ -4366,7 +4380,7 @@ cmsBool ReadMPEElem(struct _cms_typehandler_struct* self,
     if (!_cmsReadUInt32Number(io, NULL)) return FALSE;
 
     // Read diverse MPE types
-    TypeHandler = GetHandler((cmsTagTypeSignature) ElementSig, SupportedMPEtypes);
+    TypeHandler = GetHandler((cmsTagTypeSignature) ElementSig, MPETypePluginChunk ->TagTypes, SupportedMPEtypes);
     if (TypeHandler == NULL)  {
 
         char String[5];
@@ -4443,6 +4457,7 @@ cmsBool Type_MPE_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, v
     cmsPipeline* Lut = (cmsPipeline*) Ptr;
     cmsStage* Elem = Lut ->Elements;
     cmsTagTypeHandler* TypeHandler;
+    _cmsTagTypePluginChunkType* MPETypePluginChunk  = ( _cmsTagTypePluginChunkType*) _cmsContextGetClientChunk(self->ContextID, MPEPlugin);
 
     BaseOffset = io ->Tell(io) - sizeof(_cmsTagBase);
 
@@ -4476,7 +4491,7 @@ cmsBool Type_MPE_Write(struct _cms_typehandler_struct* self, cmsIOHANDLER* io, v
 
         ElementSig = Elem ->Type;
 
-        TypeHandler = GetHandler((cmsTagTypeSignature) ElementSig, SupportedMPEtypes);
+        TypeHandler = GetHandler((cmsTagTypeSignature) ElementSig, MPETypePluginChunk->TagTypes, SupportedMPEtypes);
         if (TypeHandler == NULL)  {
 
                 char String[5];
@@ -5096,7 +5111,7 @@ void *Type_Dictionary_Read(struct _cms_typehandler_struct* self, cmsIOHANDLER* i
         }
         else {
 
-        rc = cmsDictAddEntry(hDict, NameWCS, ValueWCS, DisplayNameMLU, DisplayValueMLU);
+            rc = cmsDictAddEntry(hDict, NameWCS, ValueWCS, DisplayNameMLU, DisplayValueMLU);
         }
 
         if (NameWCS != NULL) _cmsFree(self ->ContextID, NameWCS);
@@ -5253,24 +5268,95 @@ static _cmsTagTypeLinkedList SupportedTagTypes[] = {
 {TYPE_HANDLER(cmsSigVcgtType,                  vcgt),                NULL }
 };
 
-#define DEFAULT_TAG_TYPE_COUNT  (sizeof(SupportedTagTypes) / sizeof(_cmsTagTypeLinkedList))
+
+_cmsTagTypePluginChunkType _cmsTagTypePluginChunk = { NULL };
+
+
+
+// Duplicates the zone of memory used by the plug-in in the new context
+static
+void DupTagTypeList(struct _cmsContext_struct* ctx, 
+                    const struct _cmsContext_struct* src, 
+                    int loc)
+{
+   _cmsTagTypePluginChunkType newHead = { NULL };
+   _cmsTagTypeLinkedList*  entry;
+   _cmsTagTypeLinkedList*  Anterior = NULL;
+   _cmsTagTypePluginChunkType* head = (_cmsTagTypePluginChunkType*) src->chunks[loc];
+
+   // Walk the list copying all nodes
+   for (entry = head->TagTypes;
+       entry != NULL;
+       entry = entry ->Next) {
+
+           _cmsTagTypeLinkedList *newEntry = ( _cmsTagTypeLinkedList *) _cmsSubAllocDup(ctx ->MemPool, entry, sizeof(_cmsTagTypeLinkedList));
+
+           if (newEntry == NULL) 
+               return;
+
+           // We want to keep the linked list order, so this is a little bit tricky
+           newEntry -> Next = NULL;
+           if (Anterior)
+               Anterior -> Next = newEntry;
+
+           Anterior = newEntry;
+
+           if (newHead.TagTypes == NULL)
+               newHead.TagTypes = newEntry;
+   }
+
+   ctx ->chunks[loc] = _cmsSubAllocDup(ctx->MemPool, &newHead, sizeof(_cmsTagTypePluginChunkType));
+}
+
+
+void _cmsAllocTagTypePluginChunk(struct _cmsContext_struct* ctx, 
+                                 const struct _cmsContext_struct* src)
+{
+    if (src != NULL) {
+        
+        // Duplicate the LIST
+        DupTagTypeList(ctx, src, TagTypePlugin);
+    }
+    else {
+        static _cmsTagTypePluginChunkType TagTypePluginChunk = { NULL };
+        ctx ->chunks[TagTypePlugin] = _cmsSubAllocDup(ctx ->MemPool, &TagTypePluginChunk, sizeof(_cmsTagTypePluginChunkType));
+    }
+}
+
+void _cmsAllocMPETypePluginChunk(struct _cmsContext_struct* ctx, 
+                               const struct _cmsContext_struct* src)
+{
+    if (src != NULL) {
+        
+        // Duplicate the LIST
+        DupTagTypeList(ctx, src, MPEPlugin);
+    }
+    else {
+        static _cmsTagTypePluginChunkType TagTypePluginChunk = { NULL };
+        ctx ->chunks[MPEPlugin] = _cmsSubAllocDup(ctx ->MemPool, &TagTypePluginChunk, sizeof(_cmsTagTypePluginChunkType));
+    }
+
+}
+
 
 // Both kind of plug-ins share same structure
 cmsBool  _cmsRegisterTagTypePlugin(cmsContext id, cmsPluginBase* Data)
 {
-    return RegisterTypesPlugin(id, Data, SupportedTagTypes, DEFAULT_TAG_TYPE_COUNT);
+    return RegisterTypesPlugin(id, Data, TagTypePlugin);
 }
 
 cmsBool  _cmsRegisterMultiProcessElementPlugin(cmsContext id, cmsPluginBase* Data)
 {
-    return RegisterTypesPlugin(id, Data, SupportedMPEtypes, DEFAULT_MPE_TYPE_COUNT);
+    return RegisterTypesPlugin(id, Data,MPEPlugin);
 }
 
 
 // Wrapper for tag types
-cmsTagTypeHandler* _cmsGetTagTypeHandler(cmsTagTypeSignature sig)
+cmsTagTypeHandler* _cmsGetTagTypeHandler(cmsContext ContextID, cmsTagTypeSignature sig)
 {
-    return GetHandler(sig, SupportedTagTypes);
+    _cmsTagTypePluginChunkType* ctx = ( _cmsTagTypePluginChunkType*) _cmsContextGetClientChunk(ContextID, TagTypePlugin);
+
+    return GetHandler(sig, ctx->TagTypes, SupportedTagTypes);
 }
 
 // ********************************************************************************
@@ -5370,8 +5456,9 @@ static _cmsTagLinkedList SupportedTags[] = {
     { cmsSigScreeningTag,           { 1, 1, { cmsSigScreeningType},          NULL }, &SupportedTags[59]},
     { cmsSigVcgtTag,                { 1, 1, { cmsSigVcgtType},               NULL }, &SupportedTags[60]},
     { cmsSigMetaTag,                { 1, 1, { cmsSigDictType},               NULL }, &SupportedTags[61]},
-    { cmsSigProfileSequenceIdTag,   { 1, 1, { cmsSigProfileSequenceIdType},  NULL },  &SupportedTags[62]},
-    { cmsSigProfileDescriptionMLTag,{ 1, 1, { cmsSigMultiLocalizedUnicodeType}, NULL}, NULL}
+    { cmsSigProfileSequenceIdTag,   { 1, 1, { cmsSigProfileSequenceIdType},  NULL }, &SupportedTags[62]},
+    { cmsSigProfileDescriptionMLTag,{ 1, 1, { cmsSigMultiLocalizedUnicodeType}, NULL}, &SupportedTags[63]},
+    { cmsSigArgyllArtsTag,          { 9, 1, { cmsSigS15Fixed16ArrayType},    NULL}, NULL}
 
 
 };
@@ -5385,30 +5472,68 @@ static _cmsTagLinkedList SupportedTags[] = {
     cmsSigDeviceSettingsTag   ==> Deprecated, useless
 */
 
-#define DEFAULT_TAG_COUNT  (sizeof(SupportedTags) / sizeof(_cmsTagLinkedList))
+
+_cmsTagPluginChunkType _cmsTagPluginChunk = { NULL };
+
+
+// Duplicates the zone of memory used by the plug-in in the new context
+static
+void DupTagList(struct _cmsContext_struct* ctx, 
+                    const struct _cmsContext_struct* src)
+{
+   _cmsTagPluginChunkType newHead = { NULL };
+   _cmsTagLinkedList*  entry;
+   _cmsTagLinkedList*  Anterior = NULL;
+   _cmsTagPluginChunkType* head = (_cmsTagPluginChunkType*) src->chunks[TagPlugin];
+
+   // Walk the list copying all nodes
+   for (entry = head->Tag;
+       entry != NULL;
+       entry = entry ->Next) {
+
+           _cmsTagLinkedList *newEntry = ( _cmsTagLinkedList *) _cmsSubAllocDup(ctx ->MemPool, entry, sizeof(_cmsTagLinkedList));
+
+           if (newEntry == NULL) 
+               return;
+
+           // We want to keep the linked list order, so this is a little bit tricky
+           newEntry -> Next = NULL;
+           if (Anterior)
+               Anterior -> Next = newEntry;
+
+           Anterior = newEntry;
+
+           if (newHead.Tag == NULL)
+               newHead.Tag = newEntry;
+   }
+
+   ctx ->chunks[TagPlugin] = _cmsSubAllocDup(ctx->MemPool, &newHead, sizeof(_cmsTagPluginChunkType));
+}
+
+void _cmsAllocTagPluginChunk(struct _cmsContext_struct* ctx, 
+                                 const struct _cmsContext_struct* src)
+{
+    if (src != NULL) {
+
+        DupTagList(ctx, src);
+    }
+    else {
+        static _cmsTagPluginChunkType TagPluginChunk = { NULL };
+        ctx ->chunks[TagPlugin] = _cmsSubAllocDup(ctx ->MemPool, &TagPluginChunk, sizeof(_cmsTagPluginChunkType));
+    }
+
+}
 
 cmsBool  _cmsRegisterTagPlugin(cmsContext id, cmsPluginBase* Data)
 {
     cmsPluginTag* Plugin = (cmsPluginTag*) Data;
-    _cmsTagLinkedList *pt, *Anterior;
-
+    _cmsTagLinkedList *pt;
+    _cmsTagPluginChunkType* TagPluginChunk = ( _cmsTagPluginChunkType*) _cmsContextGetClientChunk(id, TagPlugin);
 
     if (Data == NULL) {
 
-        SupportedTags[DEFAULT_TAG_COUNT-1].Next = NULL;
+        TagPluginChunk->Tag = NULL;
         return TRUE;
-    }
-
-    pt = Anterior = SupportedTags;
-    while (pt != NULL) {
-
-        if (Plugin->Signature == pt -> Signature) {
-            pt ->Descriptor = Plugin ->Descriptor;  // Replace old behaviour
-            return TRUE;
-        }
-
-        Anterior = pt;
-        pt = pt ->Next;
     }
 
     pt = (_cmsTagLinkedList*) _cmsPluginMalloc(id, sizeof(_cmsTagLinkedList));
@@ -5416,17 +5541,25 @@ cmsBool  _cmsRegisterTagPlugin(cmsContext id, cmsPluginBase* Data)
 
     pt ->Signature  = Plugin ->Signature;
     pt ->Descriptor = Plugin ->Descriptor;
-    pt ->Next       = NULL;
+    pt ->Next       = TagPluginChunk ->Tag;
 
-    if (Anterior != NULL) Anterior -> Next = pt;
-
+    TagPluginChunk ->Tag = pt;
+    
     return TRUE;
 }
 
 // Return a descriptor for a given tag or NULL
-cmsTagDescriptor* _cmsGetTagDescriptor(cmsTagSignature sig)
+cmsTagDescriptor* _cmsGetTagDescriptor(cmsContext ContextID, cmsTagSignature sig)
 {
     _cmsTagLinkedList* pt;
+    _cmsTagPluginChunkType* TagPluginChunk = ( _cmsTagPluginChunkType*) _cmsContextGetClientChunk(ContextID, TagPlugin);
+
+    for (pt = TagPluginChunk->Tag;
+             pt != NULL;
+             pt = pt ->Next) {
+
+                if (sig == pt -> Signature) return &pt ->Descriptor;
+    }
 
     for (pt = SupportedTags;
             pt != NULL;

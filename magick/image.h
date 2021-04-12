@@ -1,12 +1,12 @@
 /*
-  Copyright (C) 2003 - 2015 GraphicsMagick Group
+  Copyright (C) 2003 - 2018 GraphicsMagick Group
   Copyright (C) 2002 ImageMagick Studio
   Copyright 1991-1999 E. I. du Pont de Nemours and Company
- 
+
   This program is covered by multiple licenses, which are described in
   Copyright.txt. You should have received a copy of Copyright.txt with this
   package; otherwise see http://www.graphicsmagick.org/www/Copyright.html.
- 
+
   GraphicsMagick Image Methods.
 */
 #ifndef _MAGICK_IMAGE_H
@@ -33,8 +33,14 @@ extern "C" {
 
 /*
   Maximum unsigned RGB value which fits in the specified bits
+
+  If bits <= 0, then zero is returned.  If bits exceeds bits in unsigned long,
+  then max value of unsigned long is returned.
 */
-#define MaxValueGivenBits(bits) ((unsigned long) (0x01UL << (bits-1)) +((0x01UL << (bits-1))-1))
+#define MaxValueGivenBits(bits) ((unsigned long) \
+                                 (((int) bits <= 0) ? 0 :               \
+                                   ((0x01UL << (Min(sizeof(unsigned long)*8U,(size_t)bits)-1)) + \
+                                    ((0x01UL << (Min(sizeof(unsigned long)*8U,(size_t)bits)-1))-1))))
 
 #if (QuantumDepth == 8)
 #  define MaxColormapSize  256U
@@ -133,7 +139,7 @@ typedef unsigned int Quantum;
   (value > MaxRGBDouble) ? MaxRGB : value + 0.5))
 #define RoundFloatToQuantum(value) ((Quantum) (value < 0.0f ? 0U : \
   (value > MaxRGBFloat) ? MaxRGB : value + 0.5f))
-#define ConstrainToRange(min,max,value) (value < min ? min : \
+#define ConstrainToRange(min,max,value) (value < min ? min :    \
   (value > max) ? max : value)
 #define ConstrainToQuantum(value) ConstrainToRange(0,MaxRGB,value)
 #define ScaleAnyToQuantum(x,max_value) \
@@ -393,17 +399,18 @@ typedef enum
 /*
   Image orientation.  Based on TIFF standard values (also EXIF).
 */
-typedef enum               /* Line direction / Frame Direction */
-{                          /* -------------- / --------------- */
-  UndefinedOrientation,    /* Unknown        / Unknown         */
-  TopLeftOrientation,      /* Left to right  / Top to bottom   */
-  TopRightOrientation,     /* Right to left  / Top to bottom   */
-  BottomRightOrientation,  /* Right to left  / Bottom to top   */
-  BottomLeftOrientation,   /* Left to right  / Bottom to top   */
-  LeftTopOrientation,      /* Top to bottom  / Left to right   */
-  RightTopOrientation,     /* Top to bottom  / Right to left   */
-  RightBottomOrientation,  /* Bottom to top  / Right to left   */
-  LeftBottomOrientation    /* Bottom to top  / Left to right   */
+typedef enum               /*    Exif     /  Row 0   / Column 0 */
+                           /* Orientation /  edge    /   edge   */
+{                          /* ----------- / -------- / -------- */
+  UndefinedOrientation,    /*      0      / Unknown  / Unknown  */
+  TopLeftOrientation,      /*      1      / Left     / Top      */
+  TopRightOrientation,     /*      2      / Right    / Top      */
+  BottomRightOrientation,  /*      3      / Right    / Bottom   */
+  BottomLeftOrientation,   /*      4      / Left     / Bottom   */
+  LeftTopOrientation,      /*      5      / Top      / Left     */
+  RightTopOrientation,     /*      6      / Top      / Right    */
+  RightBottomOrientation,  /*      7      / Bottom   / Right    */
+  LeftBottomOrientation    /*      8      / Bottom   / Left     */
 } OrientationType;
 
 typedef enum
@@ -669,6 +676,8 @@ typedef struct _SegmentInfo
     y2;
 } SegmentInfo;
 
+struct _ImageExtra;  /* forward decl.; see member "extra" below */
+
 typedef struct _Image
 {
   ClassType
@@ -682,7 +691,7 @@ typedef struct _Image
 
   MagickBool
     dither,             /* True if image is to be dithered */
-    matte;              /* True if image has an opacity (alpha) channel */ 
+    matte;              /* True if image has an opacity (alpha) channel */
 
   unsigned long
     columns,            /* Number of image columns */
@@ -841,8 +850,16 @@ typedef struct _Image
     is_grayscale,       /* Private, True if image is known to be grayscale */
     taint;              /* Private, True if image has not been modifed */
 
-  struct _Image
-    *clip_mask;         /* Private, Clipping mask to apply when updating pixels */
+  /*
+    Allow for expansion of Image without increasing its size.  The
+    internals are defined only in image.c.  Clients outside of image.c
+    can access the internals via the provided access functions (see below).
+
+    This location in Image used to be occupied by Image *clip_mask. The
+    clip_mask member now lives in _ImageExtra.
+  */
+  struct _ImageExtra
+    *extra;
 
   MagickBool
     ping;               /* Private, if true, pixels are undefined */
@@ -1013,6 +1030,7 @@ extern MagickExport Image
   *CloneImage(const Image *,const unsigned long,const unsigned long,
    const unsigned int,ExceptionInfo *),
   *GetImageClipMask(const Image *,ExceptionInfo *),
+  *GetImageCompositeMask(const Image *,ExceptionInfo *),  /*to support SVG masks*/
   *ReferenceImage(Image *);
 
 extern MagickExport ImageInfo
@@ -1040,6 +1058,8 @@ extern MagickExport MagickPassFail
   AnimateImages(const ImageInfo *image_info,Image *image),
   ClipImage(Image *image),
   ClipPathImage(Image *image,const char *pathname,const MagickBool inside),
+  CompositeMaskImage(Image *image),   /*to support SVG masks*/
+  CompositePathImage(Image *image,const char *pathname,const MagickBool inside),  /*to support SVG masks*/
   DisplayImages(const ImageInfo *image_info,Image *image),
   RemoveDefinitions(const ImageInfo *image_info,const char *options),
   ResetImagePage(Image *image,const char *page),
@@ -1047,8 +1067,9 @@ extern MagickExport MagickPassFail
   SetImageEx(Image *image,const Quantum opacity,ExceptionInfo *exception),
   SetImageColor(Image *image,const PixelPacket *pixel),
   SetImageColorRegion(Image *image,long x,long y,unsigned long width,
-		      unsigned long height,const PixelPacket *pixel),
+                      unsigned long height,const PixelPacket *pixel),
   SetImageClipMask(Image *image,const Image *clip_mask),
+  SetImageCompositeMask(Image *image,const Image *composite_mask),  /*to support SVG masks*/
   SetImageDepth(Image *image,const unsigned long),
   SetImageInfo(ImageInfo *image_info,const unsigned int flags,ExceptionInfo *exception),
   SetImageType(Image *image,const ImageType),
@@ -1063,6 +1084,14 @@ extern MagickExport void
   GetImageInfo(ImageInfo *),
   ModifyImage(Image **,ExceptionInfo *),
   SetImageOpacity(Image *,const unsigned int);
+
+/* provide public access to the clip_mask member of Image */
+extern MagickExport Image
+  **ImageGetClipMask(const Image *);
+
+/* provide public access to the composite_mask member of Image */
+extern MagickExport Image
+  **ImageGetCompositeMask(const Image *);
 
 #if defined(MAGICK_IMPLEMENTATION)
   /*

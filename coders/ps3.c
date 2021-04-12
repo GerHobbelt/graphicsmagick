@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -164,7 +164,7 @@ static unsigned int SerializeHuffman2DImage(const ImageInfo *image_info,
   huffman_image=CloneImage(image,0,0,True,&image->exception);
   if (huffman_image == (Image *) NULL)
     return(False);
-  /* 
+  /*
     TODO: If (image, then) huffman_image->compression is JPEG, huffman_image
     is changed to DirectClass in WriteTIFFImage and the huffman_image ends up
     broken. Change WriteTIFFIMage to not alter bilevel image to directclass
@@ -333,19 +333,19 @@ static MagickPassFail JPEGEncodeImage(const ImageInfo *image_info,
 
   MagickPassFail
     status=MagickFail;
-  
+
   blob=ImageToJPEGBlob(image,image_info,&length,&image->exception);
   if (blob != (unsigned char *) NULL)
     {
       register const unsigned char
-	*p;
+        *p;
 
       register size_t
-	i;
+        i;
 
         Ascii85Initialize(image);
       for (p=(const unsigned char*) blob,i=0; i < length; i++)
-	Ascii85Encode(image,(unsigned long) p[i]);
+        Ascii85Encode(image,(unsigned long) p[i]);
       Ascii85Flush(image);
       MagickFreeMemory(blob);
       status=MagickPass;
@@ -468,7 +468,7 @@ static unsigned int SerializePseudoClassImage(const ImageInfo *image_info,
         {
           status=MagickMonitorFormatted(y,image->rows,&image->exception,
                                         SaveImageText,image->filename,
-					image->columns,image->rows);
+                                        image->columns,image->rows);
           if (status == False)
             break;
         }
@@ -561,7 +561,7 @@ static unsigned int SerializeMultiChannelImage(const ImageInfo *image_info,
         {
           status=MagickMonitorFormatted(y,image->rows,&image->exception,
                                         SaveImageText,image->filename,
-					image->columns,image->rows);
+                                        image->columns,image->rows);
           if (status == False)
             break;
         }
@@ -678,7 +678,7 @@ static unsigned int SerializeSingleChannelImage(const ImageInfo *image_info,
           status=MagickMonitorFormatted(y,image->rows,
                                         &image->exception,SaveImageText,
                                         image->filename,
-					image->columns,image->rows);
+                                        image->columns,image->rows);
           if (status == False)
             break;
         }
@@ -749,9 +749,10 @@ typedef struct WriteByteHookInfo_
     *image;
 } WriteByteHookInfo;
 
-static unsigned int MaskWriteByteHook(Image *ARGUNUSED(mask_image),
+static unsigned int MaskWriteByteHook(Image *mask_image,
   const magick_uint8_t code, void *info)
 {
+  ARG_NOT_USED(mask_image);
   Ascii85Encode(((WriteByteHookInfo *)info)->image, (unsigned long)code);
   return(True);
 }
@@ -974,7 +975,7 @@ static MagickPassFail WritePS3MaskImage(const ImageInfo *image_info,Image *image
 static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
 {
   static const char
-    *PostscriptProlog[]=
+    * const PostscriptProlog[]=
     {
       "/ByteStreamDecodeFilter",
       "{",
@@ -1129,7 +1130,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
       "  token pop /y exch def pop",
       "  currentfile buffer readline pop",
       "  token pop /pointsize exch def pop",
-      (char *) NULL
+      (const char *) NULL
     },
     /*
       This hole in the PS prolog is for labels.
@@ -1183,7 +1184,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
       "  grestore",
       "  sp {showpage} if",
       "} bind def",
-      (char *) NULL
+      (const char *) NULL
     };
 
   char
@@ -1194,7 +1195,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
     **labels;
 
   const char
-    **q;
+    * const *q;
 
   CompressionType
     compression;
@@ -1243,6 +1244,12 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
     scene,
     text_size;
 
+  size_t
+    image_list_length;
+
+  Image
+    *clip_mask;
+
   /*
     Open output image file.
   */
@@ -1250,6 +1257,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -1279,6 +1287,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
   }
   page=0;
   scene=0;
+  clip_mask = *ImageGetClipMask(image);
   do
   {
     page++;
@@ -1447,7 +1456,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
               (void) strlcpy(buffer,"%%Pages: 1\n",sizeof(buffer));
             else
               FormatString(buffer,"%%%%Pages: %lu\n",(unsigned long)
-                GetImageListLength(image));
+                           image_list_length);
             (void) WriteBlobString(image,buffer);
           }
         (void) WriteBlobString(image,"%%EndComments\n");
@@ -1525,13 +1534,13 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
       (void) WriteBlobString(image,"%%PageResources: font Helvetica\n");
 
     /* PS clipping path from Photoshop clipping path */
-    if ((image->clip_mask != (Image *) NULL) && 
-      (LocaleNCompare("8BIM:",image->clip_mask->magick_filename,5) == 0))
+    if ((clip_mask != (Image *) NULL) &&
+      (LocaleNCompare("8BIM:",clip_mask->magick_filename,5) == 0))
       {
         const ImageAttribute
           *attribute;
 
-        attribute=GetImageAttribute(image,image->clip_mask->magick_filename);
+        attribute=GetImageAttribute(image,clip_mask->magick_filename);
         if (attribute == (const ImageAttribute *) NULL)
           return(False);
         (void) WriteBlobString(image,attribute->value);
@@ -1597,12 +1606,12 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
       }
 
     /* Photoshop clipping path active? */
-    if ((image->clip_mask != (Image *) NULL) &&
-        (LocaleNCompare("8BIM:",image->clip_mask->magick_filename,5) == 0))
+    if ((clip_mask != (Image *) NULL) &&
+        (LocaleNCompare("8BIM:",clip_mask->magick_filename,5) == 0))
       (void) WriteBlobString(image,"true\n");
     else
       (void) WriteBlobString(image,"false\n");
-  
+
     /* Compression seems to take precedence over anyting */
     if (compression == FaxCompression)
       (void) SetImageType(image, BilevelType);
@@ -1673,27 +1682,27 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
           (void) WriteBlobString(image,PS3_JPEGCompression"\n");
           break;
       }
-      
+
       /* Number of colors -- 0 for single component non-color mapped data */
       (void) WriteBlobString(image,"0\n");
 
       /* 1 bit or 8 bit components? */
-      FormatString(buffer,"%d\n", 
+      FormatString(buffer,"%d\n",
         IsMonochromeImage(image,&image->exception) ? 1 : 8);
       (void) WriteBlobString(image,buffer);
 
       /* Image data. Always ASCII85 encoded. */
       if (compression == JPEGCompression)
         {
-	  status=JPEGEncodeImage(image_info,image);
+          status=JPEGEncodeImage(image_info,image);
         }
       else
         if (compression == FaxCompression)
           {
-	    if (LocaleCompare(CCITTParam,"0") == 0)
-	      status=HuffmanEncodeImage(image_info,image);
-	    else
-	      status=Huffman2DEncodeImage(image_info,image);
+            if (LocaleCompare(CCITTParam,"0") == 0)
+              status=HuffmanEncodeImage(image_info,image);
+            else
+              status=Huffman2DEncodeImage(image_info,image);
           }
         else
           {
@@ -1802,7 +1811,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
         {
           /*
             Color mapped images.
-            
+
             Image class.
           */
           (void) WriteBlobString(image,PS3_PseudoClass"\n");
@@ -1827,7 +1836,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
               (void) WriteBlobString(image,PS3_ZipCompression"\n");
               break;
           }
-          
+
           /* Number of colors in color map */
           FormatString(buffer,"%u\n",image->colors);
           (void) WriteBlobString(image,buffer);
@@ -1904,7 +1913,7 @@ static unsigned int WritePS3Image(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)
@@ -2053,4 +2062,3 @@ static unsigned int ZLIBEncode2Image(Image *image,const size_t length,
   return(False);
 }
 #endif
-

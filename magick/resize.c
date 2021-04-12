@@ -472,7 +472,7 @@ MagickExport Image *MinifyImage(const Image *image,ExceptionInfo *exception)
 
   long
     y;
- 
+
   /*
     Initialize minified image.
   */
@@ -581,7 +581,7 @@ MagickExport Image *MinifyImage(const Image *image,ExceptionInfo *exception)
             if (!MagickMonitorFormatted(row_count,image->rows,exception,
                                         MinifyImageText,image->filename))
               thread_status=MagickFail;
-          
+
           if (thread_status == MagickFail)
             status=MagickFail;
         }
@@ -640,22 +640,25 @@ MagickExport Image *MinifyImage(const Image *image,ExceptionInfo *exception)
 %
 */
 
-static double Bessel(const double x,const double ARGUNUSED(support))
+static double Bessel(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x == 0.0)
     return(MagickPI/4.0);
   return(BesselOrderOne(MagickPI*x)/(2.0*x));
 }
 
-static double Sinc(const double x,const double ARGUNUSED(support))
+static double Sinc(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x == 0.0)
     return(1.0);
   return(sin(MagickPI*x)/(MagickPI*x));
 }
 
-static double Blackman(const double x,const double ARGUNUSED(support))
+static double Blackman(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   return(0.42+0.5*cos(MagickPI*x)+0.08*cos(2*MagickPI*x));
 }
 
@@ -669,8 +672,9 @@ static double BlackmanSinc(const double x,const double support)
   return(Blackman(x/support,support)*Sinc(x,support));
 }
 
-static double Box(const double x,const double ARGUNUSED(support))
+static double Box(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -0.5)
     return(0.0);
   if (x < 0.5)
@@ -678,8 +682,9 @@ static double Box(const double x,const double ARGUNUSED(support))
   return(0.0);
 }
 
-static double Catrom(const double x,const double ARGUNUSED(support))
+static double Catrom(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -2.0)
     return(0.0);
   if (x < -1.0)
@@ -693,8 +698,9 @@ static double Catrom(const double x,const double ARGUNUSED(support))
   return(0.0);
 }
 
-static double Cubic(const double x,const double ARGUNUSED(support))
+static double Cubic(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -2.0)
     return(0.0);
   if (x < -1.0)
@@ -708,23 +714,27 @@ static double Cubic(const double x,const double ARGUNUSED(support))
   return(0.0);
 }
 
-static double Gaussian(const double x,const double ARGUNUSED(support))
+static double Gaussian(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   return(exp(-2.0*x*x)*sqrt(2.0/MagickPI));
 }
 
-static double Hanning(const double x,const double ARGUNUSED(support))
+static double Hanning(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   return(0.5+0.5*cos(MagickPI*x));
 }
 
-static double Hamming(const double x,const double ARGUNUSED(support))
+static double Hamming(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   return(0.54+0.46*cos(MagickPI*x));
 }
 
-static double Hermite(const double x,const double ARGUNUSED(support))
+static double Hermite(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -1.0)
     return(0.0);
   if (x < 0.0)
@@ -745,7 +755,7 @@ static double Lanczos(const double x,const double support)
   return(0.0);
 }
 
-static double Mitchell(const double x,const double ARGUNUSED(support))
+static double Mitchell(const double x,const double support)
 {
 #define B   (1.0/3.0)
 #define C   (1.0/3.0)
@@ -757,6 +767,7 @@ static double Mitchell(const double x,const double ARGUNUSED(support))
 #define Q2  ((       6.0*B+30.0*C)/6.0)
 #define Q3  ((     - 1.0*B- 6.0*C)/6.0)
 
+  ARG_NOT_USED(support);
   if (x < -2.0)
     return(0.0);
   if (x < -1.0)
@@ -770,8 +781,9 @@ static double Mitchell(const double x,const double ARGUNUSED(support))
   return(0.0);
 }
 
-static double Quadratic(const double x,const double ARGUNUSED(support))
+static double Quadratic(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -1.5)
     return(0.0);
   if (x < -0.5)
@@ -783,8 +795,9 @@ static double Quadratic(const double x,const double ARGUNUSED(support))
   return(0.0);
 }
 
-static double Triangle(const double x,const double ARGUNUSED(support))
+static double Triangle(const double x,const double support)
 {
+  ARG_NOT_USED(support);
   if (x < -1.0)
     return(0.0);
   if (x < 0.0)
@@ -802,7 +815,7 @@ HorizontalFilter(const Image *source,Image *destination,
                  ExceptionInfo *exception)
 {
 #define ResizeImageText "[%s] Resize..."
-  
+
   double
     scale,
     support;
@@ -913,10 +926,10 @@ HorizontalFilter(const Image *source,Image *destination,
                            contribution[n-1].pixel-contribution[0].pixel+1,
                            source->rows,exception);
       if (p == (const PixelPacket *) NULL)
-	thread_status=MagickFail;
+        thread_status=MagickFail;
 
       if (thread_status != MagickFail)
-	q=SetImagePixelsEx(destination,x,0,1,destination->rows,exception);
+        q=SetImagePixelsEx(destination,x,0,1,destination->rows,exception);
       if (q == (PixelPacket *) NULL)
         thread_status=MagickFail;
 
@@ -941,11 +954,11 @@ HorizontalFilter(const Image *source,Image *destination,
               pixel=zero;
               if ((destination->matte) || (destination->colorspace == CMYKColorspace))
                 {
-		  double
-		    transparency_coeff,
-		    normalize;
+                  double
+                    transparency_coeff,
+                    normalize;
 
-		  normalize=0.0;
+                  normalize=0.0;
                   for (i=0; i < n; i++)
                     {
                       j=y*(contribution[n-1].pixel-contribution[0].pixel+1)+
@@ -959,9 +972,9 @@ HorizontalFilter(const Image *source,Image *destination,
                       normalize += transparency_coeff;
                     }
                   normalize = 1.0 / (AbsoluteValue(normalize) <= MagickEpsilon ? 1.0 : normalize);
-		  pixel.red *= normalize;
-		  pixel.green *= normalize;
-		  pixel.blue *= normalize;
+                  pixel.red *= normalize;
+                  pixel.green *= normalize;
+                  pixel.blue *= normalize;
                   q[y].red=RoundDoubleToQuantum(pixel.red);
                   q[y].green=RoundDoubleToQuantum(pixel.green);
                   q[y].blue=RoundDoubleToQuantum(pixel.blue);
@@ -1006,7 +1019,7 @@ HorizontalFilter(const Image *source,Image *destination,
             thread_status=MagickFail;
 
         (*quantum)++;
-          
+
         if (thread_status == MagickFail)
           status=MagickFail;
       }
@@ -1015,7 +1028,7 @@ HorizontalFilter(const Image *source,Image *destination,
   if (IsEventLogging())
     (void) LogMagickEvent(TransformEvent,GetMagickModule(),
                           "%s exit HorizontalFilter()",
-			  (status == MagickFail ? "Error" : "Normal"));
+                          (status == MagickFail ? "Error" : "Normal"));
 
   return (status);
 }
@@ -1084,7 +1097,7 @@ VerticalFilter(const Image *source,Image *destination,
 
       register const PixelPacket
         *p;
-    
+
       register PixelPacket
         *q = (PixelPacket *) NULL;
 
@@ -1139,10 +1152,10 @@ VerticalFilter(const Image *source,Image *destination,
                            contribution[n-1].pixel-contribution[0].pixel+1,
                            exception);
       if (p == (const PixelPacket *) NULL)
-	thread_status=MagickFail;
+        thread_status=MagickFail;
 
       if (thread_status != MagickFail)
-	q=SetImagePixelsEx(destination,0,y,destination->columns,1,exception);
+        q=SetImagePixelsEx(destination,0,y,destination->columns,1,exception);
       if (q == (PixelPacket *) NULL)
         thread_status=MagickFail;
 
@@ -1167,11 +1180,11 @@ VerticalFilter(const Image *source,Image *destination,
               pixel=zero;
               if ((source->matte) || (source->colorspace == CMYKColorspace))
                 {
-		  double
-		    transparency_coeff,
-		    normalize;
+                  double
+                    transparency_coeff,
+                    normalize;
 
-		  normalize=0.0;
+                  normalize=0.0;
                   for (i=0; i < n; i++)
                     {
                       j=(long) ((contribution[i].pixel-contribution[0].pixel)*
@@ -1186,9 +1199,9 @@ VerticalFilter(const Image *source,Image *destination,
                     }
 
                   normalize = 1.0 / (AbsoluteValue(normalize) <= MagickEpsilon ? 1.0 : normalize);
-		  pixel.red *= normalize;
-		  pixel.green *= normalize;
-		  pixel.blue *= normalize;
+                  pixel.red *= normalize;
+                  pixel.green *= normalize;
+                  pixel.blue *= normalize;
                   q[x].red=RoundDoubleToQuantum(pixel.red);
                   q[x].green=RoundDoubleToQuantum(pixel.green);
                   q[x].blue=RoundDoubleToQuantum(pixel.blue);
@@ -1231,9 +1244,9 @@ VerticalFilter(const Image *source,Image *destination,
           if (!MagickMonitorFormatted(*quantum,span,exception,
                                       ResizeImageText,source->filename))
             thread_status=MagickFail;
-        
+
         (*quantum)++;
-        
+
         if (thread_status == MagickFail)
           status=MagickFail;
       }
@@ -1241,8 +1254,8 @@ VerticalFilter(const Image *source,Image *destination,
 
   if (IsEventLogging())
     (void) LogMagickEvent(TransformEvent,GetMagickModule(),
-			  "%s exit VerticalFilter()",
-			  (status == MagickFail ? "Error" : "Normal"));
+                          "%s exit VerticalFilter()",
+                          (status == MagickFail ? "Error" : "Normal"));
 
   return (status);
 }
@@ -1378,19 +1391,19 @@ MagickExport Image *ResizeImage(const Image *image,const unsigned long columns,
     {
       span=source_image->columns+resize_image->rows;
       status=HorizontalFilter(image,source_image,x_factor,&filters[i],blur,
-			      view_data_set,span,&quantum,exception);
+                              view_data_set,span,&quantum,exception);
       if (status != MagickFail)
-	status=VerticalFilter(source_image,resize_image,y_factor,&filters[i],
-			      blur,view_data_set,span,&quantum,exception);
+        status=VerticalFilter(source_image,resize_image,y_factor,&filters[i],
+                              blur,view_data_set,span,&quantum,exception);
     }
   else
     {
       span=resize_image->columns+source_image->rows;
       status=VerticalFilter(image,source_image,y_factor,&filters[i],blur,
-			    view_data_set,span,&quantum,exception);
+                            view_data_set,span,&quantum,exception);
       if (status != MagickFail)
-	status=HorizontalFilter(source_image,resize_image,x_factor,&filters[i],
-				blur,view_data_set,span,&quantum,exception);
+        status=HorizontalFilter(source_image,resize_image,x_factor,&filters[i],
+                                blur,view_data_set,span,&quantum,exception);
     }
   /*
     Free allocated memory.
@@ -1661,7 +1674,11 @@ MagickExport Image *ScaleImage(const Image *image,const unsigned long columns,
                           MagickMsg(OptionError,NonzeroWidthAndHeightRequired));
       return((Image *) NULL);
     }
-  scale_image=CloneImage(image,columns,rows,True,exception);
+  if ((columns == image->columns) && (rows == image->rows))
+    scale_image=CloneImage(image,0,0,True,exception);
+  else
+    scale_image=CloneImage(image,columns,rows,True,exception);
+
   if (scale_image == (Image *) NULL)
     return((Image *) NULL);
 
@@ -1692,10 +1709,12 @@ MagickExport Image *ScaleImage(const Image *image,const unsigned long columns,
       (x_vector == (DoublePixelPacket *) NULL) ||
       (y_vector == (DoublePixelPacket *) NULL))
     {
-      MagickFreeMemory(y_vector);
-      MagickFreeMemory(scale_scanline);
+      if (scanline == x_vector)
+        scanline=(DoublePixelPacket *) NULL;
       MagickFreeMemory(scanline);
+      MagickFreeMemory(scale_scanline);
       MagickFreeMemory(x_vector);
+      MagickFreeMemory(y_vector);
       DestroyImage(scale_image);
       ThrowImageException3(ResourceLimitError,MemoryAllocationFailed,
                            UnableToScaleImage);
@@ -1915,10 +1934,12 @@ MagickExport Image *ScaleImage(const Image *image,const unsigned long columns,
   /*
     Free allocated memory.
   */
-  MagickFreeMemory(y_vector);
-  MagickFreeMemory(scale_scanline);
+  if (scanline == x_vector)
+    scanline=(DoublePixelPacket *) NULL;
   MagickFreeMemory(scanline);
+  MagickFreeMemory(scale_scanline);
   MagickFreeMemory(x_vector);
+  MagickFreeMemory(y_vector);
   scale_image->is_grayscale=image->is_grayscale;
   return(scale_image);
 }

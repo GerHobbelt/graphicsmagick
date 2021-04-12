@@ -47,12 +47,6 @@ Prerequisites
   important.  Both 32 and 64-bit versions of GraphicsMagick and
   Ghostscript may be installed at the same time.
 
-  The installation package includes the GraphicsMagick Perl extension
-  ( `PerlMagick <perl.html>`_) as an installation option. If you would
-  like to use this extension, then you must install `ActiveState
-  ActivePerl <http://www.activestate.com/activeperl/downloads/>`_
-  prior to commencing with installation of GraphicsMagick.
-
 Retrieve Install Package
 ------------------------
 
@@ -61,7 +55,7 @@ Retrieve Install Package
   <download.html>`_ page. The available install packages are as follows
 
   Windows Dynamic-Multithread (DLL-based) install package with utilities,
-  PerlMagick, ImageMagickObject COM object, and web pages:
+  ImageMagickObject COM object, and web pages:
 
     ::
 
@@ -121,7 +115,7 @@ Select Start Menu Folder
 Select Additional Tasks
 -----------------------
 
-  A screen is displayed which presents most (or all) of the following
+  A screen is displayed which presents some (or all) of the following
   options:
 
   * Create a desktop icon
@@ -130,17 +124,12 @@ Select Additional Tasks
 
   * Associate supported file extensions with GraphicsMagick
 
-  * Install PerlMagick for ActiveState Perl v5.14.2 build 1402
-
   * Install ImageMagickObject OLE Control for VBscript, Visual Basic,
     and WSH.
 
   "Creating a desktop icon" and "Update the executable search path"
   are selected by default. The remaining options default to
-  un-selected.  Select the options you prefer. Note that ActiveState
-  Perl packages are intended to be binary compatible across a build
-  series.  See the ActiveState Perl documentation for more information
-  on this topic.
+  un-selected.  Select the options you prefer.
 
   Think twice before selecting "*Associate supported file extensions with
   GraphicsMagick*" since this will set up approximately fifty file
@@ -199,7 +188,7 @@ Testing The Installation
     ::
 
       gm convert logo: logo.miff
-      gmdisplay logo.miff
+      gm convert logo.miff win:
 
   and the GraphicsMagick logo should be displayed in a window.
 
@@ -281,8 +270,8 @@ Important Notes
   optimization, and the problem is likely to go away (but with less
   performance).
 
-Windows XP, Vista, 7 Visual C++ 6.0 through 9.0 Compilation
------------------------------------------------------------
+Windows XP, Vista, 7 Visual C++ 6.0 through 14.0 Compilation
+------------------------------------------------------------
 
   The Visual C++ distribution targeted at Windows 2000 through Windows
   8 does not provide any stock workspace (DSW) or project files (DSP)
@@ -393,6 +382,14 @@ Windows XP, Vista, 7 Visual C++ 6.0 through 9.0 Compilation
       DLL is properly initialized without participation from dependent
       applications. This avoids the requirement to invoke IntializeMagick()
       from dependent applications but only works for DLL builds.
+
+    EnableBrokenCoders (default undefined)
+
+      Define to enable broken/dangerous file format support.  Only
+      enable this if you have complete control over the input files
+      and not for arbitrary files such as uploaded from untrusted
+      sources via the Internet.  Currently this must be enabled to
+      enable Adobe Photoshop Format (PSD).
 
   After creating your build environment you can proceed to open the DSW (or
   SLN) file that was generated in the VisualMagick directory and build
@@ -605,7 +602,8 @@ Windows Distribution Build Procedure
   The following are the instructions for how to build a Q:8 (or Q:16)
   DLL-based distribution installer package using Visual Studio 2008
   Professional.  This is the same procedure used to produce the
-  release packages:
+  release packages.  The PerlMagick steps are skipped as of
+  GraphicsMagick 1.3.26):
 
   1. Install prerequisite software:
 
@@ -614,10 +612,19 @@ Windows Distribution Build Procedure
     b. Download and install Inno Setup 5
        <"http://www.jrsoftware.org/isinfo.php">.
 
-    c. Download and install ActiveState ActivePerl
+    c. Download and install ActiveState ActivePerl (optional)
        <"http://www.activestate.com/activeperl/downloads/">.
 
-  2. Build `GM\VisualMagick\configure\configure.exe` (if
+  2. Disable automatic indexing and virus scanning for the
+     GraphicsMagick source tree.  In particular, "Windows Defender" in
+     Windows 10 (and similar software in earlier Windows releases) has
+     been observed to cause Visual Studio builds to fail since the
+     virus scanner opens built libraries and executables to inspect
+     whem while Visual Studio is still using them.  Indexing and
+     scanning also cause significant slowdowns since there are many
+     megabytes of files to index.
+
+  3. Build `GM\VisualMagick\configure\configure.exe` (if
      missing/outdated)
 
      a. Open workspace `GM\VisualMagick\configure\configure.dsp` by
@@ -629,7 +636,7 @@ Windows Distribution Build Procedure
 
      d. Close the project.
 
-  3. Configure Initial GraphicsMagick Visual Studio Workspace
+  4. Configure Initial GraphicsMagick Visual Studio Workspace
 
      a. Use Windows Explorer to navigate to `GM\VisualMagick\configure`.
 
@@ -643,7 +650,7 @@ Windows Distribution Build Procedure
 
      f. `File` -> `Close Workspace`.
 
-  2. Open Workspace, set build configuration, build GraphicsMagick software.
+  5. Open Workspace, set build configuration, build GraphicsMagick software.
 
      a. Open workspace `GM\VisualMagick\configure\configure.sln` by
         double-clicking from Windows Explorer.
@@ -682,36 +689,44 @@ Windows Distribution Build Procedure
 
      l. File -> `Close Workspace`
 
-  3. Build ImageMagickObject
+  6. Build ImageMagickObject
 
-     a. ``cd GM\contrib\win32\ATL7\ImageMagickObject``
+     a. Open Visual Studio Command Shell Window for WIN32 or WIN64
 
-     b. ``BuildImageMagickObject clean``
+     b. Change to GraphicsMagick project directory ``GM``
 
-     c. ``BuildImageMagickObject release``
+     c. ``cd GM\contrib\win32\ATL7\ImageMagickObject``
 
-     d. ``cd ..\..\..\..``
+     d. ``BuildImageMagickObject clean``
 
-  4. Open Windows Command Shell Window
+     e. ``BuildImageMagickObject release``
 
-     a. ``cd GM\PerlMagick``
+     f. ``cd ..\..\..\..``
 
-     b. ``nmake clean`` (only if this is a rebuild)
+  7. Build PerlMagick extension (optional)
 
-     c. ``C:\Perl32\perl Makefile.nt``
+     a. Open Visual Studio Command Shell Window for WIN32  or WIN64
+
+     b. Change to GraphicsMagick project directory ``GM``
+
+     c. ``cd GM\PerlMagick``
+
+     d. ``nmake clean`` (only if this is a rebuild)
+
+     e. ``C:\Perl32\bin\perl.exe Makefile.nt`` (or Perl64)
 
         Note that if multiple Perl's are installed, then it may be
         necessary to specify the full path to perl.exe in order to use
         the correct Perl.
 
-     d. ``nmake release``
+     f. ``nmake release``
 
   NOTE: access to *nmake* requires that there be a path to it. Depending on
   how the install of Visual Studio was done, this may not be the case.
   Visual Studio provides a batch script in VC98\Bin called VCVARS32.BAT
   that can be used to do this manually after you open up a command prompt.
 
-  5. Open `GM\VisualMagick\installer\gm-win32-Q8-dll-full.iss` (or
+  8. Open `GM\VisualMagick\installer\gm-win32-Q8-dll-full.iss` (or
      `gm-win32-Q16-dll-full.iss` if QuantumDepth=16) by
      double-clicking from Windows Explorer.
 
@@ -719,13 +734,13 @@ Windows Distribution Build Procedure
 
      b. Test install by clicking on green triangle
 
-  6. Test PerlMagick.
+  9. Test PerlMagick (optional).
 
      a. ``cd PerlMagick``
 
      b. ``nmake test`` (All tests must pass!)
 
-  7. Test file format read and write.
+  10. Test file format read and write.
 
      a. ``cd VisualMagick\tests``
 
@@ -733,13 +748,13 @@ Windows Distribution Build Procedure
 
      c. ``run_rwblob.bat`` (All tests must pass!)
 
-  8. Run Magick++ test programs.
+  11. Run Magick++ test programs.
 
      a. ``cd Magick++/tests``
 
      b. ``run_tests.bat`` (All tests must pass!)
 
-  9. Run Magick++ demo programs.
+  12. Run Magick++ demo programs.
 
      a. ``cd Magick++/demo``
 
@@ -747,10 +762,10 @@ Windows Distribution Build Procedure
 
      c. Use *gmdisplay* to visually inspect all output files.
 
-  10. Distribution package is available named similar to
+  13. Distribution package is available named similar to
       ``GM\VisualMagick\bin\GraphicsMagick-1.3-Q8-dll.exe``
 
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2018

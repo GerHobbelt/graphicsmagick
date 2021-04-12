@@ -1,4 +1,4 @@
-/* Copyright (C) 2003-2015 GraphicsMagick Group */
+/* Copyright (C) 2003-2017 GraphicsMagick Group */
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                             %
@@ -219,7 +219,7 @@ static MagickWand *CloneMagickWandWithImages(const MagickWand *wand,
   clone_wand=MagickAllocateMemory(MagickWand *,sizeof(MagickWand));
   if (clone_wand == (MagickWand *) NULL)
     MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
-		      UnableToAllocateWand);
+                      UnableToAllocateWand);
   (void) memset(clone_wand,0,sizeof(MagickWand));
   (void) MagickFormatString(clone_wand->id,MaxTextExtent,"MagickWand-%lu",
     GetMagickWandId());
@@ -624,6 +624,81 @@ WandExport MagickWand *MagickAppendImages(MagickWand *wand,
 %                                                                             %
 %                                                                             %
 %                                                                             %
+%   M a g i c k A u t o O r i e n t I m a g e                                 %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickAutoOrientImage() adjusts the current image so that its orientation
+%  is suitable for viewing (i.e. top-left orientation).
+%
+%  The format of the MagickAutoOrientImage method is:
+%
+%      unsigned int MagickAutoOrientImage(MagickWand *wand,
+%        const OrientationType current_orientation,
+%        ExceptionInfo *exception)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o current_orientation: Current image orientation. May be one of:
+%         TopLeftOrientation      Left to right and Top to bottom
+%         TopRightOrientation     Right to left  and Top to bottom
+%         BottomRightOrientation  Right to left and Bottom to top
+%         BottomLeftOrientation   Left to right and Bottom to top
+%         LeftTopOrientation      Top to bottom and Left to right
+%         RightTopOrientation     Top to bottom and Right to left
+%         RightBottomOrientation  Bottom to top and Right to left
+%         LeftBottomOrientation   Bottom to top and Left to right
+%         UndefinedOrientation    Current orientation is not known.
+%                                 Use orientation defined by the
+%                                 current image if any. Equivalent
+%                                 to MagickGetImageOrientation().
+%
+%  Returns True on success, False otherwise.
+%
+%  Note that after successful auto-orientation the internal orientation will
+%  be set to TopLeftOrientation. However this internal value is only written
+%  to TIFF files. For JPEG files, there is currently no support for resetting
+%  the EXIF orientation tag to TopLeft so the JPEG should be stripped or EXIF
+%  profile removed if present to prevent saved auto-oriented images from being
+%  incorrectly rotated a second time by follow-on viewers that understand the
+%  EXIF orientation tag.
+%
+*/
+WandExport unsigned int MagickAutoOrientImage(MagickWand *wand,
+  const OrientationType current_orientation)
+{
+  Image
+    *orient_image;
+
+  OrientationType
+    orientation;
+
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+
+  orientation = (current_orientation == UndefinedOrientation)
+    ? wand->image->orientation
+    : current_orientation;
+
+  orient_image=AutoOrientImage(wand->image,orientation,&wand->exception);
+  if (orient_image == (Image *) NULL)
+    return(False);
+  ReplaceImageInList(&wand->image,orient_image);
+  wand->images=GetFirstImageInList(wand->image);
+  return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
 %   M a g i c k A v e r a g e I m a g e s                                     %
 %                                                                             %
 %                                                                             %
@@ -971,6 +1046,35 @@ WandExport unsigned int MagickChopImage(MagickWand *wand,
   ReplaceImageInList(&wand->image,chop_image);
   wand->images=GetFirstImageInList(wand->image);
   return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k C l e a r E x c e p t i o n                                   %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickClearException() clears the last wand exception.
+%
+%  The format of the MagickClearException method is:
+%
+%      void MagickClearException(MagickWand *wand)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+*/
+WandExport void MagickClearException(MagickWand *wand)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  GetExceptionInfo(&wand->exception);
 }
 
 /*
@@ -1725,7 +1829,7 @@ WandExport char *MagickDescribeImage(MagickWand *wand)
   if ((file = AcquireTemporaryFileStream(filename, TextFileIOMode)) == (FILE *) NULL)
     {
       ThrowException(&wand->exception,FileOpenError,
-		     UnableToCreateTemporaryFile,filename);
+                     UnableToCreateTemporaryFile,filename);
     }
   else
     {
@@ -2123,9 +2227,9 @@ WandExport unsigned int MagickEqualizeImage(MagickWand *wand)
 %            on the new image.
 %
 */
-WandExport unsigned int 
+WandExport unsigned int
 MagickExtentImage(MagickWand *wand,const size_t width,const size_t height,
-		  const ssize_t x,const ssize_t y)
+                  const ssize_t x,const ssize_t y)
 {
   Image
     *extent_image;
@@ -2761,7 +2865,7 @@ WandExport MagickWand *MagickGetImage(MagickWand *wand)
 WandExport char *MagickGetImageAttribute(MagickWand *wand, const char *name)
 {
   const ImageAttribute
-	  *attribute;
+          *attribute;
 
   assert(wand != (MagickWand *) NULL);
   assert(wand->signature == MagickSignature);
@@ -2927,8 +3031,8 @@ WandExport unsigned int MagickGetImageBorderColor(MagickWand *wand,
 */
 WandExport unsigned int
 MagickGetImageBoundingBox(MagickWand *wand,const double fuzz,
-			  unsigned long *width, unsigned long *height,
-			  long *x, long *y)
+                          unsigned long *width, unsigned long *height,
+                          long *x, long *y)
 {
   RectangleInfo
     rectangle;
@@ -3178,7 +3282,7 @@ WandExport unsigned int MagickGetImageChannelMean(MagickWand *wand,
     }
   deviation *= MaxRGBDouble;
   *standard_deviation = RoundDoubleToQuantum(deviation);
-  
+
   meanf *= MaxRGBDouble;
   *mean = RoundDoubleToQuantum(meanf);
 
@@ -4005,6 +4109,51 @@ WandExport unsigned int MagickGetImageMatteColor(MagickWand *wand,
 %                                                                             %
 %                                                                             %
 %                                                                             %
+%   M a g i c k G e t I m a g e O r i e n t a t i o n                         %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickGetImageOrientation() gets the image orientation type. May be one of:
+%
+%         UndefinedOrientation    Image orientation not specified or error.
+%         TopLeftOrientation      Left to right and Top to bottom.
+%         TopRightOrientation     Right to left  and Top to bottom.
+%         BottomRightOrientation  Right to left and Bottom to top.
+%         BottomLeftOrientation   Left to right and Bottom to top.
+%         LeftTopOrientation      Top to bottom and Left to right.
+%         RightTopOrientation     Top to bottom and Right to left.
+%         RightBottomOrientation  Bottom to top and Right to left.
+%         LeftBottomOrientation   Bottom to top and Left to right.
+%
+%  The format of the MagickGetImageOrientation method is:
+%
+%      OrientationType MagickGetImageOrientation(MagickWand *wand)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+*/
+WandExport OrientationType MagickGetImageOrientation(MagickWand *wand)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  if (wand->images == (Image *) NULL)
+    {
+      (void) ThrowException(&wand->exception,WandError,WandContainsNoImages,
+                            wand->id);
+      return(UndefinedOrientation);
+    }
+  return(wand->image->orientation);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
 %   M a g i c k G e t I m a g e P a g e                                       %
 %                                                                             %
 %                                                                             %
@@ -4154,10 +4303,10 @@ WandExport unsigned char *MagickGetImageProfile(MagickWand *wand,
 
   const unsigned char
     *profile=0;
-  
+
   unsigned char
     *result=0;
-  
+
   assert(wand != (MagickWand *) NULL);
   assert(wand->signature == MagickSignature);
   *length=0;
@@ -4941,6 +5090,46 @@ WandExport MagickPassFail MagickHaldClutImage(MagickWand *wand,const MagickWand 
 %                                                                             %
 %                                                                             %
 %                                                                             %
+%   M a g i c k H a s C o l o r M a p                                         %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickHasColormap() returns True if the check was successful with the
+%  colormap parameter set to a boolean value indicating whether the current
+%  wand image uses a color map or not. Returns False if there are no wand
+%  images available.
+%
+%  The format of the MagickHasColormap method is:
+%
+%      unsigned int MagickHasColormap(MagickWand *wand,
+%        unsigned int *colormap)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o colormap: Set to True if current image uses a color map, False if not.
+%
+*/
+WandExport unsigned int MagickHasColormap(MagickWand *wand,
+  unsigned int *colormap)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+
+  *colormap = (wand->image->storage_class == PseudoClass ? True : False);
+  return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
 %   M a g i c k H a s N e x t I m a g e                                       %
 %                                                                             %
 %                                                                             %
@@ -5046,6 +5235,177 @@ WandExport unsigned int MagickImplodeImage(MagickWand *wand,const double amount)
   ReplaceImageInList(&wand->image,implode_image);
   wand->images=GetFirstImageInList(wand->image);
   return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k I s G r a y I m a g e                                         %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickIsGrayImage() returns True if the check was successful with the
+%  grayimage parameter set to a boolean value indicating whether the current
+%  wand image is a gray-scale image or not. Returns False if there was
+%  an error.
+%
+%  The format of the MagickIsGrayImage method is:
+%
+%      unsigned int MagickIsGrayImage(MagickWand *wand,
+%        unsigned int *grayimage)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o grayimage: Set to True if current image is a gray-scale image,
+%        False if not.
+%
+*/
+WandExport unsigned int MagickIsGrayImage(MagickWand *wand,
+  unsigned int *grayimage)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  assert(grayimage != (unsigned int *) NULL);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+  MagickClearException(wand);
+  *grayimage = IsGrayImage(wand->image, &wand->exception);
+  return (wand->exception.severity == UndefinedException);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k I s M o n o c h r o m e I m a g e                             %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickIsMonochromeImage() returns True if the check was successful with the
+%  monochrome parameter set to a boolean value indicating whether the current
+%  wand image is a monochrome image or not. Returns False if there was
+%  an error.
+%
+%  The format of the MagickIsMonochromeImage method is:
+%
+%      unsigned int MagickIsMonochromeImage(MagickWand *wand,
+%        unsigned int *monochrome)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o monochrome: Set to True if current image is a monochrome image,
+%        False if not.
+%
+*/
+WandExport unsigned int MagickIsMonochromeImage(MagickWand *wand,
+  unsigned int *monochrome)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  assert(monochrome != (unsigned int *) NULL);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+  MagickClearException(wand);
+  *monochrome = IsMonochromeImage(wand->image, &wand->exception);
+  return (wand->exception.severity == UndefinedException);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k I s O p a q u e I m a g e                                     %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickIsOpaqueImage() returns True if the check was successful with the
+%  opaque parameter set to a boolean value indicating whether the current
+%  wand image is entirely opaque or not. Returns False if there was
+%  an error.
+%
+%  The format of the MagickIsOpaqueImage method is:
+%
+%      unsigned int MagickIsOpaqueImage(MagickWand *wand,
+%        unsigned int *opaque)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o opaque: Set to True if current image is entirely opaque,
+%        False if not.
+%
+*/
+WandExport unsigned int MagickIsOpaqueImage(MagickWand *wand,
+  unsigned int *opaque)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  assert(opaque != (unsigned int *) NULL);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+  MagickClearException(wand);
+  *opaque = IsOpaqueImage(wand->image, &wand->exception);
+  return (wand->exception.severity == UndefinedException);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k I s P a l e t t e I m a g e                                   %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickIsPaletteImage() returns True if the check was successful with the
+%  palette parameter set to a boolean value indicating whether the current
+%  wand image is an image with 256 unique colors or less. Returns False if
+%  there was an error. Note that a palette image does not necessarily use a
+%  colormap. See MagickHasColormap() if needing to determine whether a
+%  colormap is in use.
+%
+%
+%  The format of the MagickIsPaletteImage method is:
+%
+%      unsigned int MagickIsPaletteImage(MagickWand *wand,
+%        unsigned int *palette)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o palette: Set to True if current image is 256 colors or less,
+%        False if not.
+%
+*/
+WandExport unsigned int MagickIsPaletteImage(MagickWand *wand,
+  unsigned int *palette)
+{
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  assert(palette != (unsigned int *) NULL);
+  if (wand->images == (Image *) NULL)
+    ThrowWandException(WandError,WandContainsNoImages,wand->id);
+  MagickClearException(wand);
+  *palette = IsPaletteImage(wand->image, &wand->exception);
+  return (wand->exception.severity == UndefinedException);
 }
 
 /*
@@ -6828,7 +7188,7 @@ WandExport unsigned int MagickReadImageBlob(MagickWand *wand,
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  MagickReadImageFile() reads an image or image sequence from an open file 
+%  MagickReadImageFile() reads an image or image sequence from an open file
 %  descriptor.
 %
 %  The format of the MagickReadImageFile method is:
@@ -6969,6 +7329,47 @@ WandExport unsigned int MagickRemoveImage(MagickWand *wand)
   DeleteImageFromList(&wand->image);
   wand->images=GetFirstImageInList(wand->image);
   return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k R e m o v e I m a g e O p t i o n                             %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickRemoveImageOption() removes an image format-specific option from the
+%  the image (.e.g MagickRemoveImageOption(wand,"jpeg","preserve-settings").
+%
+%  The format of the MagickRemoveImageOption method is:
+%
+%      unsigned int MagickRemoveImageOption(MagickWand *wand,const char *format,
+%        const char *key)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o format: The image format.
+%
+%    o key:  The key.
+%
+*/
+WandExport unsigned int MagickRemoveImageOption(MagickWand *wand,
+  const char *format,const char *key)
+{
+  char
+    option[MaxTextExtent];
+
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  (void) MagickFormatString(option,MaxTextExtent,"%.1024s:%.1024s",
+    format,key);
+  return (RemoveDefinitions(wand->image_info,option) ? True : False);
 }
 
 /*
@@ -7458,20 +7859,20 @@ WandExport unsigned int MagickSeparateImageChannel(MagickWand *wand,
 %  -sampling-factor option to specify the factors for chroma
 %  downsampling.  To use the same quality value as that found by the
 %  JPEG decoder, use the -define jpeg:preserve-settings flag.
-% 
+%
 %  For the MIFF image format, and the TIFF format while using ZIP
 %  compression, quality/10 is the zlib compres- sion level, which is 0
 %  (worst but fastest compression) to 9 (best but slowest). It has no
 %  effect on the image appearance, since the compression is always
 %  lossless.
-% 
+%
 %  For the JPEG-2000 image format, quality is mapped using a non-linear
 %  equation to the compression ratio required by the Jasper library.
 %  This non-linear equation is intended to loosely approximate the
 %  quality provided by the JPEG v1 format.  The default quality value 75
 %  results in a request for 16:1 compression. The quality value 100
 %  results in a request for non-lossy compres- sion.
-% 
+%
 %  For the MNG and PNG image formats, the quality value sets the zlib
 %  compression level (quality / 10) and filter-type (quality % 10).
 %  Compression levels range from 0 (fastest compression) to 100 (best
@@ -7479,38 +7880,38 @@ WandExport unsigned int MagickSeparateImageChannel(MagickWand *wand,
 %  used, which is fastest but not necessarily the worst compression.  If
 %  filter-type is 4 or less, the specified filter-type is used for all
 %  scanlines:
-% 
+%
 %       0) none
 %       1) sub
 %       2) up
 %       3) average
 %       4) Paeth
-% 
+%
 %  If filter-type is 5, adaptive filtering is used when quality is
 %  greater than 50 and the image does not have a color map, otherwise no
 %  filtering is used.
-% 
+%
 %  If filter-type is 6, adaptive filtering with minimum-
 %  sum-of-absolute-values is used.
-% 
+%
 %  Only if the output is MNG, if filter-type is 7, the LOCO color
 %  transformation and adaptive filtering with
 %  minimum-sum-of-absolute-values are used.
-% 
+%
 %  The default is quality is 75, which means nearly the best compression
 %  with adaptive filtering.  The quality setting has no effect on the
 %  appearance of PNG and MNG images, since the compression is always
 %  lossless.
-% 
+%
 %  For further information, see the PNG specification.
-% 
+%
 %  When writing a JNG image with transparency, two quality values are
 %  required, one for the main image and one for the grayscale image that
 %  conveys the opacity channel.  These are written as a single integer
 %  equal to the main image quality plus 1000 times the opacity quality.
 %  For example, if you want to use quality 75 for the main image and
 %  quality 90 to compress the opacity data, use -quality 90075.
-% 
+%
 %  For the PNM family of formats (PNM, PGM, and PPM) specify a quality
 %  factor of zero in order to obtain the ASCII variant of the
 %  format. Note that -compress none used to be used to trigger ASCII
@@ -7713,11 +8114,11 @@ WandExport unsigned int MagickSetImage(MagickWand *wand,
 %    o value: The value of the attribute
 %
 */
-WandExport unsigned int MagickSetImageAttribute(MagickWand *wand, const char *name, 
+WandExport unsigned int MagickSetImageAttribute(MagickWand *wand, const char *name,
   const char *value)
 {
   unsigned int status;
-  
+
   assert(wand != (MagickWand *) NULL);
   assert(wand->signature == MagickSignature);
   if (wand->images == (Image *) NULL)
@@ -8306,7 +8707,7 @@ WandExport unsigned int MagickSetImageGamma(MagickWand *wand,const double gamma)
  %                                                                             %
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %
- %  MagickSetImageGeometry() sets the image geometry string. 
+ %  MagickSetImageGeometry() sets the image geometry string.
  %
  %  The format of the MagickSetImageGeometry method is:
  %
@@ -8651,6 +9052,66 @@ WandExport unsigned int MagickSetImageOption(MagickWand *wand,
   (void) MagickFormatString(option,MaxTextExtent,"%.1024s:%.1024s=%.1024s",
     format,key,value);
   (void) AddDefinitions(wand->image_info,option,&wand->exception);
+  return(True);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%   M a g i c k S e t I m a g e O r i e n t a t i o n                         %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  MagickSetImageOrientation() sets the internal image orientation type.
+%  The EXIF orientation tag will be updated if present.
+%
+%  The format of the MagickSetImageOrientation method is:
+%
+%      MagickSetImageOrientation(MagickWand *wand,
+%        OrientationType new_orientation)
+%
+%  A description of each parameter follows:
+%
+%    o wand: The magick wand.
+%
+%    o new_orientation: The new orientation of the image. One of:
+%
+%         UndefinedOrientation    Image orientation not specified.
+%         TopLeftOrientation      Left to right and Top to bottom.
+%         TopRightOrientation     Right to left  and Top to bottom.
+%         BottomRightOrientation  Right to left and Bottom to top.
+%         BottomLeftOrientation   Left to right and Bottom to top.
+%         LeftTopOrientation      Top to bottom and Left to right.
+%         RightTopOrientation     Top to bottom and Right to left.
+%         RightBottomOrientation  Bottom to top and Right to left.
+%         LeftBottomOrientation   Bottom to top and Left to right.
+%
+%  Returns True on success, False otherwise.
+%
+*/
+WandExport unsigned int MagickSetImageOrientation(MagickWand *wand,
+  const OrientationType new_orientation)
+{
+  OrientationType orientation;
+  char orientation_attribute[MaxTextExtent];
+  assert(wand != (MagickWand *) NULL);
+  assert(wand->signature == MagickSignature);
+  orientation = ((new_orientation > UndefinedOrientation
+    && new_orientation <= LeftBottomOrientation)
+      ? new_orientation
+      : UndefinedOrientation);
+  FormatString(orientation_attribute,"%d",new_orientation);
+
+  if (wand->images == (Image *) NULL)
+      (void) ThrowException(&wand->exception,WandError,WandContainsNoImages,
+                            wand->id);
+
+  (void) SetImageAttribute(wand->image, "EXIF:Orientation", orientation_attribute);
+  wand->image->orientation = orientation;
   return(True);
 }
 
@@ -9220,7 +9681,7 @@ WandExport unsigned int MagickSetInterlaceScheme(MagickWand *wand,
 */
 WandExport unsigned int
 MagickSetResolution(MagickWand *wand,
-		    const double x_resolution,const double y_resolution)
+                    const double x_resolution,const double y_resolution)
 {
   char
     geometry[MaxTextExtent];
@@ -10486,7 +10947,7 @@ WandExport unsigned int MagickWriteImage(MagickWand *wand,const char *filename)
 %
 */
 WandExport unsigned int MagickWriteImagesFile(MagickWand *wand,FILE * file,
-					      const unsigned int adjoin)
+                                              const unsigned int adjoin)
 {
   ImageInfo
     *write_info;
@@ -10691,7 +11152,7 @@ WandExport MagickWand *NewMagickWand(void)
   wand=MagickAllocateMemory(MagickWand *,sizeof(MagickWand));
   if (wand == (MagickWand *) NULL)
     MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
-		      UnableToAllocateWand);
+                      UnableToAllocateWand);
   (void) memset(wand,0,sizeof(MagickWand));
   (void) MagickFormatString(wand->id,MaxTextExtent,"MagickWand-%lu",
     GetMagickWandId());

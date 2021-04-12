@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2016 GraphicsMagick Group
 % Copyright (c) 2000 Markus Friedl.  All rights reserved.
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
@@ -765,11 +765,17 @@ MagickExport char *EscapeString(const char *source,const char escape)
 
   assert(source != (const char *) NULL);
 
-  length=strlen(source)+1;
+  /*
+    Use dry-run method to compute required string length.
+  */
+  length=0;
   for (p=source; *p; p++)
-    if ((*p == '\\') || (*p == escape))
+    {
+      if ((*p == '\\') || (*p == escape))
+        length++;
       length++;
-  destination=MagickAllocateMemory(char *,length);
+    }
+  destination=MagickAllocateMemory(char *,length+1);
   if (destination == (char *) NULL)
     MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
       UnableToEscapeString);
@@ -929,104 +935,104 @@ MagickExport MagickPassFail ExpandFilenames(int *argc,char ***argv)
   for (i=0; i < *argc; i++)
     {
       char
-	**filelist,
-	filename[MaxTextExtent],
-	magick[MaxTextExtent],
-	path[MaxTextExtent],
-	subimage[MaxTextExtent];
+        **filelist,
+        filename[MaxTextExtent],
+        magick[MaxTextExtent],
+        path[MaxTextExtent],
+        subimage[MaxTextExtent];
 
       option=(*argv)[i];
       /* Never throw options away, so copy here, then perhaps modify later */
       vector[count++]=AcquireString(option);
 
       /*
-	Don't expand or process any VID: argument since the VID coder
-	does its own expansion
+        Don't expand or process any VID: argument since the VID coder
+        does its own expansion
       */
       if (LocaleNCompare("VID:",option,4) == 0)
-	continue;
+        continue;
 
       /*
-	Don't attempt to expand the argument to these options.
+        Don't attempt to expand the argument to these options.
       */
       if ((LocaleNCompare("+define",option,7) == 0) ||
-	  (LocaleNCompare("+profile",option,8) == 0) ||
-	  (LocaleNCompare("-comment",option,8) == 0) ||
-	  (LocaleNCompare("-convolve",option,9) == 0) ||
-	  (LocaleNCompare("-draw",option,5) == 0) ||
-	  (LocaleNCompare("-font",option,5) == 0) ||
-	  (LocaleNCompare("-format",option,7) == 0) ||
-	  (LocaleNCompare("-label",option,6) == 0))
-	{
-	  i++;
-	  if (i == *argc)
+          (LocaleNCompare("+profile",option,8) == 0) ||
+          (LocaleNCompare("-comment",option,8) == 0) ||
+          (LocaleNCompare("-convolve",option,9) == 0) ||
+          (LocaleNCompare("-draw",option,5) == 0) ||
+          (LocaleNCompare("-font",option,5) == 0) ||
+          (LocaleNCompare("-format",option,7) == 0) ||
+          (LocaleNCompare("-label",option,6) == 0))
+        {
+          i++;
+          if (i == *argc)
             continue;
-	  option=(*argv)[i];
-	  vector[count++]=AcquireString(option);
-	  continue;
-	}
+          option=(*argv)[i];
+          vector[count++]=AcquireString(option);
+          continue;
+        }
 
       /* Pass quotes through to the command-line parser */
       if ((*option == '"') || (*option == '\''))
-	continue;
+        continue;
 
       /*
-	Expand @filename to a list of arguments.
+        Expand @filename to a list of arguments.
       */
       j=0;
       if (option[0] == '@')
-	{
-	  FILE
-	    *file;
+        {
+          FILE
+            *file;
 
-	  file=fopen(option+1,"r");
-	  if (file != (FILE *) NULL)
-	    {
+          file=fopen(option+1,"r");
+          if (file != (FILE *) NULL)
+            {
 
-	      first=MagickTrue;
-	      number_files=0;
-	      while (fgets(filename,sizeof(filename),file) != (char *) NULL)
-		{
-		  for (j=0; filename[j] != '\0'; j++)
-		    if (filename[j] == '\n')
-		      filename[j] = '\0';
-	      
-		  if (filename[0] != '\0')
-		    {
-		      if ((number_files % prealloc_entries) == 0)
-			{
-			  MagickReallocMemory(char **,vector,
-					      (*argc+count+prealloc_entries)*
-					      sizeof(char *));
-			  if (vector == (char **) NULL)
-			    {
-			      fclose(file);
-			      return(MagickFail);
-			    }
-			}
+              first=MagickTrue;
+              number_files=0;
+              while (fgets(filename,sizeof(filename),file) != (char *) NULL)
+                {
+                  for (j=0; filename[j] != '\0'; j++)
+                    if (filename[j] == '\n')
+                      filename[j] = '\0';
 
-		      if (first)
-			{
-			  /* Deallocate original option assigned above */
-			  --count;
-			  MagickFreeMemory(vector[count]);
-			  first=MagickFalse;
-			}
-		      number_files++;
-		      vector[count++]=AcquireString(filename);
-		    }
-		}
+                  if (filename[0] != '\0')
+                    {
+                      if ((number_files % prealloc_entries) == 0)
+                        {
+                          MagickReallocMemory(char **,vector,
+                                              (*argc+count+prealloc_entries)*
+                                              sizeof(char *));
+                          if (vector == (char **) NULL)
+                            {
+                              fclose(file);
+                              return(MagickFail);
+                            }
+                        }
 
-	      fclose(file);
-	    }
-	}
+                      if (first)
+                        {
+                          /* Deallocate original option assigned above */
+                          --count;
+                          MagickFreeMemory(vector[count]);
+                          first=MagickFalse;
+                        }
+                      number_files++;
+                      vector[count++]=AcquireString(filename);
+                    }
+                }
 
-      /* 
-	 Fast cycle options that are not expandable filename patterns.
-	 ListFiles only expands patterns in the filename.  We also check
-	 if the full option resolves to a file since ListFiles() obtains
-	 a list of all the files in the directory and is thus very slow
-	 if there are thousands of files.
+              fclose(file);
+            }
+        }
+
+      /*
+         Fast cycle options that are not expandable filename patterns.
+         ListFiles only expands patterns in the filename.  We also check
+         if the full option resolves to a file since ListFiles() obtains
+         a list of all the files in the directory and is thus very slow
+         if there are thousands of files.
       */
       GetPathComponent(option,TailPath,filename);
       if ((!IsGlob(filename)) || IsAccessibleNoLogging(option))
@@ -1039,110 +1045,110 @@ MagickExport MagickPassFail ExpandFilenames(int *argc,char ***argv)
 
       /* GetPathComponent throws away the colon */
       if (*magick != '\0')
-	(void) strlcat(magick,":",sizeof(magick));
+        (void) strlcat(magick,":",sizeof(magick));
       ExpandFilename(path);
 
       if ('\0' == current_directory[0])
-	if (getcwd(current_directory,MaxTextExtent-1) == NULL)
+        if (getcwd(current_directory,MaxTextExtent-1) == NULL)
           MagickFatalError(ConfigureFatalError,UnableToGetCurrentDirectory,
                            NULL);
 
       /* Get the list of matching file names. */
       filelist=ListFiles(*path=='\0' ? current_directory : path,
-			 filename,&number_files);
+                         filename,&number_files);
 
       if (filelist != (char **) NULL)
-	for (j=0; j < number_files; j++)
-	  if (IsDirectory(filelist[j]) <= 0)
-	    break;
+        for (j=0; j < number_files; j++)
+          if (IsDirectory(filelist[j]) <= 0)
+            break;
 
       /* ListFiles() may change current directory without restoring. */
       if ((strlen(current_directory) > 0) && (chdir(current_directory) != 0))
         {
           for (j=0; j < number_files; j++)
-	    MagickFreeMemory(filelist[j]);
+            MagickFreeMemory(filelist[j]);
           MagickFreeMemory(filelist);
           MagickFatalError(ConfigureFatalError,UnableToRestoreCurrentDirectory,
                            NULL);
         }
 
       if (filelist == 0)
-	continue;
+        continue;
 
       if (j == number_files)
-	{
-	  /*
-	    Bourne/Bash shells passes through unchanged any glob patterns
-	    not matching anything (abc* and there's no file starting with
-	    abc). Do the same for behaviour consistent with that.
-	  */
-	  for (j=0; j < number_files; j++)
-	    MagickFreeMemory(filelist[j]);
-	  MagickFreeMemory(filelist);
-	  continue;
-	}
+        {
+          /*
+            Bourne/Bash shells passes through unchanged any glob patterns
+            not matching anything (abc* and there's no file starting with
+            abc). Do the same for behaviour consistent with that.
+          */
+          for (j=0; j < number_files; j++)
+            MagickFreeMemory(filelist[j]);
+          MagickFreeMemory(filelist);
+          continue;
+        }
 
       /*
-	There's at least one matching filename.
-	Transfer file list to argument vector.
+        There's at least one matching filename.
+        Transfer file list to argument vector.
       */
       MagickReallocMemory(char **,vector,
-			  (*argc+count+number_files+prealloc_entries)*sizeof(char *));
+                          (*argc+count+number_files+prealloc_entries)*sizeof(char *));
       if (vector == (char **) NULL)
-	return(MagickFail);
+        return(MagickFail);
 
       first=MagickTrue;
       for (j=0; j < number_files; j++)
-	{
-	  char
-	    filename_buffer[MaxTextExtent];
+        {
+          char
+            filename_buffer[MaxTextExtent];
 
-	  *filename_buffer='\0';
-	  if (strlcat(filename_buffer,path,sizeof(filename_buffer))
-	      >= sizeof(filename_buffer))
-	    MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-			      filename_buffer);
-	  if (*path != '\0')
-	    {
-	      if (strlcat(filename_buffer,DirectorySeparator,sizeof(filename_buffer))
-		  >= sizeof(filename_buffer))
-		MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-				  filename_buffer);
-	    }
-	  if (strlcat(filename_buffer,filelist[j],sizeof(filename_buffer))
-	      >= sizeof(filename_buffer))
-	    MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-			      filename_buffer);
-	  /* If it's a filename (not a directory) ... */
-	  if (IsDirectory(filename_buffer) == 0) 
-	    {
-	      char
-		formatted_buffer[MaxTextExtent];
+          *filename_buffer='\0';
+          if (strlcat(filename_buffer,path,sizeof(filename_buffer))
+              >= sizeof(filename_buffer))
+            MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                              filename_buffer);
+          if (*path != '\0')
+            {
+              if (strlcat(filename_buffer,DirectorySeparator,sizeof(filename_buffer))
+                  >= sizeof(filename_buffer))
+                MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                                  filename_buffer);
+            }
+          if (strlcat(filename_buffer,filelist[j],sizeof(filename_buffer))
+              >= sizeof(filename_buffer))
+            MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                              filename_buffer);
+          /* If it's a filename (not a directory) ... */
+          if (IsDirectory(filename_buffer) == 0)
+            {
+              char
+                formatted_buffer[MaxTextExtent];
 
-	      *formatted_buffer='\0';
-	      if (strlcat(formatted_buffer,magick,sizeof(formatted_buffer))
-		  >= sizeof(formatted_buffer))
-		MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-				  formatted_buffer);
-	      if (strlcat(formatted_buffer,filename_buffer,sizeof(formatted_buffer))
-		  >= sizeof(formatted_buffer))
-		MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-				  formatted_buffer);
-	      if (strlcat(formatted_buffer,subimage,sizeof(formatted_buffer))
-		  >= sizeof(formatted_buffer))
-		MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
-				  formatted_buffer);
-	      if (first)
-		{
-		  /* Deallocate original option assigned above */
-		  --count;
-		  MagickFreeMemory(vector[count]);
-		  first=MagickFalse;
-		}
-	      vector[count++]=AcquireString(formatted_buffer);
-	    }
-	  MagickFreeMemory(filelist[j]);
-	}
+              *formatted_buffer='\0';
+              if (strlcat(formatted_buffer,magick,sizeof(formatted_buffer))
+                  >= sizeof(formatted_buffer))
+                MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                                  formatted_buffer);
+              if (strlcat(formatted_buffer,filename_buffer,sizeof(formatted_buffer))
+                  >= sizeof(formatted_buffer))
+                MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                                  formatted_buffer);
+              if (strlcat(formatted_buffer,subimage,sizeof(formatted_buffer))
+                  >= sizeof(formatted_buffer))
+                MagickFatalError2(ResourceLimitFatalError,"Path buffer overflow",
+                                  formatted_buffer);
+              if (first)
+                {
+                  /* Deallocate original option assigned above */
+                  --count;
+                  MagickFreeMemory(vector[count]);
+                  first=MagickFalse;
+                }
+              vector[count++]=AcquireString(formatted_buffer);
+            }
+          MagickFreeMemory(filelist[j]);
+        }
       MagickFreeMemory(filelist);
     }
   *argc=count;
@@ -1233,7 +1239,7 @@ MagickExport void FormatSize(const magick_int64_t size,char *format)
 %
 %
 */
-MagickExport void FormatStringList(char *string,const char *format, 
+MagickExport void FormatStringList(char *string,const char *format,
                                    va_list operands)
 {
 #if defined(HAVE_VSNPRINTF)
@@ -1328,7 +1334,7 @@ MagickExport MagickPassFail GetExecutionPath(char *path)
     char
       executable_path[PATH_MAX*2],
       real_path[PATH_MAX+1];
-    
+
     bufsize=sizeof(executable_path);
     if (_NSGetExecutablePath(executable_path,&bufsize) == 0)
       if (realpath(executable_path,real_path) != NULL)
@@ -1351,7 +1357,7 @@ MagickExport MagickPassFail GetExecutionPath(char *path)
     long
       pid;
 
-    char 
+    char
       link_path[MaxTextExtent],
       real_path[PATH_MAX+1];
 
@@ -1470,16 +1476,16 @@ MagickExport MagickPassFail GetExecutionPathUsingName(char *path)
         const char
           *end = NULL,
           *start = search_path;
-        
+
         end=start+strlen(start);
         while ( start < end )
           {
             const char
               *separator;
-            
+
             int
               length;
-            
+
             separator = strchr(start,DirectoryListSeparator);
             if (separator)
               length=separator-start;
@@ -1844,9 +1850,9 @@ static int MagickStrToD(const char *start,char **end,double *value)
   int
     i,
     n=0;
-  
+
   p=start;
-  
+
   for (i=0; (*p != 0) && (*p != 'x') && (*p != ',') && (i < MaxTextExtent-2); i++)
     buff[i]=*p++;
   buff[i]=0;
@@ -2195,90 +2201,101 @@ MagickExport int GetMagickGeometry(const char *geometry,long *x,long *y,
 */
 MagickExport char *GetPageGeometry(const char *page_geometry)
 {
-  static const char
-    *PageSizes[][2]=
+#define PAGE_SIZE(name, geometry) { name, sizeof(name)-1, geometry }
+  static const struct
+  {
+    char
+      *name;
+
+    size_t
+       name_length;
+
+    char
+       *geometry;
+  }
+  PageSizes[] =
     {
-      { "4x6",  "288x432" },
-      { "5x7",  "360x504" },
-      { "7x9",  "504x648" },
-      { "8x10", "576x720" },
-      { "9x11",  "648x792" },
-      { "9x12",  "648x864" },
-      { "10x13",  "720x936" },
-      { "10x14",  "720x1008" },
-      { "11x17",  "792x1224" },
-      { "A0",  "2384x3370" },
-      { "A1",  "1684x2384" },
-      { "A10", "73x105" },
-      { "A2",  "1191x1684" },
-      { "A3",  "842x1191" },
-      { "A4",  "595x842" },
-      { "A4SMALL", "595x842" },
-      { "A5",  "420x595" },
-      { "A6",  "297x420" },
-      { "A7",  "210x297" },
-      { "A8",  "148x210" },
-      { "A9",  "105x148" },
-      { "ARCHA", "648x864" },
-      { "ARCHB", "864x1296" },
-      { "ARCHC", "1296x1728" },
-      { "ARCHD", "1728x2592" },
-      { "ARCHE", "2592x3456" },
-      { "B0",  "2920x4127" },
-      { "B1",  "2064x2920" },
-      { "B10", "91x127" },
-      { "B2",  "1460x2064" },
-      { "B3",  "1032x1460" },
-      { "B4",  "729x1032" },
-      { "B5",  "516x729" },
-      { "B6",  "363x516" },
-      { "B7",  "258x363" },
-      { "B8",  "181x258" },
-      { "B9",  "127x181" },
-      { "C0",  "2599x3676" },
-      { "C1",  "1837x2599" },
-      { "C2",  "1298x1837" },
-      { "C3",  "918x1296" },
-      { "C4",  "649x918" },
-      { "C5",  "459x649" },
-      { "C6",  "323x459" },
-      { "C7",  "230x323" },
-      { "EXECUTIVE", "540x720" },
-      { "FLSA", "612x936" },
-      { "FLSE", "612x936" },
-      { "FOLIO",  "612x936" },
-      { "HALFLETTER", "396x612" },
-      { "ISOB0", "2835x4008" },
-      { "ISOB1", "2004x2835" },
-      { "ISOB10", "88x125" },
-      { "ISOB2", "1417x2004" },
-      { "ISOB3", "1001x1417" },
-      { "ISOB4", "709x1001" },
-      { "ISOB5", "499x709" },
-      { "ISOB6", "354x499" },
-      { "ISOB7", "249x354" },
-      { "ISOB8", "176x249" },
-      { "ISOB9", "125x176" },
-      { "LEDGER",  "1224x792" },
-      { "LEGAL",  "612x1008" },
-      { "LETTER", "612x792" },
-      { "LETTERSMALL",  "612x792" },
-      { "QUARTO",  "610x780" },
-      { "STATEMENT",  "396x612" },
-      { "TABLOID",  "792x1224" },
-      { (char *) NULL, (char *) NULL }
+      PAGE_SIZE("4x6",  "288x432"),
+      PAGE_SIZE("5x7",  "360x504"),
+      PAGE_SIZE("7x9",  "504x648"),
+      PAGE_SIZE("8x10", "576x720"),
+      PAGE_SIZE("9x11",  "648x792"),
+      PAGE_SIZE("9x12",  "648x864"),
+      PAGE_SIZE("10x13",  "720x936"),
+      PAGE_SIZE("10x14",  "720x1008"),
+      PAGE_SIZE("11x17",  "792x1224"),
+      PAGE_SIZE("A0",  "2384x3370"),
+      PAGE_SIZE("A1",  "1684x2384"),
+      PAGE_SIZE("A10", "73x105"),
+      PAGE_SIZE("A2",  "1191x1684"),
+      PAGE_SIZE("A3",  "842x1191"),
+      PAGE_SIZE("A4",  "595x842"),
+      PAGE_SIZE("A4SMALL", "595x842"),
+      PAGE_SIZE("A5",  "420x595"),
+      PAGE_SIZE("A6",  "297x420"),
+      PAGE_SIZE("A7",  "210x297"),
+      PAGE_SIZE("A8",  "148x210"),
+      PAGE_SIZE("A9",  "105x148"),
+      PAGE_SIZE("ARCHA", "648x864"),
+      PAGE_SIZE("ARCHB", "864x1296"),
+      PAGE_SIZE("ARCHC", "1296x1728"),
+      PAGE_SIZE("ARCHD", "1728x2592"),
+      PAGE_SIZE("ARCHE", "2592x3456"),
+      PAGE_SIZE("B0",  "2920x4127"),
+      PAGE_SIZE("B1",  "2064x2920"),
+      PAGE_SIZE("B10", "91x127"),
+      PAGE_SIZE("B2",  "1460x2064"),
+      PAGE_SIZE("B3",  "1032x1460"),
+      PAGE_SIZE("B4",  "729x1032"),
+      PAGE_SIZE("B5",  "516x729"),
+      PAGE_SIZE("B6",  "363x516"),
+      PAGE_SIZE("B7",  "258x363"),
+      PAGE_SIZE("B8",  "181x258"),
+      PAGE_SIZE("B9",  "127x181"),
+      PAGE_SIZE("C0",  "2599x3676"),
+      PAGE_SIZE("C1",  "1837x2599"),
+      PAGE_SIZE("C2",  "1298x1837"),
+      PAGE_SIZE("C3",  "918x1296"),
+      PAGE_SIZE("C4",  "649x918"),
+      PAGE_SIZE("C5",  "459x649"),
+      PAGE_SIZE("C6",  "323x459"),
+      PAGE_SIZE("C7",  "230x323"),
+      PAGE_SIZE("EXECUTIVE", "540x720"),
+      PAGE_SIZE("FLSA", "612x936"),
+      PAGE_SIZE("FLSE", "612x936"),
+      PAGE_SIZE("FOLIO",  "612x936"),
+      PAGE_SIZE("HALFLETTER", "396x612"),
+      PAGE_SIZE("ISOB0", "2835x4008"),
+      PAGE_SIZE("ISOB1", "2004x2835"),
+      PAGE_SIZE("ISOB10", "88x125"),
+      PAGE_SIZE("ISOB2", "1417x2004"),
+      PAGE_SIZE("ISOB3", "1001x1417"),
+      PAGE_SIZE("ISOB4", "709x1001"),
+      PAGE_SIZE("ISOB5", "499x709"),
+      PAGE_SIZE("ISOB6", "354x499"),
+      PAGE_SIZE("ISOB7", "249x354"),
+      PAGE_SIZE("ISOB8", "176x249"),
+      PAGE_SIZE("ISOB9", "125x176"),
+      PAGE_SIZE("LEDGER",  "1224x792"),
+      PAGE_SIZE("LEGAL",  "612x1008"),
+      PAGE_SIZE("LETTER", "612x792"),
+      PAGE_SIZE("LETTERSMALL",  "612x792"),
+      PAGE_SIZE("QUARTO",  "610x780"),
+      PAGE_SIZE("STATEMENT",  "396x612"),
+      PAGE_SIZE("TABLOID",  "792x1224"),
     };
 
   char
-    *page;
+    page[MaxTextExtent];
 
-  register long
+  register size_t
     i;
 
   assert(page_geometry != (char *) NULL);
-  page=AllocateString(page_geometry);
-  for (i=0; *PageSizes[i] != (char *) NULL; i++)
-    if (LocaleNCompare(PageSizes[i][0],page,strlen(PageSizes[i][0])) == 0)
+  strlcpy(page,page_geometry,MaxTextExtent);
+  for (i=0; i < sizeof(PageSizes)/sizeof(PageSizes[0]); i++)
+    if (LocaleNCompare(PageSizes[i].name,page_geometry,
+                       PageSizes[i].name_length) == 0)
       {
         int
           flags;
@@ -2289,16 +2306,15 @@ MagickExport char *GetPageGeometry(const char *page_geometry)
         /*
           Replace mneumonic with the equivalent size in dots-per-inch.
         */
-        (void) strlcpy(page,PageSizes[i][1],MaxTextExtent);
-        (void) strlcat(page,page_geometry+strlen(PageSizes[i][0]),
-          MaxTextExtent);
+        FormatString(page,"%s%.80s", PageSizes[i].geometry,
+                     page_geometry+PageSizes[i].name_length);
         flags=GetGeometry(page,&geometry.x,&geometry.y,&geometry.width,
           &geometry.height);
         if (!(flags & GreaterValue))
           (void) strcat(page,">");
         break;
       }
-  return(page);
+  return (AcquireString(page));
 }
 
 /*
@@ -2434,7 +2450,7 @@ MagickExport void GetPathComponent(const char *path,PathType type,
 
   /* first locate the spot were the filename begins */
   for (p=component+strlen(component); p > component; p--)
-    if (IsBasenameSeparator(*p))
+    if (IsBasenameSeparator(*p)) /* Is directory delimiter like '/' or '\\' */
       break;
 
   switch (type)
@@ -2547,7 +2563,9 @@ MagickExport void GetPathComponent(const char *path,PathType type,
 %  Method GetToken gets a token from the token stream.  A token is defined
 %  as sequence of characters delimited by whitespace (e.g. clip-path), a
 %  sequence delimited with quotes (.e.g "Quote me"), or a sequence enclosed
-%  in parenthesis (e.g. rgb(0,0,0)).
+%  in parenthesis (e.g. rgb(0,0,0)).  The output to token is constrained to
+%  not overflow a buffer of size MaxTextExtent so it should be allocated with
+%  that size.
 %
 %  The format of the GetToken method is:
 %
@@ -2565,106 +2583,7 @@ MagickExport void GetPathComponent(const char *path,PathType type,
 */
 MagickExport void GetToken(const char *start,char **end,char *token)
 {
-  register char
-    *p;
-
-  register long
-    i;
-
-  double
-    double_val;
-
-  assert(start != (const char *) NULL);
-  assert(token != (char *) NULL);
-
-  i=0;
-  p=(char *) start;
-
-  if (*p != '\0')
-  {
-    while (isspace((int)(unsigned char) (*p)) && (*p != '\0'))
-      p++;
-    switch (*p)
-    {
-      case '"':
-      case '\'':
-      case '{':
-      {
-        register char
-          escape;
-
-        escape=(*p);
-        if (escape == '{')
-          escape='}';
-        for (p++; *p != '\0'; p++)
-        {
-          if ((*p == '\\') && ((*(p+1) == escape) || (*(p+1) == '\\')))
-            p++;
-          else
-            if (*p == escape)
-              {
-                p++;
-                break;
-              }
-          token[i++]=(*p);
-        }
-        break;
-      }
-      default:
-      {
-        char
-          *q;
-
-        double_val=strtod(p,&q);
-        (void) double_val;
-        if (p != q)
-          {
-            for ( ; p < q; p++)
-              token[i++]=(*p);
-            if (*p == '%')
-              token[i++]=(*p++);
-            break;
-          }
-        if ((*p != '\0') && !isalpha((int) *p) && (*p != *DirectorySeparator) &&
-	    (*p != '#') && (*p != '<'))
-          {
-            token[i++]=(*p++);
-            break;
-          }
-        for ( ; *p != '\0'; p++)
-        {
-          if ((isspace((int)(unsigned char) *p) || (*p == '=')) && (*(p-1) != '\\'))
-            break;
-          token[i++]=(*p);
-          if (*p == '(')
-            for (p++; *p != '\0'; p++)
-            {
-              token[i++]=(*p);
-              if ((*p == ')') && (*(p-1) != '\\'))
-                break;
-            }
-        }
-        break;
-      }
-    }
-  }
-  token[i]='\0';
-  {
-    char
-      *r;
-
-    /*
-      Parse token in form "url(#%s)"
-    */
-    if ((LocaleNCompare(token,"url(#",5) == 0) &&
-        ((r = strrchr(token,')')) != NULL))
-    {
-      *r='\0';
-      (void) memmove(token,token+5,r-token+1);
-    }
-  }
-  if (end != (char **) NULL)
-    *end=p;
+  (void) MagickGetToken(start,end,token, MaxTextExtent);
 }
 
 /*
@@ -2689,7 +2608,7 @@ MagickExport void GetToken(const char *start,char **end,char *token)
 %  if the specification may be a subimage specification.  If the pattern is
 %  ultimately determined to be a subimage specification, then globbing is
 %  not performed.
-%  
+%
 %
 %  The format of the GlobExpression function is:
 %
@@ -2886,9 +2805,9 @@ MagickExport int GlobExpression(const char *expression,const char *pattern)
                     }
                 }
               }
-            if (*pattern != '\0')
-              pattern++;
-          }
+          if (*pattern != '\0')
+            pattern++;
+        }
         break;
       }
       default:
@@ -3574,6 +3493,59 @@ MagickExport void LocaleUpper(char *string)
     *q=(char) toupper((int) *q);
 }
 
+MagickExport MagickPassFail MagickAtoFChk(const char *str, double *value)
+{
+  char *estr=0;
+  *value=strtod(str,&estr);
+  if (str == estr)
+    *value=0.0;
+  return (str == estr ? MagickFail : MagickPass);
+}
+
+MagickExport MagickPassFail MagickAtoIChk(const char *str, int *value)
+{
+  char *estr=0;
+  long lvalue;
+  lvalue=strtol(str,&estr, 10);
+  if ((str == estr) || ((int) lvalue != lvalue))
+    lvalue=0;
+  *value=(int) lvalue;
+  return (str == estr ? MagickFail : MagickPass);
+}
+
+MagickExport MagickPassFail MagickAtoUIChk(const char *str, unsigned int *value)
+{
+  char *estr=0;
+  long lvalue;
+  lvalue=strtol(str,&estr, 10);
+  if ((str == estr) || ((long) ((unsigned int) lvalue) != lvalue))
+    lvalue=0U;
+  *value=(unsigned int) lvalue;
+  return (((str == estr) || ((long) ((unsigned int) lvalue) != lvalue))
+          ? MagickFail : MagickPass);
+}
+
+MagickExport MagickPassFail MagickAtoLChk(const char *str, long *value)
+{
+  char *estr=0;
+  *value=strtol(str,&estr, 10);
+  if (str == estr)
+    *value=0L;
+  return (str == estr ? MagickFail : MagickPass);
+}
+
+MagickExport MagickPassFail MagickAtoULChk(const char *str, unsigned long *value)
+{
+  char *estr=0;
+  long lvalue;
+  lvalue=strtol(str,&estr, 10);
+  if ((str == estr) || ((long) ((unsigned long) lvalue) != lvalue))
+    lvalue=0L;
+  *value=(unsigned long) lvalue;
+  return (((str == estr) || ((long) ((unsigned long) lvalue) != lvalue)) ?
+          MagickFail : MagickPass);
+}
+
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                             %
@@ -3676,7 +3648,7 @@ double MagickFmax(const double x, const double y)
 */
 MagickExport void MagickFormatStringList(char *string,
                                          const size_t length,
-                                         const char *format, 
+                                         const char *format,
                                          va_list operands)
 {
 #if defined(HAVE_VSNPRINTF)
@@ -3695,6 +3667,172 @@ MagickExport void MagickFormatString(char *string,
   va_start(operands,format);
   MagickFormatStringList(string, length, format, operands);
   va_end(operands);
+}
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%                                                                             %
++   M a g i c k G e t T o k e n                                               %
+%                                                                             %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Method MagickGetToken gets a token from the token stream.  A token is defined
+%  as sequence of characters delimited by whitespace (e.g. clip-path), a
+%  sequence delimited with quotes (.e.g "Quote me"), or a sequence enclosed
+%  in parenthesis (e.g. rgb(0,0,0)).
+%
+%  The format of the MagickGetToken method is:
+%
+%      void MagickGetToken(const char *start,char **end,char *token,
+%                          const size_t buffer_length)
+%
+%  A description of each parameter follows:
+%
+%    o start: the start of the token sequence.
+%
+%    o end: point to the end of the token sequence (may be NULL).
+%
+%    o token: copy the token to this buffer.
+%
+%    o buffer_length: size of the token buffer.  If the token exceeds
+%             the buffer size, the token will be truncated, but the
+%             parser will still update the end pointer as if the
+%             truncation did not occur.
+%
+%    o returns: Size of the consumed token, not including a terminating
+%             null character.  If this is larger or equal to the buffer
+%             size then truncation has occured.
+%
+*/
+MagickExport size_t MagickGetToken(const char *start,char **end,char *token,
+                                   const size_t buffer_length)
+{
+  register char
+    *p;
+
+  register size_t
+    i;
+
+  register size_t
+    length = buffer_length - 1;
+
+  double
+    double_val;
+
+  assert(start != (const char *) NULL);
+  assert(token != (char *) NULL);
+
+  i=0;
+  p=(char *) start;
+
+  if (*p != '\0')
+    {
+      while (isspace((int)(unsigned char) (*p)) && (*p != '\0'))
+        p++;
+      switch (*p)
+        {
+        case '"':
+        case '\'':
+        case '{':
+          {
+            register char
+              escape;
+
+            escape=(*p);
+            if (escape == '{')
+              escape='}';
+            for (p++; *p != '\0'; p++)
+              {
+                if ((*p == '\\') && ((*(p+1) == escape) || (*(p+1) == '\\')))
+                  p++;
+                else
+                  if (*p == escape)
+                    {
+                      p++;
+                      break;
+                    }
+                if (i < length)
+                  token[i++]=(*p);
+              }
+            break;
+          }
+        default:
+          {
+            char
+              *q;
+
+            double_val=strtod(p,&q);
+            (void) double_val;
+            if (p != q)
+              {
+                for ( ; p < q; p++)
+                  if (i < length)
+                    token[i++]=(*p);
+                if (*p == '%')
+                  if (i < length)
+                    {
+                      token[i++]=(*p);
+                      p++;
+                    }
+                break;
+              }
+            if ((*p != '\0') && !isalpha((int) *p) &&
+                (*p != *DirectorySeparator) &&
+                (*p != '#') && (*p != '<'))
+              {
+                if (i < length)
+                  {
+                    token[i++]=(*p);
+                    p++;
+                  }
+                break;
+              }
+            for ( ; *p != '\0'; p++)
+              {
+                if ((isspace((int)(unsigned char) *p) ||
+                     (*p == '=')) && (*(p-1) != '\\'))
+                  break;
+                if (i < length)
+                  token[i++]=(*p);
+                if (*p == '(')
+                  {
+                    for (p++; *p != '\0'; p++)
+                      {
+                        if (i < length)
+                          token[i++]=(*p);
+                        if ((*p == ')') && (*(p-1) != '\\'))
+                          break;
+                      }
+                  }
+                if (*p == '\0')
+                  break;
+              }
+            break;
+          }
+        }
+    }
+  token[i]='\0';
+  {
+    char
+      *r;
+
+    /*
+      Parse token in form "url(#%s)"
+    */
+    if ((LocaleNCompare(token,"url(#",5) == 0) &&
+        ((r = strrchr(token,')')) != NULL))
+      {
+        *r='\0';
+        (void) memmove(token,token+5,r-token+1);
+      }
+  }
+  if (end != (char **) NULL)
+    *end=p;
+  return (p-start+1);
 }
 
 /*
@@ -3891,14 +4029,14 @@ MagickSpawnVP(const unsigned int verbose,const char *file, char *const argv[])
     */
     ExceptionInfo
       exception;
-    
+
     GetExceptionInfo(&exception);
     if (MagickConfirmAccess(FileExecuteConfirmAccessMode,argv[0],&exception)
-	== MagickFail)
+        == MagickFail)
       {
-	errno=EPERM;
-	DestroyExceptionInfo(&exception);
-	return -1;
+        errno=EPERM;
+        DestroyExceptionInfo(&exception);
+        return -1;
       }
   }
 
@@ -3915,47 +4053,47 @@ MagickSpawnVP(const unsigned int verbose,const char *file, char *const argv[])
     child_pid = fork( );
     if ( (pid_t)-1 == child_pid)
       {
-	/* Failed to fork, errno contains reason */
-	status = -1;
-	FormatString(message,"fork failed: %.1024s", strerror(errno));
+        /* Failed to fork, errno contains reason */
+        status = -1;
+        FormatString(message,"fork failed: %.1024s", strerror(errno));
       }
     else if ( 0 == child_pid )
       {
-	/* We are the child process, exec program with arguments. */
-	status = execvp(file, argv);
+        /* We are the child process, exec program with arguments. */
+        status = execvp(file, argv);
 
-	/* If we get here, then execvp must have failed. */
-	(void) fprintf(stderr, "execvp failed, errno = %d (%s)\n",errno,strerror(errno));
+        /* If we get here, then execvp must have failed. */
+        (void) fprintf(stderr, "execvp failed, errno = %d (%s)\n",errno,strerror(errno));
 
-	/* If there is an execvp error, then call _exit() */
-	_exit(1);
+        /* If there is an execvp error, then call _exit() */
+        _exit(1);
       }
     else
       {
-	/* We are the parent process, wait for child. */
-	pid_t waitpid_status;
-	int child_status = 0;
-	waitpid_status = waitpid(child_pid, &child_status, 0);
-	if ( (pid_t)-1 == waitpid_status )
-	  {
-	    /* Waitpid error */
-	    status = -1;
-	    FormatString(message, "waitpid failed: %.1024s", strerror(errno));
-	  }
-	else if ( waitpid_status == child_pid )
-	  {
-	    /* Status is available for child process */
-	    if ( WIFEXITED( child_status ) )
-	      {
-		status =  WEXITSTATUS( child_status );
-	      }
-	    else if ( WIFSIGNALED( child_status ) )
-	      {
-		int sig_num = WTERMSIG( child_status );
-		status = -1;
-		FormatString(message, "child process quit due to signal %d", sig_num);
-	      }
-	  }
+        /* We are the parent process, wait for child. */
+        pid_t waitpid_status;
+        int child_status = 0;
+        waitpid_status = waitpid(child_pid, &child_status, 0);
+        if ( (pid_t)-1 == waitpid_status )
+          {
+            /* Waitpid error */
+            status = -1;
+            FormatString(message, "waitpid failed: %.1024s", strerror(errno));
+          }
+        else if ( waitpid_status == child_pid )
+          {
+            /* Status is available for child process */
+            if ( WIFEXITED( child_status ) )
+              {
+                status =  WEXITSTATUS( child_status );
+              }
+            else if ( WIFSIGNALED( child_status ) )
+              {
+                int sig_num = WTERMSIG( child_status );
+                status = -1;
+                FormatString(message, "child process quit due to signal %d", sig_num);
+              }
+          }
       }
   }
 #endif
@@ -3967,29 +4105,29 @@ MagickSpawnVP(const unsigned int verbose,const char *file, char *const argv[])
   if (verbose || (status != 0))
     {
       const char
-	*message_p = (const char *) NULL;
+        *message_p = (const char *) NULL;
 
       char
-	*command;
+        *command;
 
       unsigned int
-	i;
+        i;
 
       command = AllocateString((const char*) NULL);
       for (i = 0; argv[i] != (const char*) NULL; i++)
-	{
-	  char
-	    buffer[MaxTextExtent];
+        {
+          char
+            buffer[MaxTextExtent];
 
-	  FormatString(buffer,"\"%.1024s\"", argv[i]);
+          FormatString(buffer,"\"%.1024s\"", argv[i]);
 
-	  if (0 != i)
-	    (void) ConcatenateString(&command," ");
+          if (0 != i)
+            (void) ConcatenateString(&command," ");
 
-	  (void) ConcatenateString(&command,buffer);
-	}
+          (void) ConcatenateString(&command,buffer);
+        }
       if (message[0] != '\0')
-	message_p = message;
+        message_p = message;
       MagickError2(DelegateError,command,message_p);
       MagickFreeMemory(command);
     }
@@ -4345,13 +4483,13 @@ MagickExport size_t MagickStrlCat(char *dst, const char *src, const size_t size)
   if (size >= 1)
     {
       char
-	*p;
+        *p;
 
       for ( p = dst + length ;
-	    (*q != 0) && (length < size - 1) ;
-	    length++, p++, q++ )
-	*p = *q;
-      
+            (*q != 0) && (length < size - 1) ;
+            length++, p++, q++ )
+        *p = *q;
+
       dst[length]='\0';
     }
 
@@ -4425,13 +4563,13 @@ MagickExport size_t MagickStrlCpy(char *dst, const char *src, const size_t size)
   if (size >= 1)
     {
       char
-	*p;
+        *p;
 
       for ( p=dst ;
-	    (*q != 0) && (length < size-1) ;
-	    length++, p++, q++ )
-	*p = *q;
-      
+            (*q != 0) && (length < size-1) ;
+            length++, p++, q++ )
+        *p = *q;
+
       dst[length]='\0';
     }
 
@@ -4494,13 +4632,13 @@ MagickExport size_t MagickStrlCpyTrunc(char *dst, const char *src, const size_t 
   if (size >= 1)
     {
       char
-	*p;
+        *p;
 
       for ( p=dst, q=src;
-	    (*q != 0) && (length < size-1) ;
-	    length++, p++, q++ )
-	*p = *q;
-      
+            (*q != 0) && (length < size-1) ;
+            length++, p++, q++ )
+        *p = *q;
+
       dst[length]='\0';
     }
 
@@ -4920,7 +5058,7 @@ MagickExport char **StringToList(const char *text)
   register const char
     *p;
 
-  register long
+  register size_t
     i;
 
   size_t
@@ -4940,26 +5078,21 @@ MagickExport char **StringToList(const char *text)
       for (p=text; *p != '\0'; p++)
         if (*p == '\n')
           lines++;
-      textlist=MagickAllocateMemory(char **,(lines+MaxTextExtent)*sizeof(char *));
+      textlist=MagickAllocateMemory(char **,(lines+1)*sizeof(char *));
       if (textlist == (char **) NULL)
         MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
           UnableToConvertText);
       p=text;
-      for (i=0; i < (long) lines; i++)
+      for (i=0; i < lines; i++)
       {
         for (q=(char *) p; *q != '\0'; q++)
           if ((*q == '\r') || (*q == '\n'))
             break;
-        textlist[i]=MagickAllocateMemory(char *,(size_t) (q-p+MaxTextExtent));
+        textlist[i]=MagickAllocateMemory(char *,(size_t) (q-p+1));
         if (textlist[i] == (char *) NULL)
           MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
             UnableToConvertText);
-	/*
-	  Don't use strlcpy here because it spends too much time
-	  looking for the trailing null in order to report the
-	  characters not copied.
-	*/
-	(void) strncpy(textlist[i],p,q-p);
+        (void) memcpy(textlist[i],p,q-p);
         textlist[i][q-p]='\0';
         if (*q == '\r')
           q++;
@@ -4968,30 +5101,35 @@ MagickExport char **StringToList(const char *text)
     }
   else
     {
+      const size_t
+        chars_per_line = 0x14;
+
       char
         hex_string[MaxTextExtent];
 
-      register long
+      register size_t
         j;
 
       /*
         Convert string to a HEX list.
       */
-      lines=(strlen(text)/0x14)+1;
-      textlist=MagickAllocateMemory(char **,(lines+MaxTextExtent)*sizeof(char *));
+      lines=(strlen(text)/chars_per_line)+1;
+      textlist=MagickAllocateMemory(char **,(lines+1)*sizeof(char *));
       if (textlist == (char **) NULL)
         MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
           UnableToConvertText);
       p=text;
-      for (i=0; i < (long) lines; i++)
+      for (i=0; i < lines; i++)
       {
+        /* FIXME: Allocation here is excessively large */
         textlist[i]=MagickAllocateMemory(char *,2*MaxTextExtent);
         if (textlist[i] == (char *) NULL)
           MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
             UnableToConvertText);
-        FormatString(textlist[i],"0x%08lx: ",0x14*i);
+        FormatString(textlist[i],"0x%08" MAGICK_SIZE_T_F "x: ",
+                     (MAGICK_SIZE_T) chars_per_line*i);
         q=textlist[i]+strlen(textlist[i]);
-        for (j=1; j <= (long) Min(strlen(p),0x14); j++)
+        for (j=1; j <= Min(strlen(p),chars_per_line); j++)
         {
           FormatString(hex_string,"%02x",*(p+j));
           (void) strlcpy(q,hex_string,MaxTextExtent);
@@ -4999,7 +5137,7 @@ MagickExport char **StringToList(const char *text)
           if ((j % 0x04) == 0)
             *q++=' ';
         }
-        for (; j <= 0x14; j++)
+        for (; j <= chars_per_line; j++)
         {
           *q++=' ';
           *q++=' ';
@@ -5007,7 +5145,7 @@ MagickExport char **StringToList(const char *text)
             *q++=' ';
         }
         *q++=' ';
-        for (j=1; j <= (long) Min(strlen(p),0x14); j++)
+        for (j=1; j <= Min(strlen(p),chars_per_line); j++)
         {
           if (isprint((int)(unsigned char)(*p)))
             *q++=(*p);
@@ -5124,30 +5262,30 @@ SubstituteString(char **buffer,const char *search,const char *replace)
   for (i=0; p[i] != '\0'; i++)
     {
       if ((p[i] == search[0]) && (strncmp(&p[i],search,search_len) == 0))
-	{
-	  if (0 == replace_len)
-	    replace_len=strlen(replace);
-	  if (replace_len > search_len)
-	    {
-	      size_t
-		allocation_len;
+        {
+          if (0 == replace_len)
+            replace_len=strlen(replace);
+          if (replace_len > search_len)
+            {
+              size_t
+                allocation_len;
 
-	      allocation_len=strlen(p)+(replace_len-search_len)+1;
-	      MagickRoundUpStringLength(allocation_len);
-	      MagickReallocMemory(char *,p,allocation_len);
-	      *buffer=p;
-	      if (p == (char *) NULL)
-		MagickFatalError3(ResourceLimitFatalError,
-				  MemoryAllocationFailed,
-				  UnableToAllocateString);
-	    }
-	  if (search_len != replace_len)
-	    (void) MagickCloneMemory(&p[i+replace_len],&p[i+search_len],
-				     strlen(&p[i+search_len])+1);
-	  (void) MagickCloneMemory(&p[i],replace,replace_len);
-	  i += replace_len;
-	  replaced=MagickTrue;
-	}
+              allocation_len=strlen(p)+(replace_len-search_len)+1;
+              MagickRoundUpStringLength(allocation_len);
+              MagickReallocMemory(char *,p,allocation_len);
+              *buffer=p;
+              if (p == (char *) NULL)
+                MagickFatalError3(ResourceLimitFatalError,
+                                  MemoryAllocationFailed,
+                                  UnableToAllocateString);
+            }
+          if (search_len != replace_len)
+            (void) MagickCloneMemory(&p[i+replace_len],&p[i+search_len],
+                                     strlen(&p[i+search_len])+1);
+          (void) MagickCloneMemory(&p[i],replace,replace_len);
+          i += replace_len;
+          replaced=MagickTrue;
+        }
     }
   return replaced;
 }
@@ -5209,13 +5347,13 @@ MagickExport int SystemCommand(const unsigned int verbose,const char *command)
     GetExceptionInfo(&exception);
     end=(char *) NULL;
     program[0]='\0';
-    GetToken(command,&end,program);
+    MagickGetToken(command,&end,program,MaxTextExtent);
     if (MagickConfirmAccess(FileExecuteConfirmAccessMode,program,&exception)
-	== MagickFail)
+        == MagickFail)
       {
-	errno=EPERM;
-	DestroyExceptionInfo(&exception);
-	return -1;
+        errno=EPERM;
+        DestroyExceptionInfo(&exception);
+        return -1;
       }
   }
 

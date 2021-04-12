@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2015 GraphicsMagick Group
+% Copyright (C) 2003-2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -84,6 +84,8 @@ static unsigned int
 #define ThrowYUVReaderException(code_,reason_,image_) \
 { \
   MagickFreeMemory(scanline);                 \
+  DestroyImage(chroma_image);                 \
+  DestroyImage(resize_image);                 \
   ThrowReaderException(code_,reason_,image_); \
 }
 
@@ -274,7 +276,7 @@ static Image *ReadYUVImage(const ImageInfo *image_info,ExceptionInfo *exception)
       if (image->previous == (Image *) NULL)
         if (!MagickMonitorFormatted(y,image->rows,exception,LoadImageText,
                                     image->filename,
-				    image->columns,image->rows))
+                                    image->columns,image->rows))
           {
             status=MagickFail;
             break;
@@ -355,6 +357,7 @@ static Image *ReadYUVImage(const ImageInfo *image_info,ExceptionInfo *exception)
     resize_image=ResizeImage(chroma_image,image->columns,image->rows,
       TriangleFilter,1.0,exception);
     DestroyImage(chroma_image);
+    chroma_image=(Image *) NULL;
     if (resize_image == (Image *) NULL)
       ThrowYUVReaderException(ResourceLimitError,MemoryAllocationFailed,image);
     for (y=0; y < (long) image->rows; y++)
@@ -381,6 +384,7 @@ static Image *ReadYUVImage(const ImageInfo *image_info,ExceptionInfo *exception)
         }
     }
     DestroyImage(resize_image);
+    resize_image=(Image *) NULL;
     if (status == MagickFail)
       break;
     image->colorspace=YCbCrColorspace;
@@ -412,6 +416,7 @@ static Image *ReadYUVImage(const ImageInfo *image_info,ExceptionInfo *exception)
         if (image->next == (Image *) NULL)
           {
             DestroyImageList(image);
+            MagickFreeMemory(scanline);
             return((Image *) NULL);
           }
         image=SyncNextImageInList(image);
@@ -550,10 +555,14 @@ static unsigned int WriteYUVImage(const ImageInfo *image_info,Image *image)
     height,
     width;
 
+  size_t
+    image_list_length;
+
   assert(image_info != (const ImageInfo *) NULL);
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   interlace=image_info->interlace;
   horizontal_factor=2;
   vertical_factor=2;
@@ -632,7 +641,7 @@ static unsigned int WriteYUVImage(const ImageInfo *image_info,Image *image)
             &chroma_image->exception);
           if (s == (const PixelPacket *) NULL)
             break;
-          for (x=0; x < (long) yuv_image->columns; x++)
+          for (x=0; x < (long) yuv_image->columns; )
           {
             (void) WriteBlobByte(image,ScaleQuantumToChar(s->green));
             (void) WriteBlobByte(image,ScaleQuantumToChar(p->red));
@@ -642,12 +651,13 @@ static unsigned int WriteYUVImage(const ImageInfo *image_info,Image *image)
             p++;
             s++;
             x++;
+            x++;
           }
           if (image->previous == (Image *) NULL)
             if (QuantumTick(y,image->rows))
               if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                           SaveImageText,image->filename,
-					  image->columns,image->rows))
+                                          image->columns,image->rows))
                 break;
         }
         DestroyImage(yuv_image);
@@ -672,7 +682,7 @@ static unsigned int WriteYUVImage(const ImageInfo *image_info,Image *image)
             if (QuantumTick(y,image->rows))
               if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                           SaveImageText,image->filename,
-					  image->columns,image->rows))
+                                          image->columns,image->rows))
                 break;
         }
         DestroyImage(yuv_image);
@@ -731,7 +741,7 @@ static unsigned int WriteYUVImage(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene++,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene++,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)

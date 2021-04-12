@@ -26,6 +26,9 @@
       <Message name="UnrecognizedImageFormat">
         Unrecognized image format
       </Message>
+      <Message name="UnableToDeduceImageFormat">
+        Unable to deduce image format
+      </Message>
     </Error>
     <FatalError>
       <Message name="Default">
@@ -45,6 +48,9 @@
       </Message>
       <Message name="PixelCacheIsNotOpen">
         Pixel cache is not open
+      </Message>
+      <Message name="PixelCacheDimensionsMisMatch">
+        Pixel cache dimensions incompatible with image dimensions
       </Message>
       <Message name="UnableToAllocateCacheView">
         Unable to allocate cache view
@@ -324,6 +330,21 @@
       <Message name="UnableToWriteTemporaryFile">
         Unable to write to temporary file
       </Message>
+      <Message name="UnsupportedBitsPerSample">
+        Unsupported bits per sample
+      </Message>
+      <Message name="UnsupportedSamplesPerPixel">
+        Unsupported samples per pixel
+      </Message>
+      <Message name="ArithmeticOverflow">
+        Arithmetic overflow
+      </Message>
+      <Message name="DivisionByZero">
+        Division by zero
+      </Message>
+      <Message name="DecodedImageNotReturned">
+        Coder did not return an image (this is a bug, please report it!)
+      </Message>
     </Error>
     <FatalError>
       <Message name="Default">
@@ -500,7 +521,16 @@
         <Message name="UnrecognizedNumberOfColors">
           Unrecognized number of colors
         </Message>
-      </Error>
+        <Message name="UnsupportedBitsPerSample">
+          Unsupported bits per sample
+        </Message>
+        <Message name="UnsupportedNumberOfPlanes">
+          Unsupported number of planes
+        </Message>
+        <Message name="ImageFileHasNoScenes">
+          Image file has no scenes
+        </Message>
+     </Error>
       <FatalError>
         <Message name="UnableToPersistKey">
           Unable to persist key
@@ -513,11 +543,17 @@
         <Message name="ImproperImageHeader">
           Improper image header
         </Message>
+        <Message name="InvalidColormapIndex">
+          Invalid colormap index
+        </Message>
         <Message name="NegativeOrZeroImageSize">
           Negative or zero image size
         </Message>
         <Message name="NonOS2HeaderSizeError">
           Non OS2 header size error
+        </Message>
+        <Message name="CorruptImage">
+          Corrupt image (some data returned)
         </Message>
         <Message name="StaticPlanesValueNotEqualToOne">
           Static planes value not equal to one
@@ -533,6 +569,9 @@
         </Message>
         <Message name="LengthAndFilesizeDoNotMatch">
           Length and filesize do not match
+        </Message>
+        <Message name="UnableToParseEmbeddedProfile">
+          Unable to parse embedded profile
         </Message>
       </Warning>
     </Image>
@@ -622,6 +661,27 @@
       <Message name="TooManyCoordinates">
         too many coordinates
       </Message>
+      <Message name="FloatValueConversionError">
+        text value does not convert to float
+      </Message>
+      <Message name="IntegerValueConversionError">
+        text value does not convert to integer
+      </Message>
+      <Message name="VectorPathTruncated">
+        vector path truncated
+      </Message>
+      <Message name="InvalidPrimitiveArgument">
+        invalid primitive argument
+      </Message>
+      <Message name="DrawingRecursionDetected">
+        drawing recursion detected
+      </Message>
+      <Message name="PrimitiveArithmeticOverflow">
+        primitive arithmetic overflow
+      </Message>
+      <Message name="UnreasonableGradientSize">
+        unreasonable gradient image size
+      </Message>
     </Error>
     <FatalError>
       <Message name="Default">
@@ -687,6 +747,12 @@
       </Message>
       <Message name="ImageDoesNotContainResolution">
         image does not contain resolution
+      </Message>
+      <Message name="ImageIsNotColormapped">
+        image is not colormapped
+      </Message>
+      <Message name="CMYKAImageLacksAlphaChannel">
+        CMYKA image lacks an alpha channel (indexes)
       </Message>
       <Message name="ImageOpacityDiffers">
         image opacity differs
@@ -754,11 +820,23 @@
       <Message name="UnableToSetClipMask">
         Unable to set clip mask
       </Message>
+      <Message name="UnableToGetCompositeMask">
+        Unable to get composite mask
+      </Message>
+      <Message name="UnableToSetCompositeMask">
+        Unable to set composite mask
+      </Message>
       <Message name="UnableToShearImage">
         unable to shear image
       </Message>
       <Message name="WidthOrHeightExceedsLimit">
         width or height exceeds limit
+      </Message>
+      <Message name="UnableToExportImagePixels">
+        unable to export image pixels
+      </Message>
+      <Message name="UnableToImportImagePixels">
+        unable to import image pixels
       </Message>
     </Error>
     <FatalError>
@@ -1130,6 +1208,9 @@
       <Message name="UsageError">
         Improper arguments supplied, please see manual
       </Message>
+      <Message name="TileNotBoundedByImageDimensions">
+        Tile is not bounded by image dimensions
+      </Message>
     </Error>
     <FatalError>
       <Message name="InvalidInterlaceType">
@@ -1279,8 +1360,14 @@
         <Message name="UnableToAddIPTCProfile">
           unable to add IPTC profile
         </Message>
+        <Message name="UnableToAddOrRemoveProfile">
+          unable to add or remove profile
+        </Message>
         <Message name="UnableToAllocateColormap">
           Unable to allocate colormap
+        </Message>
+        <Message name="UnableToAllocateImage">
+          Unable to allocate image
         </Message>
         <Message name="UnableToAnnotateImage">
           Unable to annotate image
@@ -1503,7 +1590,7 @@
         <Message name="UnableToAllocateQuantizeInfo">
           unable to allocate quantize info
         </Message>
-	<Message name="UnableToAllocateRandomKernel">
+        <Message name="UnableToAllocateRandomKernel">
           unable to allocate random kernel
         </Message>
         <Message name="UnableToAllocateSemaphoreInfo">
@@ -1575,6 +1662,9 @@
         <Message name="UnableToObtainRandomEntropy">
           unable to obtain random bytes from operating system
         </Message>
+        <Message name="UnableToAllocateMagickMap">
+          unable to allocate magick map
+        </Message>
       </FatalError>
       <Warning>
         <Message name="MemoryAllocationFailed">
@@ -1599,6 +1689,9 @@
       </Message>
       <Message name="UnrecognizedFontEncoding">
         Unrecognized font encoding
+      </Message>
+      <Message name="FontNotSpecified">
+        Font name not specified
       </Message>
     </Error>
     <FatalError>

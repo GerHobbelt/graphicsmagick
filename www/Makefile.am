@@ -1,4 +1,4 @@
-# Copyright (C) 2008 - 2014 GraphicsMagick Group
+# Copyright (C) 2008 - 2017 GraphicsMagick Group
 
 # This program is covered by multiple licenses, which are described in
 # Copyright.txt. You should have received a copy of Copyright.txt with this
@@ -50,6 +50,9 @@ RST2HTML_TARGETS = \
 	$(WWWDIR)/ChangeLog-2012.html \
 	$(WWWDIR)/ChangeLog-2013.html \
 	$(WWWDIR)/ChangeLog-2014.html \
+	$(WWWDIR)/ChangeLog-2015.html \
+	$(WWWDIR)/ChangeLog-2016.html \
+	$(WWWDIR)/ChangeLog-2017.html \
 	$(WWWDIR)/Changelog.html \
 	$(WWWDIR)/Changes.html \
 	$(WWWDIR)/Copyright.html \
@@ -93,8 +96,10 @@ RST2HTML_TARGETS = \
 	$(WWWDIR)/process.html \
 	$(WWWDIR)/programming.html \
 	$(WWWDIR)/project.html \
-	$(WWWDIR)/reference.html \
 	$(WWWDIR)/quantize.html \
+	$(WWWDIR)/reference.html \
+	$(WWWDIR)/security.html \
+	$(WWWDIR)/thanks.html \
 	$(WWWDIR)/tools.html \
 	$(WWWDIR)/utilities.html \
 	$(WWWDIR)/wand/wand.html
@@ -137,8 +142,10 @@ WWW_RST_FILES = \
 	$(WWWDIR)/process.rst \
 	$(WWWDIR)/programming.rst \
 	$(WWWDIR)/project.rst \
-	$(WWWDIR)/reference.rst \
 	$(WWWDIR)/quantize.rst \
+	$(WWWDIR)/reference.rst \
+	$(WWWDIR)/security.rst \
+	$(WWWDIR)/thanks.rst \
 	$(WWWDIR)/tools.rst \
 	$(WWWDIR)/utilities.rst
 
@@ -158,6 +165,9 @@ WWW_HTML_FILES = \
 	$(WWWDIR)/ChangeLog-2012.html \
 	$(WWWDIR)/ChangeLog-2013.html \
 	$(WWWDIR)/ChangeLog-2014.html \
+	$(WWWDIR)/ChangeLog-2015.html \
+	$(WWWDIR)/ChangeLog-2016.html \
+	$(WWWDIR)/ChangeLog-2017.html \
 	$(WWWDIR)/Changelog.html \
 	$(WWWDIR)/Changes.html \
 	$(WWWDIR)/Copyright.html \
@@ -215,10 +225,12 @@ WWW_HTML_FILES = \
 	$(WWWDIR)/motion-picture.html \
 	$(WWWDIR)/perl.html \
 	$(WWWDIR)/process.html \
-	$(WWWDIR)/project.html \
-	$(WWWDIR)/reference.html \
 	$(WWWDIR)/programming.html \
+	$(WWWDIR)/project.html \
 	$(WWWDIR)/quantize.html \
+	$(WWWDIR)/reference.html \
+	$(WWWDIR)/security.html \
+	$(WWWDIR)/thanks.html \
 	$(WWWDIR)/tools.html \
 	$(WWWDIR)/utilities.html\
 	$(WWWDIR)/wand/wand.html
@@ -256,6 +268,15 @@ $(top_srcdir)/%.html: $(top_srcdir)/%.rst
 CHANGELOG2RST=$(top_srcdir)/scripts/changelog2rst.sh
 
 $(top_srcdir)/www/Changelog.rst: $(top_srcdir)/ChangeLog
+	$(CHANGELOG2RST) < $^ > $@
+
+$(top_srcdir)/www/ChangeLog-2017.rst: $(top_srcdir)/ChangeLog.2017
+	$(CHANGELOG2RST) < $^ > $@
+
+$(top_srcdir)/www/ChangeLog-2016.rst: $(top_srcdir)/ChangeLog.2016
+	$(CHANGELOG2RST) < $^ > $@
+
+$(top_srcdir)/www/ChangeLog-2015.rst: $(top_srcdir)/ChangeLog.2015
 	$(CHANGELOG2RST) < $^ > $@
 
 $(top_srcdir)/www/ChangeLog-2014.rst: $(top_srcdir)/ChangeLog.2014

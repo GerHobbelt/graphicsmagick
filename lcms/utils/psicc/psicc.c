@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------
 //
 //  Little Color Management System
-//  Copyright (c) 1998-2010 Marti Maria Saguer
+//  Copyright (c) 1998-2016 Marti Maria Saguer
 //
 // Permission is hereby granted, free of charge, to any person obtaining 
 // a copy of this software and associated documentation files (the "Software"), 
@@ -102,9 +102,9 @@ void HandleSwitches(int argc, char *argv[])
 static
 void Help(void)
 {
-	 fprintf(stderr, "little cms ICC PostScript generator - v2.0 [LittleCMS %2.2f]\n", LCMS_VERSION / 1000.0);
+	 fprintf(stderr, "little CMS ICC PostScript generator - v2.1 [LittleCMS %2.2f]\n", LCMS_VERSION / 1000.0);
    
-     fprintf(stderr, "usage: psicc [flags]\n\n");
+     fprintf(stderr, "usage: psicc [flags] [<Output file>]\n\n");
 
      fprintf(stderr, "flags:\n\n");
      
@@ -119,6 +119,7 @@ void Help(void)
      fprintf(stderr, "%cn<gridpoints> - Alternate way to set precission, number of CLUT points (CRD only)\n", SW);     
      
 	 fprintf(stderr, "\n");
+	 fprintf(stderr, "If no output file is specified, output goes to stdout.\n\n");
      fprintf(stderr, "This program is intended to be a demo of the little cms\n"
                      "engine. Both lcms and this program are freeware. You can\n"
                      "obtain both in source code at http://www.littlecms.com\n"
@@ -143,7 +144,7 @@ void GenerateCSA(void)
     Buffer = (char*) malloc(n + 1);
     if (Buffer != NULL) {
 
-        cmsGetPostScriptCSA(0, hProfile, Intent, 0, Buffer, n);
+        cmsGetPostScriptCSA(0, hProfile, Intent, 0, Buffer, (cmsUInt32Number) n);
         Buffer[n] = 0;
 
         fprintf(OutFile, "%s", Buffer);	
@@ -184,7 +185,8 @@ void GenerateCRD(void)
 	if (n == 0) return;
 
 	Buffer = (char*) malloc(n + 1);
-    cmsGetPostScriptCRD(0, hProfile, Intent, dwFlags, Buffer, n);
+	if (Buffer == NULL) return;
+        cmsGetPostScriptCRD(0, hProfile, Intent, dwFlags, Buffer, (cmsUInt32Number) n);
 	Buffer[n] = 0;
 
 	fprintf(OutFile, "%s", Buffer);			
@@ -206,16 +208,14 @@ int main(int argc, char *argv[])
 	 if (nargs != 0 && nargs != 1)
 				Help();            
 	
+    if (cInProf == NULL && cOutProf == NULL)
+        Help();
+
 	 if (nargs == 0) 
 			OutFile = stdout;
 	 else
 			OutFile = fopen(argv[xoptind], "wt");
 	   		
-
-	 if (cInProf == NULL && cOutProf == NULL)
-				Help();
-
-    
 	  if (cInProf != NULL)
 			GenerateCSA();
 		  

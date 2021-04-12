@@ -1,11 +1,11 @@
 /*
-  Copyright (C) 2003 - 2013 GraphicsMagick Group
+  Copyright (C) 2003 - 2017 GraphicsMagick Group
   Copyright (C) 2002 ImageMagick Studio
- 
+
   This program is covered by multiple licenses, which are described in
   Copyright.txt. You should have received a copy of Copyright.txt with this
   package; otherwise see http://www.graphicsmagick.org/www/Copyright.html.
- 
+
   GraphicsMagick Application Programming Interface declarations.
 */
 #ifndef _MAGICK_STUDIO_H
@@ -23,8 +23,9 @@ extern "C" {
 
 /*
   Note that the WIN32 and WIN64 definitions are provided by the build
-  configuration rather than the compiler.  Definitions available from
-  the Windows compiler are _WIN32 and _WIN64.
+  configuration rather than the compiler.  Definitions available from the
+  Windows compiler are _WIN32 and _WIN64.  Note that _WIN32 is defined if
+  _WIN64 is defined.
 */
 #if defined(WIN32) || defined(WIN64)
 #  define MSWINDOWS
@@ -51,12 +52,12 @@ extern "C" {
   threads.  Most CPUs have cache lines of 32 or 64 bytes.  IBM Power CPUs have
   cache lines of 128 bytes.
 */
-/* FIXME: C pre-processor does not support comparing strings. */
-/* #if defined(MAGICK_TARGET_CPU) && (MAGICK_TARGET_CPU == powerpc) */
-/* #  define MAGICK_CACHE_LINE_SIZE 128 */
-/* #else */
+/* C pre-processor does not support comparing strings. */
+#if defined(__powerpc__)
+#  define MAGICK_CACHE_LINE_SIZE 128
+#else
 #  define MAGICK_CACHE_LINE_SIZE 64
-/* #endif */
+#endif
 
 
 /*
@@ -317,6 +318,7 @@ extern int vsnprintf(char *s, size_t n, const char *format, va_list ap);
 #  define ProcessPendingEvents(text)
 #  define ReadCommandlLine(argc,argv)
 #  define SetNotifyHandlers
+#  define MagickSleep(seconds) sleep(seconds)
 #endif
 
 #if defined(MSWINDOWS)
@@ -332,8 +334,7 @@ extern int vsnprintf(char *s, size_t n, const char *format, va_list ap);
 #  define SetNotifyHandlers \
     SetErrorHandler(NTErrorHandler); \
     SetWarningHandler(NTWarningHandler)
-#  undef sleep
-#  define sleep(seconds)  Sleep(seconds*1000)
+#  define MagickSleep(seconds)  Sleep(seconds*1000)
 #  if !defined(HAVE_TIFFCONF_H)
 #    define HAVE_TIFFCONF_H
 #  endif
@@ -344,20 +345,24 @@ extern int vsnprintf(char *s, size_t n, const char *format, va_list ap);
   Define declarations.
 */
 #define AbsoluteValue(x)  ((x) < 0 ? -(x) : (x))
+#define ArraySize(a) (sizeof(a)/sizeof(a[0]))
 #define False  0
 #define DegreesToRadians(x) (MagickPI*(x)/180.0)
 #define MagickIncarnate(x)  InitializeMagick(x)
 #define MagickEpsilon  1.0e-12
 #define MagickPI  3.14159265358979323846264338327950288419716939937510
 #define MagickSQ2PI 2.50662827463100024161235523934010416269302368164062
+#if !defined(INFINITY) /* C'99 provides INFINITY but C'89 does not */
+#  define INFINITY (log(0))
+#endif
 #define Max(x,y)  (((x) > (y)) ? (x) : (y))
 #define Min(x,y)  (((x) < (y)) ? (x) : (y))
-#define NumberOfObjectsInArray(octets,size) ((octets+size-1)/size)
+#define NumberOfObjectsInArray(octets,size) (octets/size) /* rounds down */
 #define QuantumTick(i,span) \
   ((((i) % ((Max(101,span)-1)/100)) == 0) || \
     ((magick_int64_t) (i) == ((magick_int64_t) (span)-1)))
 #define RadiansToDegrees(x) (180.0*(x)/MagickPI)
-#define RoundUpToAlignment(offset,alignment)				\
+#define RoundUpToAlignment(offset,alignment)                            \
   (((offset)+((alignment)-1)) & ~((alignment)-1))
 #define AssertAlignment(offset,alignment) \
   (assert((((size_t) offset) % (size_t) alignment) == (size_t) 0))
@@ -415,40 +420,6 @@ extern int vsnprintf(char *s, size_t n, const char *format, va_list ap);
 #if defined(_MAGICKMOD_)
 #  undef BuildMagickModules
 #  define BuildMagickModules
-#endif
-
-
-/*
-  I/O defines.
-*/
-#if defined(MSWINDOWS) && !defined(Windows95) && !defined(__BORLANDC__)
-  /* Windows '95 and Borland C do not support _lseeki64 */
-#  define MagickSeek(fildes,offset,whence)  _lseeki64(fildes,/* __int64 */ offset,whence)
-#  define MagickTell(fildes) /* __int64 */ _telli64(fildes)
-#else
-#  define MagickSeek(fildes,offset,whence)  lseek(fildes,offset,whence)
-#  define MagickTell(fildes) (MagickSeek(fildes,0,SEEK_CUR))
-#endif
-
-#if defined(MSWINDOWS) && !defined(Windows95) && !defined(__BORLANDC__) && \
-  !(defined(_MSC_VER) && _MSC_VER < 1400) && \
-  !(defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x800)
-  /*
-    Windows '95 and Borland C do not support _lseeki64
-    Visual Studio does not support _fseeki64 and _ftelli64 until the 2005 release.
-    Without these interfaces, files over 2GB in size are not supported for Windows.
-  */
-#  define MagickFseek(stream,offset,whence) _fseeki64(stream,/* __int64 */ offset,whence)
-#  define MagickFstat(fildes,stat_buff) _fstati64(fildes,/* struct _stati64 */ stat_buff)
-#  define MagickFtell(stream) /* __int64 */ _ftelli64(stream)
-#  define MagickStatStruct_t struct _stati64
-#  define MagickStat(path,stat_buff) _stati64(path,/* struct _stati64 */ stat_buff)
-#else
-#  define MagickFseek(stream,offset,whence) fseek(stream,offset,whence)
-#  define MagickFstat(fildes,stat_buff) fstat(fildes,stat_buff)
-#  define MagickFtell(stream) ftell(stream)
-#  define MagickStatStruct_t struct stat
-#  define MagickStat(path,stat_buff) stat(path,stat_buff)
 #endif
 
 /*

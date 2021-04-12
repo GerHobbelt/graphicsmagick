@@ -160,14 +160,14 @@ MagickShmAt(int shmid, void *shmaddr, int shmflg)
 /*
   Shared memory control operations.
 */
-static int 
+static int
 MagickShmCtl(int shmid, int cmd, struct shmid_ds *buf)
 {
   int status;
   if ((status=shmctl(shmid, cmd, buf)) == -1)
     {
       (void) LogMagickEvent(X11Event,GetMagickModule(),"shm control id=%d cmd=%s failed (%s)",
-                            shmid, ((cmd == IPC_STAT) ? "IPC_STAT" : 
+                            shmid, ((cmd == IPC_STAT) ? "IPC_STAT" :
                                     (cmd == IPC_SET) ? "IPC_SET" :
                                     (cmd == IPC_RMID) ? "IPC_RMID" : "Unknown"),
                             strerror(errno));
@@ -175,7 +175,7 @@ MagickShmCtl(int shmid, int cmd, struct shmid_ds *buf)
   else
     {
       (void) LogMagickEvent(X11Event,GetMagickModule(),"shm control id=%d cmd=%s",
-                            shmid, ((cmd == IPC_STAT) ? "IPC_STAT" : 
+                            shmid, ((cmd == IPC_STAT) ? "IPC_STAT" :
                                     (cmd == IPC_SET) ? "IPC_SET" :
                                     (cmd == IPC_RMID) ? "IPC_RMID" : "Unknown"));
     }
@@ -184,7 +184,7 @@ MagickShmCtl(int shmid, int cmd, struct shmid_ds *buf)
 /*
   Detatch from shared memory.
 */
-static int 
+static int
 MagickShmDt(void *shmaddr)
 {
   int result;
@@ -228,14 +228,14 @@ MagickShmDt(void *shmaddr)
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXDestroyX11Resources(void)
 {
   MagickXWindows *windows = MagickXSetWindows((MagickXWindows *) ~0);
   if (windows != (MagickXWindows *) NULL)
     {
       MagickXDestroyXWindows(windows);
-      (void) MagickXSetWindows((MagickXWindows *) NULL);  
+      (void) MagickXSetWindows((MagickXWindows *) NULL);
     }
 }
 
@@ -261,7 +261,7 @@ MagickXDestroyX11Resources(void)
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXDestroyXWindows(MagickXWindows *windows)
 {
   if (windows == (MagickXWindows *) NULL ||
@@ -375,7 +375,7 @@ MagickXDestroyXWindows(MagickXWindows *windows)
 %
 %    o window: Pointer to MagickXWindowInfo structure to destroy.
 */
-MagickExport void 
+MagickExport void
 MagickXDestroyXWindowInfo(Display *display,MagickXWindowInfo *window)
 {
   if (window->mapped != False)
@@ -447,7 +447,7 @@ MagickXDestroyXWindowInfo(Display *display,MagickXWindowInfo *window)
 #if defined(HasSharedMemory)
       XShmSegmentInfo
         *segment_info;
-          
+
       segment_info=(XShmSegmentInfo *) window->segment_info;
       if (segment_info != (XShmSegmentInfo *) NULL)
         {
@@ -492,7 +492,7 @@ MagickXDestroyXWindowInfo(Display *display,MagickXWindowInfo *window)
 %
 %
 */
-MagickExport unsigned int 
+MagickExport unsigned int
 MagickIsTrue(const char *reason)
 {
   if (reason == (char *) NULL)
@@ -545,11 +545,11 @@ MagickIsTrue(const char *reason)
 %
 %
 */
-MagickExport unsigned int 
+MagickExport unsigned int
 MagickXAnnotateImage(Display *display,
-		     const MagickXPixelInfo *pixel,
-		     MagickXAnnotateInfo *annotate_info,
-		     Image *image)
+                     const MagickXPixelInfo *pixel,
+                     MagickXAnnotateInfo *annotate_info,
+                     Image *image)
 {
   GC
     annotate_context;
@@ -640,7 +640,7 @@ MagickXAnnotateImage(Display *display,
   y=0;
   (void) XParseGeometry(annotate_info->geometry,&x,&y,&width,&height);
   (void) AcquireOnePixelByReference(image,&annotate_image->background_color,
-				    x,y,&image->exception);
+                                    x,y,&image->exception);
   annotate_image->matte=annotate_info->stencil == ForegroundStencil;
   for (y=0; y < (long) annotate_image->rows; y++)
   {
@@ -857,8 +857,8 @@ MagickFontToList(char *font)
 
 MagickExport XFontStruct *
 MagickXBestFont(Display *display,
-		const MagickXResourceInfo *resource_info,
-		const unsigned int text_font)
+                const MagickXResourceInfo *resource_info,
+                const unsigned int text_font)
 {
   static const char
     *Fonts[]=
@@ -1098,9 +1098,9 @@ MagickXBestIconSize(Display *display,MagickXWindowInfo *window,
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXBestPixel(Display *display,const Colormap colormap,
-		 XColor *colors,unsigned int number_colors,XColor *color)
+                 XColor *colors,unsigned int number_colors,XColor *color)
 {
   double
     min_distance;
@@ -1226,8 +1226,8 @@ MagickXBestPixel(Display *display,const Colormap colormap,
 
 MagickExport XVisualInfo *
 MagickXBestVisualInfo(Display *display,
-		      XStandardColormap *map_info,
-		      MagickXResourceInfo *resource_info)
+                      XStandardColormap *map_info,
+                      MagickXResourceInfo *resource_info)
 {
   char
     *map_type,
@@ -1517,7 +1517,7 @@ MagickXBestVisualInfo(Display *display,
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXCheckRefreshWindows(Display *display,MagickXWindows *windows)
 {
   XEvent
@@ -1570,7 +1570,7 @@ MagickXCheckRefreshWindows(Display *display,MagickXWindows *windows)
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXClientMessage(Display *display,const Window window,
   const Atom protocol,const Atom reason,const Time timestamp)
 {
@@ -1578,6 +1578,7 @@ MagickXClientMessage(Display *display,const Window window,
     client_event;
 
   assert(display != (Display *) NULL);
+  (void) memset(&client_event,0,sizeof(client_event));
   client_event.type=ClientMessage;
   client_event.window=window;
   client_event.message_type=protocol;
@@ -1690,8 +1691,8 @@ MagickXClientWindow(Display *display,Window target_window)
 */
 MagickExport void
 MagickXConfigureImageColormap(Display *display,
-			      MagickXResourceInfo *resource_info,
-			      MagickXWindows *windows,Image *image)
+                              MagickXResourceInfo *resource_info,
+                              MagickXWindows *windows,Image *image)
 {
   Colormap
     colormap;
@@ -1746,7 +1747,7 @@ MagickXConfigureImageColormap(Display *display,
 */
 MagickExport void
 MagickXConstrainWindowPosition(Display *display,
-			       MagickXWindowInfo *window_info)
+                               MagickXWindowInfo *window_info)
 {
   unsigned int
     limit;
@@ -1970,9 +1971,9 @@ MagickXDestroyWindowColors(Display *display,Window window)
 */
 MagickExport void
 MagickXDisplayImageInfo(Display *display,
-			const MagickXResourceInfo *resource_info,
-			MagickXWindows *windows,Image *undo_image,
-			Image *image)
+                        const MagickXResourceInfo *resource_info,
+                        MagickXWindows *windows,Image *undo_image,
+                        Image *image)
 {
   char
     filename[MaxTextExtent],
@@ -2184,7 +2185,7 @@ static void MagickXDitherImage(Image *image,XImage *ximage)
     {
       red_map[i][j]=MagickAllocateArray(unsigned char *,256,sizeof(unsigned char));
       green_map[i][j]=MagickAllocateArray(unsigned char *,
-					  256,sizeof(unsigned char));
+                                          256,sizeof(unsigned char));
       blue_map[i][j]=MagickAllocateArray(unsigned char *,256,sizeof(unsigned char));
       if ((red_map[i][j] == (unsigned char *) NULL) ||
           (green_map[i][j] == (unsigned char *) NULL) ||
@@ -2302,7 +2303,7 @@ static void MagickXDitherImage(Image *image,XImage *ximage)
 */
 MagickExport unsigned int
 MagickXDrawImage(Display *display,const MagickXPixelInfo *pixel,
-		 MagickXDrawInfo *draw_info,Image *image)
+                 MagickXDrawInfo *draw_info,Image *image)
 {
   GC
     draw_context;
@@ -2726,12 +2727,12 @@ MagickXError(Display *display,XErrorEvent *error)
 */
 MagickExport void
 MagickXFreeResources(Display *display,
-		     XVisualInfo *visual_info,
-		     XStandardColormap *map_info,
-		     MagickXPixelInfo *pixel,
-		     XFontStruct *font_info,
-		     MagickXResourceInfo *resource_info,
-		     MagickXWindowInfo *window_info)
+                     XVisualInfo *visual_info,
+                     XStandardColormap *map_info,
+                     MagickXPixelInfo *pixel,
+                     XFontStruct *font_info,
+                     MagickXResourceInfo *resource_info,
+                     MagickXWindowInfo *window_info)
 {
   assert(display != (Display *) NULL);
   assert(resource_info != (MagickXResourceInfo *) NULL);
@@ -2821,9 +2822,9 @@ MagickXFreeResources(Display *display,
 */
 MagickExport void
 MagickXFreeStandardColormap(Display *display,
-			    const XVisualInfo *visual_info,
-			    XStandardColormap *map_info,
-			    MagickXPixelInfo *pixel)
+                            const XVisualInfo *visual_info,
+                            XStandardColormap *map_info,
+                            MagickXPixelInfo *pixel)
 {
   /*
     Free colormap.
@@ -2928,7 +2929,7 @@ MagickXGetAnnotateInfo(MagickXAnnotateInfo *annotate_info)
 */
 MagickExport void
 MagickXGetMapInfo(const XVisualInfo *visual_info,
-		  const Colormap colormap,XStandardColormap *map_info)
+                  const Colormap colormap,XStandardColormap *map_info)
 {
   /*
     Initialize map info.
@@ -3039,11 +3040,11 @@ MagickXGetImportInfo(MagickXImportInfo *ximage_info)
 */
 MagickExport void
 MagickXGetPixelPacket(Display *display,
-		      const XVisualInfo *visual_info,
-		      const XStandardColormap *map_info,
-		      const MagickXResourceInfo *resource_info,
-		      Image *image,
-		      MagickXPixelInfo *pixel)
+                      const XVisualInfo *visual_info,
+                      const XStandardColormap *map_info,
+                      const MagickXResourceInfo *resource_info,
+                      Image *image,
+                      MagickXPixelInfo *pixel)
 {
   static const char
     *PenColors[MaxNumberPens]=
@@ -3292,8 +3293,8 @@ MagickXGetPixelPacket(Display *display,
 */
 MagickExport char *
 MagickXGetResourceClass(XrmDatabase database,
-			const char *client_name,const char *keyword,
-			char *resource_default)
+                        const char *client_name,const char *keyword,
+                        char *resource_default)
 {
   char
     resource_class[MaxTextExtent],
@@ -3384,7 +3385,7 @@ MagickXGetResourceClass(XrmDatabase database,
 */
 MagickExport XrmDatabase
 MagickXGetResourceDatabase(Display *display,
-			   const char *client_name)
+                           const char *client_name)
 {
   char
     filename[MaxTextExtent];
@@ -3487,7 +3488,7 @@ MagickXGetResourceDatabase(Display *display,
 */
 MagickExport void
 MagickXGetResourceInfo(XrmDatabase database,const char *client_name,
-		       MagickXResourceInfo *resource_info)
+                       MagickXResourceInfo *resource_info)
 {
   char
     *resource_value;
@@ -3717,9 +3718,9 @@ MagickXGetResourceInfo(XrmDatabase database,const char *client_name,
 */
 MagickExport char *
 MagickXGetResourceInstance(XrmDatabase database,
-			   const char *client_name,
-			   const char *keyword,
-			   const char *resource_default)
+                           const char *client_name,
+                           const char *keyword,
+                           const char *resource_default)
 {
   char
     *resource_type,
@@ -4029,7 +4030,7 @@ MagickXGetWindowColor(Display *display,MagickXWindows *windows,char *name)
 */
 static Image *
 MagickXGetWindowImage(Display *display,const Window window,
-		      const unsigned int borders,const unsigned int level)
+                      const unsigned int borders,const unsigned int level)
 {
   typedef struct _ColormapInfo
   {
@@ -4156,7 +4157,7 @@ MagickXGetWindowImage(Display *display,const Window window,
       max_windows+=1024;
       if (window_info == (WindowInfo *) NULL)
         window_info=MagickAllocateArray(WindowInfo *,
-					max_windows,sizeof(WindowInfo));
+                                        max_windows,sizeof(WindowInfo));
       else
         MagickReallocMemory(WindowInfo *,window_info,max_windows*sizeof(WindowInfo));
     }
@@ -4618,12 +4619,12 @@ MagickXGetWindowImage(Display *display,const Window window,
 */
 MagickExport void
 MagickXGetWindowInfo(Display *display,
-		     XVisualInfo *visual_info,
-		     XStandardColormap *map_info,
-		     MagickXPixelInfo *pixel,
-		     XFontStruct *font_info,
-		     MagickXResourceInfo *resource_info,
-		     MagickXWindowInfo *window)
+                     XVisualInfo *visual_info,
+                     XStandardColormap *map_info,
+                     MagickXPixelInfo *pixel,
+                     XFontStruct *font_info,
+                     MagickXResourceInfo *resource_info,
+                     MagickXWindowInfo *window)
 {
   /*
     Initialize window info.
@@ -4763,8 +4764,8 @@ MagickXGetWindowInfo(Display *display,
 */
 MagickExport void
 MagickXHighlightEllipse(Display *display,Window window,
-			GC annotate_context,
-			const RectangleInfo *highlight_info)
+                        GC annotate_context,
+                        const RectangleInfo *highlight_info)
 {
   assert(display != (Display *) NULL);
   assert(window != (Window) NULL);
@@ -4813,9 +4814,9 @@ MagickXHighlightEllipse(Display *display,Window window,
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXHighlightLine(Display *display,Window window,
-		     GC annotate_context,const XSegment *highlight_info)
+                     GC annotate_context,const XSegment *highlight_info)
 {
   assert(display != (Display *) NULL);
   assert(window != (Window) NULL);
@@ -4860,8 +4861,8 @@ MagickXHighlightLine(Display *display,Window window,
 */
 MagickExport void
 MagickXHighlightRectangle(Display *display,Window window,
-			  GC annotate_context,
-			  const RectangleInfo *highlight_info)
+                          GC annotate_context,
+                          const RectangleInfo *highlight_info)
 {
   assert(display != (Display *) NULL);
   assert(window != (Window) NULL);
@@ -4905,7 +4906,7 @@ MagickXHighlightRectangle(Display *display,Window window,
 */
 MagickExport Image *
 MagickXImportImage(const ImageInfo *image_info,
-		   MagickXImportInfo *ximage_info)
+                   MagickXImportInfo *ximage_info)
 {
   Colormap
     *colormaps;
@@ -5173,7 +5174,7 @@ MagickXImportImage(const ImageInfo *image_info,
 */
 MagickExport MagickXWindows *
 MagickXInitializeWindows(Display *display,
-			 MagickXResourceInfo *resource_info)
+                         MagickXResourceInfo *resource_info)
 {
   Window
     root_window;
@@ -5373,8 +5374,8 @@ MagickXInitializeWindows(Display *display,
 */
 MagickExport Cursor
 MagickXMakeCursor(Display *display,Window window,
-		  Colormap colormap,char *background_color,
-		  char *foreground_color)
+                  Colormap colormap,char *background_color,
+                  char *foreground_color)
 {
 #define scope_height 17
 #define scope_x_hot 8
@@ -5481,13 +5482,13 @@ static const char *
 MagickXImageFormatToString(int xformat)
 {
   static const char
-    *formats[] = 
+    *formats[] =
     {
       "XYBitmap",
       "XYPixmap",
       "ZPixmap"
     };
-  
+
   const char
     *format = "Unknown";
 
@@ -5505,7 +5506,7 @@ MagickXByteOrderToString(int xbyte_order)
       "LSBFirst",
       "MSBFirst"
     };
-  
+
   const char
     *byte_order = "Unknown";
 
@@ -5516,10 +5517,10 @@ MagickXByteOrderToString(int xbyte_order)
 }
 MagickExport unsigned int
 MagickXMakeImage(Display *display,
-		 const MagickXResourceInfo *resource_info,
-		 MagickXWindowInfo *window,
-		 Image *image,
-		 unsigned int width,unsigned int height)
+                 const MagickXResourceInfo *resource_info,
+                 MagickXWindowInfo *window,
+                 Image *image,
+                 unsigned int width,unsigned int height)
 {
   int
     depth,
@@ -5552,7 +5553,7 @@ MagickXMakeImage(Display *display,
   if (window->image != (Image *) NULL)
     {
       MonitorHandler
-	handler=(MonitorHandler) NULL;
+        handler=(MonitorHandler) NULL;
 
       handler=SetMonitorHandler((MonitorHandler) NULL);
       if (window->crop_geometry)
@@ -5617,8 +5618,8 @@ MagickXMakeImage(Display *display,
             }
         }
       if ((window->image->matte != MagickFalse) &&
-	  (window->pixel_info->colors == 0)
-	  /* && (window->immutable == MagickFalse) */)
+          (window->pixel_info->colors == 0)
+          /* && (window->immutable == MagickFalse) */)
         {
           Image
             *texture;
@@ -5627,7 +5628,7 @@ MagickXMakeImage(Display *display,
             Tile background with texture according to opacity
           */
           strlcpy(resource_info->image_info->filename,"image:checkerboard",
-		  sizeof(resource_info->image_info->filename));
+                  sizeof(resource_info->image_info->filename));
           texture=ReadImage(resource_info->image_info,&window->image->exception);
           if (texture != (Image *) NULL)
             {
@@ -5635,20 +5636,20 @@ MagickXMakeImage(Display *display,
                 *textured_image;
 
               textured_image=CloneImage(window->image,0,0,MagickTrue,
-					&window->image->exception);
+                                        &window->image->exception);
               if (textured_image != (Image *) NULL)
                 {
                   if (TextureImage(textured_image,texture) != MagickFail)
-		    {
-		      if (window->image != image)
-			DestroyImage(window->image);
-		      window->image=textured_image;
-		      window->destroy=MagickTrue;
-		    }
-		  else
-		    {
-		      DestroyImage(textured_image);
-		    }
+                    {
+                      if (window->image != image)
+                        DestroyImage(window->image);
+                      window->image=textured_image;
+                      window->destroy=MagickTrue;
+                    }
+                  else
+                    {
+                      DestroyImage(textured_image);
+                    }
                 }
               DestroyImage(texture);
               texture=(Image *) NULL;
@@ -5673,13 +5674,14 @@ MagickXMakeImage(Display *display,
         *segment_info;
 
       size_t
-	shm_extent;
+        shm_extent;
 
       segment_info=(XShmSegmentInfo *) window->segment_info;
       segment_info[1].shmid=(-1);
       segment_info[1].shmaddr=NULL;
+      shm_extent=0;
       ximage=XShmCreateImage(display,window->visual,depth,format,(char *) NULL,
-			     &segment_info[1],width,height);
+                             &segment_info[1],width,height);
       window->shared_memory &= (ximage != (XImage *) NULL);
 
       if (window->shared_memory)
@@ -5779,9 +5781,9 @@ MagickXMakeImage(Display *display,
       (void) LogMagickEvent(X11Event,GetMagickModule(),"  width x height: %dx%d",
         ximage->width,ximage->height);
       (void) LogMagickEvent(X11Event,GetMagickModule(),"  format: %s",
-			    MagickXImageFormatToString(ximage->format));
+                            MagickXImageFormatToString(ximage->format));
       (void) LogMagickEvent(X11Event,GetMagickModule(),"  byte order: %s",
-			    MagickXByteOrderToString(ximage->byte_order));
+                            MagickXByteOrderToString(ximage->byte_order));
       (void) LogMagickEvent(X11Event,GetMagickModule(),
         "  bitmap unit, bit order, pad: %d %d %d",ximage->bitmap_unit,
         ximage->bitmap_bit_order,ximage->bitmap_pad);
@@ -5798,13 +5800,25 @@ MagickXMakeImage(Display *display,
   if (!window->shared_memory)
     {
       if (ximage->format == XYBitmap)
-        ximage->data=
-	  MagickAllocateArray(char *,
-			      MagickArraySize(ximage->height,ximage->bytes_per_line),
-			      ximage->depth);
+        {
+          ximage->data=
+            MagickAllocateArray(char *,
+                                MagickArraySize(ximage->height,
+                                                ximage->bytes_per_line),
+                                ximage->depth);
+          if (ximage->data != (char *) NULL)
+            (void) memset(ximage->data,0,
+                          (size_t) ximage->height*ximage->bytes_per_line*
+                          ximage->depth);
+        }
       else
-        ximage->data=
-	  MagickAllocateArray(char *,ximage->height,ximage->bytes_per_line);
+        {
+          ximage->data=
+            MagickAllocateArray(char *,ximage->height,ximage->bytes_per_line);
+          if (ximage->data != (char *) NULL)
+            (void) memset(ximage->data,0,
+                          (size_t) ximage->height*ximage->bytes_per_line);
+        }
     }
   if (ximage->data == (char *) NULL)
     {
@@ -5852,7 +5866,7 @@ MagickXMakeImage(Display *display,
     {
       XShmSegmentInfo
         *segment_info;
-      
+
       segment_info=(XShmSegmentInfo *) window->segment_info;
       segment_info[0]=segment_info[1];
     }
@@ -5881,8 +5895,8 @@ MagickXMakeImage(Display *display,
               Allocate matte image pixel data.
             */
             length=MagickArraySize(MagickArraySize(matte_image->bytes_per_line,
-						   matte_image->height),
-				   matte_image->depth);
+                                                   matte_image->height),
+                                   matte_image->depth);
             matte_image->data=MagickAllocateMemory(char *,length);
             if (matte_image->data == (char *) NULL)
               {
@@ -6002,8 +6016,8 @@ MagickXMakeImage(Display *display,
 */
 static void
 MagickXMakeImageLSBFirst(const MagickXResourceInfo *resource_info,
-			 const MagickXWindowInfo *window,Image *image,
-			 XImage *ximage,XImage *matte_image)
+                         const MagickXWindowInfo *window,Image *image,
+                         XImage *ximage,XImage *matte_image)
 {
   int
     y;
@@ -6560,8 +6574,8 @@ MagickXMakeImageLSBFirst(const MagickXResourceInfo *resource_info,
 */
 static void
 MagickXMakeImageMSBFirst(const MagickXResourceInfo *resource_info,
-			 const MagickXWindowInfo *window,Image *image,
-			 XImage *ximage,XImage *matte_image)
+                         const MagickXWindowInfo *window,Image *image,
+                         XImage *ximage,XImage *matte_image)
 {
   int
     y;
@@ -7111,7 +7125,7 @@ MagickXMakeImageMSBFirst(const MagickXResourceInfo *resource_info,
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXMakeMagnifyImage(Display *display,MagickXWindows *windows)
 {
   char
@@ -7561,8 +7575,8 @@ MagickXMakeMagnifyImage(Display *display,MagickXWindows *windows)
 */
 static unsigned int
 MagickXMakePixmap(Display *display,
-		  const MagickXResourceInfo *resource_info,
-		  MagickXWindowInfo *window)
+                  const MagickXResourceInfo *resource_info,
+                  MagickXWindowInfo *window)
 {
   unsigned int
     height,
@@ -7698,11 +7712,11 @@ static int PopularityCompare(const void *x,const void *y)
 
 MagickExport void
 MagickXMakeStandardColormap(Display *display,
-			    XVisualInfo *visual_info,
-			    MagickXResourceInfo *resource_info,
-			    Image *image,
-			    XStandardColormap *map_info,
-			    MagickXPixelInfo *pixel)
+                            XVisualInfo *visual_info,
+                            MagickXResourceInfo *resource_info,
+                            Image *image,
+                            XStandardColormap *map_info,
+                            MagickXPixelInfo *pixel)
 {
   Colormap
     colormap;
@@ -7853,7 +7867,7 @@ MagickXMakeStandardColormap(Display *display,
       */
       number_colors=image->colors;
       colors=MagickAllocateArray(XColor *,
-				 visual_info->colormap_size,sizeof(XColor));
+                                 visual_info->colormap_size,sizeof(XColor));
       if (colors == (XColor *) NULL)
         MagickFatalError3(ResourceLimitError,MemoryAllocationFailed,
           UnableToCreateColormap);
@@ -7893,7 +7907,7 @@ MagickXMakeStandardColormap(Display *display,
       */
       number_colors=image->colors;
       colors=MagickAllocateArray(XColor *,
-				 visual_info->colormap_size,sizeof(XColor));
+                                 visual_info->colormap_size,sizeof(XColor));
       if (colors == (XColor *) NULL)
         MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
           UnableToCreateColormap);
@@ -7939,7 +7953,7 @@ MagickXMakeStandardColormap(Display *display,
             Define Standard colormap for shared GrayScale or PseudoColor visual.
           */
           diversity=MagickAllocateArray(DiversityPacket *,
-					image->colors,sizeof(DiversityPacket));
+                                        image->colors,sizeof(DiversityPacket));
           if (diversity == (DiversityPacket *) NULL)
             MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
               UnableToCreateColormap);
@@ -8001,8 +8015,8 @@ MagickXMakeStandardColormap(Display *display,
             Read X server colormap.
           */
           server_colors=MagickAllocateArray(XColor *,
-					    visual_info->colormap_size,
-					    sizeof(XColor));
+                                            visual_info->colormap_size,
+                                            sizeof(XColor));
           if (server_colors == (XColor *) NULL)
             MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
               UnableToCreateColormap);
@@ -8289,8 +8303,8 @@ MagickXMakeStandardColormap(Display *display,
 */
 MagickExport void
 MagickXMakeWindow(Display *display,Window parent,char **argv,
-		  int argc,XClassHint *class_hint,XWMHints *manager_hints,
-		  MagickXWindowInfo *window_info)
+                  int argc,XClassHint *class_hint,XWMHints *manager_hints,
+                  MagickXWindowInfo *window_info)
 {
 #define MinWindowSize  64
 
@@ -8536,12 +8550,13 @@ MagickXMakeWindow(Display *display,Window parent,char **argv,
 */
 MagickExport unsigned int
 MagickXMagickMonitor(const char *task,
-		     const magick_int64_t quantum,const magick_uint64_t span,
-		     ExceptionInfo *ARGUNUSED(exception))
+                     const magick_int64_t quantum,const magick_uint64_t span,
+                     ExceptionInfo *exception)
 {
   MagickXWindows
     *windows;
 
+  ARG_NOT_USED(exception);
   windows=MagickXSetWindows((MagickXWindows *) ~0);
   if (windows == (MagickXWindows *) NULL)
     return(True);
@@ -8662,7 +8677,7 @@ MagickXQueryColorDatabase(const char *target,XColor *color)
 %
 %
 */
-MagickExport void 
+MagickExport void
 MagickXQueryPosition(Display *display,const Window window,int *x,int *y)
 {
   int
@@ -8715,7 +8730,7 @@ MagickXQueryPosition(Display *display,const Window window,int *x,int *y)
 */
 MagickExport void
 MagickXRefreshWindow(Display *display,const MagickXWindowInfo *window,
-		     const XEvent *event)
+                     const XEvent *event)
 {
   int
     x,
@@ -8821,7 +8836,7 @@ MagickXRefreshWindow(Display *display,const MagickXWindowInfo *window,
 */
 MagickExport unsigned int
 MagickXRemoteCommand(Display *display,const char *window,
-		     const char *filename)
+                     const char *filename)
 {
   Atom
     remote_atom;
@@ -9174,8 +9189,8 @@ MagickXSignalHandler(int status)
 */
 MagickExport void
 MagickXSetCursorState(Display *display,
-		      MagickXWindows *windows,
-		      const unsigned int state)
+                      MagickXWindows *windows,
+                      const unsigned int state)
 {
   assert(display != (Display *) NULL);
   assert(windows != (MagickXWindows *) NULL);
@@ -9391,8 +9406,8 @@ MagickXVisualClassName(const int visual_class)
 %
 */
 MagickExport void
-MagickXWarning(const ExceptionType ARGUNUSED(warning),
-	       const char *reason,const char *description)
+MagickXWarning(const ExceptionType warning,
+               const char *reason,const char *description)
 {
   char
     text[MaxTextExtent];
@@ -9400,6 +9415,7 @@ MagickXWarning(const ExceptionType ARGUNUSED(warning),
   MagickXWindows
     *windows;
 
+  ARG_NOT_USED(warning);
   if (reason == (char *) NULL)
     return;
   (void) strlcpy(text,reason,MaxTextExtent);
@@ -9441,7 +9457,7 @@ MagickXWarning(const ExceptionType ARGUNUSED(warning),
 */
 MagickExport Window
 MagickXWindowByID(Display *display,const Window root_window,
-		  const unsigned long id)
+                  const unsigned long id)
 {
   RectangleInfo
     rectangle_info;
@@ -9515,7 +9531,7 @@ MagickXWindowByID(Display *display,const Window root_window,
 */
 MagickExport Window
 MagickXWindowByName(Display *display,const Window root_window,
-		    const char *name)
+                    const char *name)
 {
   register int
     i;
@@ -9588,7 +9604,7 @@ MagickXWindowByName(Display *display,const Window root_window,
 */
 MagickExport Window
 MagickXWindowByProperty(Display *display,const Window window,
-			const Atom property)
+                        const Atom property)
 {
   Atom
     type;

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -41,6 +41,7 @@
 #include "magick/blob.h"
 #include "magick/colormap.h"
 #include "magick/constitute.h"
+#include "magick/enum_strings.h"
 #include "magick/magick.h"
 #include "magick/monitor.h"
 #include "magick/pixel_cache.h"
@@ -64,13 +65,13 @@ static void FixSignedValues(unsigned char *data, int size, unsigned step, unsign
   if(endian != MSBEndian)
   {
     data += step - 1;  /* LSB has most signifficant byte at the end */
-  }		       /* MSB has most signifficant byte first */
+  }                    /* MSB has most signifficant byte first */
 
   while(size-->0)
   {
-    *data ^= 0x80;	
+    *data ^= 0x80;
     data += step;
-  }     
+  }
 }
 
 /*
@@ -146,12 +147,13 @@ static unsigned int IsFITS(const unsigned char *magick,const size_t length)
 %
 */
 static Image *ReadFITSImage(const ImageInfo *image_info,
-  ExceptionInfo *exception)
+                            ExceptionInfo *exception)
 {
   typedef struct _FITSInfo
   {
     char
       extensions_exist;
+
     int
       simple,
       bits_per_pixel,
@@ -169,18 +171,19 @@ static Image *ReadFITSImage(const ImageInfo *image_info,
 
   char
     keyword[FITS_ROW_SIZE+1],
-    value[FITS_ROW_SIZE+1];  
+    value[FITS_ROW_SIZE+1];
 
   FITSInfo
     fits_info;
 
   Image
-    *image; 
+    *image;
 
   int
-    c;   
+    c;
 
-  int logging;
+  int
+    logging;
 
   long
     packet_size,
@@ -192,16 +195,20 @@ static Image *ReadFITSImage(const ImageInfo *image_info,
     *q;
 
   unsigned char
-    *fits_pixels;    
+    *fits_pixels;
 
   unsigned int
     status,
     value_expected;
 
-  unsigned long
+  magick_uint64_t
     number_pixels;
 
   ImportPixelAreaOptions import_options;
+
+  magick_off_t
+    file_size,
+    remaining;
 
   /*
     Open image file.
@@ -211,12 +218,29 @@ static Image *ReadFITSImage(const ImageInfo *image_info,
   assert(exception != (ExceptionInfo *) NULL);
   assert(exception->signature == MagickSignature);
 
-  logging = LogMagickEvent(CoderEvent,GetMagickModule(),"enter"); 
+  logging = LogMagickEvent(CoderEvent,GetMagickModule(),"enter");
 
   image=AllocateImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == False)
     ThrowReaderException(FileOpenError,UnableToOpenFile,image);
+
+  file_size=GetBlobSize(image);
+
+  /*
+    Verify file header
+  */
+  if (ReadBlob(image,sizeof(keyword),keyword) != sizeof(keyword))
+    ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+
+  if ((LocaleNCompare(keyword,"IT0",3) != 0) &&
+      (LocaleNCompare(keyword,"SIMPLE",6) != 0))
+    ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
+
+  /*
+    Seek back to beginning of file
+  */
+  SeekBlob(image,0,SEEK_SET);
 
   /*
     Initialize common part of image header.
@@ -226,6 +250,7 @@ static Image *ReadFITSImage(const ImageInfo *image_info,
 
   ImportPixelAreaOptionsInit(&import_options);
   import_options.endian = MSBEndian;
+  import_options.sample_type = UnsignedQuantumSampleType;
 
   /*
     Decode image header.
@@ -233,9 +258,10 @@ static Image *ReadFITSImage(const ImageInfo *image_info,
   if ((c=ReadBlobByte(image)) == EOF)
     ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
 
-ReadExtension:
+ ReadExtension:
   if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),
-          "Reading FITS HDU at position: %Xh", (unsigned)TellBlob(image) );
+                                    "Reading FITS HDU at position: %Xh",
+                                    (unsigned)TellBlob(image) );
 
   /*
     Initialize image header for all subheaders.
@@ -252,140 +278,141 @@ ReadExtension:
   number_pixels = 0;
 
   for ( ; ; )
-  {
-    if (!isalnum((int) c))
-      c=ReadBlobByte(image);
-    else
-      {
-        register char
-          *p;
+    {
+      if (!isalnum((int) c))
+        c=ReadBlobByte(image);
+      else
+        {
+          register char
+            *p;
 
-        /*
-          Determine a keyword and its value.
-        */
-        p=keyword;
-        do
-        {
-          if ((p-keyword) < (FITS_ROW_SIZE-1))
-            *p++=c;
-          if ((c=ReadBlobByte(image)) == EOF)
-            ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
-        } while (isalnum(c) || (c == '_'));
-        *p='\0';
-        if (LocaleCompare(keyword,"END") == 0)
-          break;
-        value_expected=False;
-        while (isspace(c) || (c == '='))
-        {
-          if (c == '=')
-            value_expected=True;
-          if ((c=ReadBlobByte(image)) == EOF)
-            ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
-        }
-        if (value_expected == False)
-          continue;
-        p=value;
-        if (c == '\'')
-          c=ReadBlobByte(image);
-
-        while (isalnum(c) || (c == '-') || (c == '+') || (c == '.'))
-        {
-          if ((p-value) < (FITS_ROW_SIZE-1))
-            *p++=c;
-          if ((c=ReadBlobByte(image)) == EOF)
-            ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
-        }
-        *p='\0';
-        /*
-          Assign a value to the specified keyword.
-        */
-        if (LocaleCompare(keyword,"SIMPLE") == 0)
-          fits_info.simple = (*value=='T') || (*value=='t');
-        if (LocaleCompare(keyword,"EXTEND") == 0)
-          fits_info.extensions_exist = (*value== 'T') || (*value=='t');
-        if (LocaleCompare(keyword,"BITPIX") == 0)
-        {
-          fits_info.bits_per_pixel=MagickAtoI(value);
           /*
-            BITPIX valid values:
-              8 -- Character or unsigned binary integer
-             16 -- 16-bit two's complement binary integer
-             32 -- 32-bit two's complement binary integer
-            -32 -- 32-bit floating point, single precision
-            -64 -- 64-bit floating point, double precision
+            Determine a keyword and its value.
           */
-	  if(fits_info.bits_per_pixel>0)
-            import_options.sample_type = UnsignedQuantumSampleType;
-	  if(fits_info.bits_per_pixel<0)          
-            import_options.sample_type = FloatQuantumSampleType;
-        }
-	if(!LocaleNCompare(keyword,"NAXIS",5))
-        {
-          if (keyword[5] == 0) ax_number=-1;          
-          else
-	  {
-            if(isdigit((int) keyword[5]))
-              ax_number = MagickAtoI(keyword+5);
-            else ax_number=-2;			/*unsupported fits keyword*/
-          }
-	  y=0;
-          if(ax_number>=-1)
-	    y = MagickAtoI(value);
-          switch(ax_number)
-          {
-            case -1:fits_info.number_axes = y; break;
-            case 1: fits_info.columns = (y<=0) ? 1 : y; break;
-	    case 2: fits_info.rows = (y<=0) ? 1 : y; break;
-	    case 3: fits_info.number_scenes = (y<=0) ? 1 : y; break;
-          }
-          if(ax_number>0)
-          {
-            if(number_pixels == 0)
-              number_pixels = y;
-            else
-              number_pixels *= (y<=0) ? 1 : y;
-          }
-        }
+          p=keyword;
+          do
+            {
+              if ((p-keyword) < (FITS_ROW_SIZE-1))
+                *p++=c;
+              if ((c=ReadBlobByte(image)) == EOF)
+                ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+            } while (isalnum(c) || (c == '_'));
+          *p='\0';
+          if (LocaleCompare(keyword,"END") == 0)
+            break;
+          value_expected=False;
+          while (isspace(c) || (c == '='))
+            {
+              if (c == '=')
+                value_expected=True;
+              if ((c=ReadBlobByte(image)) == EOF)
+                ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+            }
+          if (value_expected == False)
+            continue;
+          p=value;
+          if (c == '\'')
+            c=ReadBlobByte(image);
 
-        if (LocaleCompare(keyword,"DATAMAX") == 0)
-          fits_info.max_data=MagickAtoF(value);
-        if (LocaleCompare(keyword,"DATAMIN") == 0)
-          fits_info.min_data=MagickAtoF(value);
-        if (LocaleCompare(keyword,"BZERO") == 0)
-          fits_info.zero=MagickAtoF(value);
-        if (LocaleCompare(keyword,"BSCALE") == 0)
-          fits_info.scale=MagickAtoF(value);
-        if (LocaleCompare(keyword,"XENDIAN") == 0)
-        {
-	  if (LocaleCompare(keyword,"BIG") == 0)
-	    import_options.endian = MSBEndian;
-          else
-	    import_options.endian = LSBEndian;          
-	}
-      }
-    while ((TellBlob(image) % 80) != 0)
+          while (isalnum(c) || (c == '-') || (c == '+') || (c == '.'))
+            {
+              if ((p-value) < (FITS_ROW_SIZE-1))
+                *p++=c;
+              if ((c=ReadBlobByte(image)) == EOF)
+                ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+            }
+          *p='\0';
+          /*
+            Assign a value to the specified keyword.
+          */
+          if (LocaleCompare(keyword,"SIMPLE") == 0)
+            fits_info.simple = (*value=='T') || (*value=='t');
+          if (LocaleCompare(keyword,"EXTEND") == 0)
+            fits_info.extensions_exist = (*value== 'T') || (*value=='t');
+          if (LocaleCompare(keyword,"BITPIX") == 0)
+            {
+              fits_info.bits_per_pixel=MagickAtoI(value);
+              /*
+                BITPIX valid values:
+                8 -- Character or unsigned binary integer
+                16 -- 16-bit two's complement binary integer
+                32 -- 32-bit two's complement binary integer
+                -32 -- 32-bit floating point, single precision
+                -64 -- 64-bit floating point, double precision
+              */
+              if (fits_info.bits_per_pixel > 0)
+                import_options.sample_type = UnsignedQuantumSampleType;
+              if (fits_info.bits_per_pixel < 0)
+                import_options.sample_type = FloatQuantumSampleType;
+            }
+          if (!LocaleNCompare(keyword,"NAXIS",5))
+            {
+              if (keyword[5] == 0) ax_number=-1;
+              else
+                {
+                  if (isdigit((int) keyword[5]))
+                    ax_number = MagickAtoI(keyword+5);
+                  else ax_number=-2;  /*unsupported fits keyword*/
+                }
+              y=0;
+              if (ax_number >= -1)
+                y = MagickAtoI(value);
+              switch (ax_number)
+                {
+                case -1:fits_info.number_axes = y; break;
+                case 1: fits_info.columns = (y <= 0) ? 1 : y; break;
+                case 2: fits_info.rows = (y <= 0) ? 1 : y; break;
+                case 3: fits_info.number_scenes = (y <=0 ) ? 1 : y; break;
+                }
+              if (ax_number > 0)
+                {
+                  if (number_pixels == 0)
+                    number_pixels = (magick_uint64_t) y;
+                  else
+                    number_pixels *= (y <= 0) ? 1U : (magick_uint64_t) y;
+                }
+            }
+
+          if (LocaleCompare(keyword,"DATAMAX") == 0)
+            fits_info.max_data=MagickAtoF(value);
+          if (LocaleCompare(keyword,"DATAMIN") == 0)
+            fits_info.min_data=MagickAtoF(value);
+          if (LocaleCompare(keyword,"BZERO") == 0)
+            fits_info.zero=MagickAtoF(value);
+          if (LocaleCompare(keyword,"BSCALE") == 0)
+            fits_info.scale=MagickAtoF(value);
+          if (LocaleCompare(keyword,"XENDIAN") == 0)
+            {
+              if (LocaleCompare(keyword,"BIG") == 0)
+                import_options.endian = MSBEndian;
+              else
+                import_options.endian = LSBEndian;
+            }
+        }
+      while ((TellBlob(image) % 80) != 0)
+        if ((c=ReadBlobByte(image)) == EOF)
+          ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
       if ((c=ReadBlobByte(image)) == EOF)
         ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
-    if ((c=ReadBlobByte(image)) == EOF)
-      ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
-  }
+    }
 
-  while ((TellBlob(image) % FITS_BLOCK_SIZE) != 0)		/* Read till the rest of a block. */
+  while ((TellBlob(image) % FITS_BLOCK_SIZE) != 0) /* Read till the rest of a block. */
     if ((c=ReadBlobByte(image)) == EOF)
       ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
 
   /*
     Verify that required image information is defined.
-  */  
+  */
   if (logging)
     {
       (void) LogMagickEvent(CoderEvent,GetMagickModule(),
-                            "HDU read finished at %Xh, number of pixel is: %d (%d*%d*%d)",
-                            (unsigned) TellBlob(image),
-                            (unsigned) number_pixels,
-                            (unsigned) fits_info.columns,
-                            (unsigned) fits_info.rows,
-                            (unsigned) fits_info.number_scenes);
+                            "HDU read finished at offset %" MAGICK_OFF_F "Xh, "
+                            "number of pixels is: %" MAGICK_UINT64_F "u (%d*%d*%d)",
+                            TellBlob(image),
+                            number_pixels,
+                            fits_info.columns,
+                            fits_info.rows,
+                            fits_info.number_scenes);
       (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                             "FITS header:\n"
                             "    extensions_exist : 0x%02x\n"
@@ -420,171 +447,247 @@ ReadExtension:
       (fits_info.bits_per_pixel != -64))
     ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
 
+  if ((fits_info.columns <= 0) ||
+      (fits_info.rows <= 0) ||
+      (fits_info.number_axes < 0) ||
+      (fits_info.number_scenes < 0))
+    ThrowReaderException(CorruptImageError,ImproperImageHeader,image);
+
+  /*
+    Validate that remaining file size is sufficient for claimed
+    image properties
+  */
+  packet_size=AbsoluteValue(fits_info.bits_per_pixel)/8;
+  remaining = file_size-TellBlob(image);
+  if (remaining == 0)
+    {
+      ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,
+                           image);
+    }
+  if (file_size != 0)
+    {
+      double
+        ratio = (((double) number_pixels*packet_size)/remaining);
+
+      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                            "Remaining: %" MAGICK_OFF_F "d, Ratio: %g",
+                            remaining, ratio);
+
+      if (ratio > 1.5)
+        {
+          (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                "Unreasonable file size "
+                                "(ratio of pixels to remaining file size %g)",
+                                ratio);
+          ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,
+                               image);
+        }
+    }
+
   if ((!fits_info.simple) || (fits_info.number_axes < 1) ||
       (fits_info.number_axes > 4) || (number_pixels == 0))
-  {
-    if(!fits_info.extensions_exist)	/* when extensions exists, process further */
-      ThrowReaderException(CorruptImageError,ImageTypeNotSupported,image);
+    {
+      if (!fits_info.extensions_exist)     /* when extensions exists, process further */
+        ThrowReaderException(CorruptImageError,ImageTypeNotSupported,image);
 
-    number_pixels = (number_pixels*AbsoluteValue(fits_info.bits_per_pixel)) / 8;
-    number_pixels = ((number_pixels+FITS_BLOCK_SIZE-1) / FITS_BLOCK_SIZE) * FITS_BLOCK_SIZE; /* raw data block size */
-    (void) SeekBlob(image,number_pixels,SEEK_CUR);    
-  }
+      number_pixels = (number_pixels*AbsoluteValue(fits_info.bits_per_pixel)) / 8;
+      number_pixels = ((number_pixels+FITS_BLOCK_SIZE-1) /
+                       FITS_BLOCK_SIZE) * FITS_BLOCK_SIZE; /* raw data block size */
+      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                            "Seek CUR: %" MAGICK_OFF_F "u",(magick_off_t) number_pixels);
+      SeekBlob(image,(magick_off_t) number_pixels,SEEK_CUR);
+    }
   else
-  {
-   number_pixels = fits_info.columns*fits_info.rows; 
-   for (scene=0; scene < (long) fits_info.number_scenes; scene++)
-   {
-      if(image->rows!=0 && image->columns!=0)
-      {
-        /*
-          Allocate next image structure.
-        */
-        AllocateNextImage(image_info,image);
-        if (image->next == (Image *) NULL)
-          {
-            DestroyImageList(image);
-            return((Image *) NULL);
-          }
-        image=SyncNextImageInList(image);
-        if (!MagickMonitorFormatted(TellBlob(image),GetBlobSize(image),exception,
-                                    LoadImagesText,image->filename))
-          break;
-      }
-
-    /*
-      Create linear colormap.
-    */
-    image->columns = fits_info.columns;
-    image->rows = fits_info.rows;
-    if(fits_info.bits_per_pixel>=0)
-      image->depth = Min(QuantumDepth,fits_info.bits_per_pixel);
-    else
-      image->depth = QuantumDepth;		/* double type cell */
-    /* image->storage_class=PseudoClass; */
-    image->storage_class = DirectClass;
-    image->scene=scene;
-    image->is_grayscale = 1;
-
-    if (image->depth<=8 && fits_info.bits_per_pixel==8)
-      if (!AllocateImageColormap(image,1 << image->depth))
-        ThrowReaderException(FileOpenError,UnableToOpenFile,image);
-
-    if (image_info->ping && (image_info->subrange != 0))
-      if (image->scene >= (image_info->subimage+image_info->subrange-1))
-        break;
-
-    /*
-      Initialize image structure.
-    */
-    packet_size=AbsoluteValue(fits_info.bits_per_pixel)/8;
-        
-    number_pixels = image->columns*image->rows;
-    if ((number_pixels / image->columns) != image->rows)
-      ThrowReaderException(CoderError,ImageColumnOrRowSizeIsNotSupported,image);
-
-    fits_pixels=MagickAllocateArray(unsigned char *, image->columns, packet_size);
-    if (fits_pixels == (unsigned char *) NULL)
-      ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,image);
-
-    /*
-      Recover minimum and maximum from data if not present in HDU
-    */     
-    if ((fits_info.min_data == 0.0) && (fits_info.max_data == 0.0))
-    {  /*  Determine minimum and maximum intensity. */
-      if(fits_info.bits_per_pixel==-32)
-        (void) MagickFindRawImageMinMax(image, import_options.endian, image->columns,
-                                        image->rows, FloatPixel, packet_size*image->columns,
-                                        fits_pixels, &import_options.double_minvalue,
-                                        &import_options.double_maxvalue);
-      if(fits_info.bits_per_pixel==-64)
-        (void) MagickFindRawImageMinMax(image, import_options.endian, image->columns,
-                                        image->rows, DoublePixel, packet_size*image->columns,
-                                        fits_pixels, &import_options.double_minvalue,
-                                        &import_options.double_maxvalue);
-    }
-    else
     {
-      import_options.double_maxvalue = fits_info.max_data;
-      import_options.double_minvalue = fits_info.min_data;
+      for (scene=0; scene < (long) fits_info.number_scenes; scene++)
+        {
+          if (image->rows!=0 && image->columns!=0)
+            {
+              /*
+                Allocate next image structure.
+              */
+              AllocateNextImage(image_info,image);
+              if (image->next == (Image *) NULL)
+                {
+                  DestroyImageList(image);
+                  return((Image *) NULL);
+                }
+              image=SyncNextImageInList(image);
+              if (!MagickMonitorFormatted(TellBlob(image),file_size,exception,
+                                          LoadImagesText,image->filename))
+                break;
+            }
+
+          /*
+            Create linear colormap.
+          */
+          image->columns = fits_info.columns;
+          image->rows = fits_info.rows;
+          if (fits_info.bits_per_pixel>=0)
+            image->depth = Min(QuantumDepth,fits_info.bits_per_pixel);
+          else
+            image->depth = QuantumDepth;              /* double type cell */
+          /* image->storage_class=PseudoClass; */
+          image->storage_class = DirectClass;
+          image->scene=scene;
+          image->is_grayscale = 1;
+
+          if (image->logging)
+            (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                  "Frame[%lu] geometry %lux%lu, %u bits/pixel, %s",
+                                  scene, image->columns, image->rows,
+                                  fits_info.bits_per_pixel,
+                                  ClassTypeToString(image->storage_class));
+
+          if (image->depth<=8 && fits_info.bits_per_pixel==8)
+            if (!AllocateImageColormap(image,1 << image->depth))
+              ThrowReaderException(FileOpenError,UnableToOpenFile,image);
+
+          if (image_info->ping && (image_info->subrange != 0))
+            if (image->scene >= (image_info->subimage+image_info->subrange-1))
+              break;
+
+          if (CheckImagePixelLimits(image, exception) != MagickPass)
+            ThrowReaderException(ResourceLimitError,ImagePixelLimitExceeded,image);
+
+          /*
+            Initialize image structure.
+          */
+          packet_size=AbsoluteValue(fits_info.bits_per_pixel)/8;
+
+          /*
+            Validate that remaining file size is sufficient for claimed
+            image properties
+          */
+          remaining = file_size-TellBlob(image);
+          if (remaining == 0)
+            {
+              ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,
+                                   image);
+            }
+          if (file_size != 0)
+            {
+              double
+                ratio = (((double) image->columns*image->rows*packet_size)/remaining);
+
+              (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                    "Remaining: %" MAGICK_OFF_F "d, Ratio: %g",
+                                    remaining, ratio);
+
+              if (ratio > 1.5)
+                {
+                  (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                        "Unreasonable file size "
+                                        "(ratio of pixels to remaining file size %g)",
+                                        ratio);
+                  ThrowReaderException(CorruptImageError,InsufficientImageDataInFile,
+                                       image);
+                }
+            }
+
+          fits_pixels=MagickAllocateArray(unsigned char *, image->columns, packet_size);
+          if (fits_pixels == (unsigned char *) NULL)
+            ThrowReaderException(ResourceLimitError,MemoryAllocationFailed,image);
+
+          /*
+            Recover minimum and maximum from data if not present in HDU
+          */
+          if ((fits_info.min_data == 0.0) && (fits_info.max_data == 0.0))
+            {  /*  Determine minimum and maximum intensity. */
+              if (fits_info.bits_per_pixel==-32)
+                (void) MagickFindRawImageMinMax(image, import_options.endian, image->columns,
+                                                image->rows, FloatPixel, packet_size*image->columns,
+                                                fits_pixels, &import_options.double_minvalue,
+                                                &import_options.double_maxvalue);
+              if (fits_info.bits_per_pixel==-64)
+                (void) MagickFindRawImageMinMax(image, import_options.endian, image->columns,
+                                                image->rows, DoublePixel, packet_size*image->columns,
+                                                fits_pixels, &import_options.double_minvalue,
+                                                &import_options.double_maxvalue);
+            }
+          else
+            {
+              import_options.double_maxvalue = fits_info.max_data;
+              import_options.double_minvalue = fits_info.min_data;
+            }
+
+          /*
+            Convert FITS pixels to pixel packets.
+          */
+
+          for (y=(long) image->rows-1; y >= 0; y--)
+            {
+              q=SetImagePixels(image,0,y,image->columns,1);
+              if (q == (PixelPacket *) NULL)
+                break;
+
+              if (ReadBlob(image, packet_size*image->columns, fits_pixels) != (size_t)packet_size*image->columns)
+                {
+                  if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),
+                                                    "  fits cannot read scanrow %u from a file.", (unsigned)y );
+                  break; /* goto ExitLoop; */
+                }
+
+              switch(fits_info.bits_per_pixel)
+                {
+                case 16: FixSignedValues(fits_pixels, image->columns, 2, import_options.endian);
+                  break;
+                case 32: FixSignedValues(fits_pixels, image->columns, 4, import_options.endian);
+                  break;
+                case 64: FixSignedValues(fits_pixels, image->columns, 8, import_options.endian);
+                  break;
+                }
+
+              if (ImportImagePixelArea(image, GrayQuantum, packet_size*8, fits_pixels, &import_options,0) == MagickFail)
+                {
+                  if (logging)
+                    (void)LogMagickEvent(CoderEvent,GetMagickModule(),
+                                         "  fits failed to ImportImagePixelArea for a row %u", (unsigned)y);
+                  break;
+                }
+
+              if (!SyncImagePixels(image))
+                break;
+              if (QuantumTick(y,image->rows))
+                if (!MagickMonitorFormatted(y,image->rows,exception,
+                                            LoadImageText,image->filename,
+                                            image->columns,image->rows))
+                  break;
+            }
+          MagickFreeMemory(fits_pixels);
+          if (EOFBlob(image))
+            {
+              ThrowException(exception,CorruptImageError,UnexpectedEndOfFile, image->filename);
+              break;
+            }
+
+          /*
+            Proceed to next image.
+          */
+          if (image_info->subrange != 0)
+            if (image->scene >= (image_info->subimage+image_info->subrange-1))
+              break;
+        }
     }
 
-    /*
-      Convert FITS pixels to pixel packets.
-    */
-
-    for (y=(long) image->rows-1; y >= 0; y--)
+  if (fits_info.extensions_exist)
     {
-      q=SetImagePixels(image,0,y,image->columns,1);
-      if (q == (PixelPacket *) NULL)
-        break;
-
-      if(ReadBlob(image, packet_size*image->columns, fits_pixels) != (size_t)packet_size*image->columns)
-      {
- 	if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),
-           "  fits cannot read scanrow %u from a file.", (unsigned)y );
-	break; /* goto ExitLoop; */
-      }
-
-      switch(fits_info.bits_per_pixel)
-      {
-        case 16: FixSignedValues(fits_pixels, image->columns, 2, import_options.endian);
-		 break;
-        case 32: FixSignedValues(fits_pixels, image->columns, 4, import_options.endian);
-		 break;
-	case 64: FixSignedValues(fits_pixels, image->columns, 8, import_options.endian);
-		 break;
-      }
-
-      if(ImportImagePixelArea(image, GrayQuantum, packet_size*8, fits_pixels, &import_options,0) == MagickFail)
-      {
-        if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),
-               "  fits failed to ImportImagePixelArea for a row %u", (unsigned)y);
-	break;
-      }
-
-      if (!SyncImagePixels(image))
-        break;
-      if (QuantumTick(y,image->rows))
-        if (!MagickMonitorFormatted(y,image->rows,exception,
-                                    LoadImageText,image->filename,
-				    image->columns,image->rows))
+      while ((TellBlob(image) % FITS_BLOCK_SIZE) != 0) /* Read till the rest of a block. */
+        if ((c=ReadBlobByte(image)) == EOF)
           break;
+      if (!EOFBlob(image))
+        {                                           /* Try to read a next extension block header. */
+          if ((c=ReadBlobByte(image)) != EOF)
+            goto ReadExtension;
+        }
     }
-    MagickFreeMemory(fits_pixels);
-    if (EOFBlob(image))
-      {
-        ThrowException(exception,CorruptImageError,UnexpectedEndOfFile, image->filename);
-        break;
-      }
-
-    /*
-      Proceed to next image.
-    */
-    if (image_info->subrange != 0)
-      if (image->scene >= (image_info->subimage+image_info->subrange-1))
-        break;    
-    }
-  }
-
-  if(fits_info.extensions_exist)
-  {
-    while ((TellBlob(image) % FITS_BLOCK_SIZE) != 0) /* Read till the rest of a block. */
-      if ((c=ReadBlobByte(image)) == EOF)
-        break;
-    if(!EOFBlob(image))
-    {						/* Try to read a next extension block header. */
-      if ((c=ReadBlobByte(image)) != EOF)
-	goto ReadExtension;
-    }
-  }
 
   CloseBlob(image);
 
   while (image->previous != (Image *) NULL)
-    image=image->previous;  
+    image=image->previous;
 
-  if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),"return");  
+  if (logging) (void)LogMagickEvent(CoderEvent,GetMagickModule(),"return");
   return(image);
 }
 
@@ -655,7 +758,7 @@ ModuleExport void UnregisterFITSImage(void)
 /*
   This functions inserts one row into a HDU. Note that according to
   FITS spec a card image contains 80 bytes of ASCII data.
-  
+
   buffer - 2880 byte logical FITS record.
   data   - string data to append
   offset - offset into FITS record to write the data.
@@ -671,7 +774,7 @@ int InsertRowHDU(char *buffer, const char *data, int offset)
   len = Min(len,80); /* Each card image is 80 bytes max */
 
   if (len > (size_t) (FITS_BLOCK_SIZE-offset))
-	len = FITS_BLOCK_SIZE-offset;
+        len = FITS_BLOCK_SIZE-offset;
 
   (void) strncpy(buffer+offset,data,len);
   return offset +80;
@@ -707,7 +810,7 @@ int InsertRowHDU(char *buffer, const char *data, int offset)
 %
 %
 */
-static unsigned int WriteFITSImage(const ImageInfo *image_info,Image *image)
+static MagickPassFail WriteFITSImage(const ImageInfo *image_info,Image *image)
 {
   char
     buffer[FITS_BLOCK_SIZE],
@@ -717,19 +820,21 @@ static unsigned int WriteFITSImage(const ImageInfo *image_info,Image *image)
     y;
 
   register const PixelPacket
-    *p;  
+    *p;
 
   unsigned char
     *pixels;
 
-  unsigned int    
-    quantum_size,
-    status;
+  unsigned int
+    quantum_size;
 
   unsigned long
     packet_size;
 
   ExportPixelAreaOptions export_options;
+
+  MagickPassFail
+    status;
 
   /*
     Open output image file.
@@ -739,34 +844,42 @@ static unsigned int WriteFITSImage(const ImageInfo *image_info,Image *image)
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
-  if (status == False)
+  if (status == MagickFail)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
-  (void) TransformColorspace(image,RGBColorspace);
+  if (TransformColorspace(image,RGBColorspace) == MagickFail)
+    {
+      CloseBlob(image);
+      return MagickFail;
+    }
 
   ExportPixelAreaOptionsInit(&export_options);
   export_options.endian = MSBEndian;
   export_options.sample_type = UnsignedQuantumSampleType;
 
   if (image->depth <= 8)
-  {
-    quantum_size=8;    
-  }
+    {
+      quantum_size=8;
+    }
   else if (image->depth <= 16)
-  {    
-    quantum_size=16;
-  }
+    {
+      quantum_size=16;
+    }
   else
-  {   
-    quantum_size=32;
-  }
+    {
+      quantum_size=32;
+    }
 
   /*
     Allocate image memory.
-  */  
+  */
   packet_size=quantum_size/8;
   fits_info=MagickAllocateMemory(char *,FITS_BLOCK_SIZE);
-  pixels=MagickAllocateMemory(unsigned char *,packet_size*image->columns);
-  if ((fits_info == (char *) NULL) || (pixels == (unsigned char *) NULL))
+  if (fits_info == (char *) NULL)
+    {
+      ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,image);
+    }
+  pixels=MagickAllocateArray(unsigned char *,packet_size,image->columns);
+  if (pixels == (unsigned char *) NULL)
     {
       MagickFreeMemory(fits_info);
       ThrowWriterException(ResourceLimitError,MemoryAllocationFailed,image);
@@ -774,7 +887,7 @@ static unsigned int WriteFITSImage(const ImageInfo *image_info,Image *image)
 
   /*
     Initialize image header.
-  */  
+  */
   memset(fits_info,' ',FITS_BLOCK_SIZE);
   y = 0;
   y = InsertRowHDU(fits_info, "SIMPLE  =                    T", y);
@@ -783,53 +896,57 @@ static unsigned int WriteFITSImage(const ImageInfo *image_info,Image *image)
   y = InsertRowHDU(fits_info, "NAXIS   =                    2", y);
   FormatString(buffer,        "NAXIS1  =           %10lu",image->columns);
   y = InsertRowHDU(fits_info, buffer, y);
-  FormatString(buffer,        "NAXIS2  =           %10lu",image->rows); 
-  y = InsertRowHDU(fits_info, buffer, y);  
+  FormatString(buffer,        "NAXIS2  =           %10lu",image->rows);
+  y = InsertRowHDU(fits_info, buffer, y);
   FormatString(buffer,        "DATAMIN =           %10u",0);
-  y = InsertRowHDU(fits_info, buffer, y);    
+  y = InsertRowHDU(fits_info, buffer, y);
   FormatString(buffer,        "DATAMAX =           %10lu", MaxValueGivenBits(quantum_size));
   y = InsertRowHDU(fits_info, buffer, y);
-  if(quantum_size>8)
-  {
-    FormatString(buffer,      "BZERO   =           %10u", (quantum_size <= 16) ? 32768U : 2147483648U);
-    y = InsertRowHDU(fits_info, buffer, y);
-  }
+  if (quantum_size>8)
+    {
+      FormatString(buffer,      "BZERO   =           %10u", (quantum_size <= 16) ? 32768U : 2147483648U);
+      y = InsertRowHDU(fits_info, buffer, y);
+    }
   /* Magick version data can only be 60 bytes. */
   (void) FormatString(buffer, "HISTORY Created by %.60s.",MagickPackageName " " MagickLibVersionText);
   y = InsertRowHDU(fits_info, buffer, y);
-  y = InsertRowHDU(fits_info, "END", y);        
+  y = InsertRowHDU(fits_info, "END", y);
   (void) WriteBlob(image, FITS_BLOCK_SIZE, (char *)fits_info);
-  
+
   /*
     Convert image to fits scale PseudoColor class.
   */
   for (y=(long) image->rows-1; y >= 0; y--)
-  {
-    p=AcquireImagePixels(image,0,y,image->columns,1,&image->exception);
-    if (p == (const PixelPacket *) NULL)
-      break;
-    (void) ExportImagePixelArea(image,GrayQuantum,quantum_size,pixels,&export_options,0);
-    if(quantum_size==16) FixSignedValues(pixels, image->columns, 2, export_options.endian);
-    if(quantum_size==32) FixSignedValues(pixels, image->columns, 4, export_options.endian);
-    (void) WriteBlob(image,packet_size*image->columns,pixels);
-    if (QuantumTick(image->rows-y-1,image->rows))
-      {
-        status=MagickMonitorFormatted(image->rows-y-1,image->rows,
-                                      &image->exception,SaveImageText,
-                                      image->filename,
-				      image->columns,image->rows);
-        if (status == False)
-          break;
-      }
-  }
-  
-	/* Calculate of padding */
+    {
+      p=AcquireImagePixels(image,0,y,image->columns,1,&image->exception);
+      if (p == (const PixelPacket *) NULL)
+        break;
+      if (ExportImagePixelArea(image,GrayQuantum,quantum_size,pixels,&export_options,0) == MagickFail)
+        break;
+      if (quantum_size == 16)
+        FixSignedValues(pixels, image->columns, 2, export_options.endian);
+      if (quantum_size == 32)
+        FixSignedValues(pixels, image->columns, 4, export_options.endian);
+      if (WriteBlob(image,packet_size*image->columns,pixels) != packet_size*image->columns)
+        break;
+      if (QuantumTick(image->rows-y-1,image->rows))
+        {
+          status=MagickMonitorFormatted(image->rows-y-1,image->rows,
+                                        &image->exception,SaveImageText,
+                                        image->filename,
+                                        image->columns,image->rows);
+          if (status == False)
+            break;
+        }
+    }
+
+  /* Calculate of padding */
   y = FITS_BLOCK_SIZE - (image->columns * image->rows * packet_size) % FITS_BLOCK_SIZE;
-  if(y>0)
-  {
-    memset(fits_info, 0, y);    
-    (void)WriteBlob(image,y,(char *) fits_info);
-  }
+  if (y > 0)
+    {
+      memset(fits_info, 0, y);
+      (void)WriteBlob(image,y,(char *) fits_info);
+    }
   MagickFreeMemory(fits_info);
 
   MagickFreeMemory(pixels);

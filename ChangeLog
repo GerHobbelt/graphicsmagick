@@ -1,1754 +1,2109 @@
-2015-06-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+2018-06-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* version.sh: Update library versioning for 1.3.30 release.
+
+	* NEWS.txt: Update news for 1.3.30 release.
+
+2018-06-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Report exception on EOF file
+	reading DPX pixel data. Fixes oss-fuzz 8104
+	"graphicsmagick/coder_DPX_fuzzer: Use-of-uninitialized-value in
+	WriteDPXImage", oss-fuzz 8297 "graphicsmagick/enhance_fuzzer:
+	Use-of-uninitialized-value in EnhanceImage", and oss-fuzz 8133
+	"graphicsmagick/coder_DPX_fuzzer: Use-of-uninitialized-value in
+	RGBTransformPackets". (Credit to OSS-Fuzz)
+
+2018-06-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/cmyk.c (ReadCMYKImage): Free scanline buffer in error
+	path. Fixes SourceForge issue #567 "small memory leak in rgb.c,
+	gray.c and cmyk.c" reported by Petr Gajdos.
+
+	* coders/gray.c (ReadGRAYImage): Free scanline buffer in error
+	path. Fixes SourceForge issue #567 "small memory leak in rgb.c,
+	gray.c and cmyk.c" reported by Petr Gajdos.
+
+	* coders/rgb.c (ReadRGBImage): Free scanline buffer in error
+	path. Fixes SourceForge issue #567 "small memory leak in rgb.c,
+	gray.c and cmyk.c" reported by Petr Gajdos.
+
+	* coders/jpeg.c (ReadJPEGImage): Avoid memory leak of profile
+	buffer when longjmp-based exception is thrown while reading a
+	profile. Fixes oss-fuzz 8957 "graphicsmagick/enhance_fuzzer:
+	Direct-leak in ReadGenericProfile". (Credit to OSS-Fuzz)
+
+2018-06-17  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xcf.c (load_level): Make sure to free 'tile_image' before
+	returning exception.  Fixes oss-fuzz 8935
+	"graphicsmagick/coder_XCF_fuzzer: Indirect-leak in
+	CloneImage". (Credit to OSS-Fuzz)
+
+	* coders/jpeg.c (ReadJPEGImage): Allow three warnings of any given
+	type before promoting the next warning of the same type to a hard
+	error.  The warning limit may be adjusted by the user using
+	-define jpeg:max-warnings=<value>.  Fixes oss-fuzz 8704
+	"graphicsmagick/coder_JPG_fuzzer: Out-of-memory in
+	graphicsmagick_coder_JPG_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/png.c (ReadPNGImage): Detect EOF when reading
+	magic_number.  Fixes oss-fuzz 8944
+	"graphicsmagick/coder_PNG_fuzzer: Use-of-uninitialized-value in
+	ReadPNGImage".  (Credit to OSS-Fuzz)
+	(ReadPNGImage, ReadJNGImage): Makes sure that return value of
+	ReadBlob() is always checked to detect EOF.
 
-	* coders/tiff.c (WriteTIFFImage): Include JPEG headers to obtain
-	its BITS_IN_JSAMPLE definition.  This is needed so we can know
-	what JPEG depth libtiff supports.
+2018-06-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/tiff.c (ReadTIFFImage): Re-structure exception reporting
+	so that QuantumTransferMode() exceptions thrown for
+	PLANARCONFIG_SEPARATE images are handled immediately.  Fixes
+	oss-fuzz 8896 "graphicsmagick/coder_BIGTIFF_fuzzer:
+	Use-of-uninitialized-value in DisassociateAlphaRegion". (Credit to
+	OSS-Fuzz)
+	(ReadTIFFImage): tsize_t is a signed type so be prepared for
+	unexpected negative values produced by libtiff size functions.
+	Fixes oss-fuzz 8934 "graphicsmagick/coder_TIFF_fuzzer: Sanitizer
+	CHECK failure in "((0)) != (0)" (0x0, 0x0)". (Credit to OSS-Fuzz)
+
+2018-06-16  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Fix oss-fuzz 7735 "graphicsmagick/coder_WPG_fuzzer:
+	Use-of-uninitialized-value in ReadWPGImage".  (Credit to OSS-Fuzz)
+
+2018-06-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadMNGImage): ENDL chunk must be at least one
+	byte in size. Fixes oss-fuzz 8832
+	"graphicsmagick/coder_MNG_fuzzer: Null-dereference READ in
+	ReadMNGImage". (Credit to OSS-Fuzz)
+	(ReadMNGImage): Length of DISC chunk must be evenly divisible by
+	2.  Fixes oss-fuzz 8834 "graphicsmagick/coder_MNG_fuzzer:
+	Heap-buffer-overflow in ReadMNGImage". (Credit to OSS-Fuzz)
 
-	* www/index.rst: Add mention of GraphicsMagick having zero defects
-	reported by Coverity.
+2018-06-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/mpc.c (ReadMPCImage): Detect end of file while reading
+	image directory.  Similar to MIFF fixes for ImageMagick
+	CVE-2017-18272.
+	(RegisterMPCImage): Require seekable stream since MPC is strictly
+	a file-based format and so GetBlobSize() is assured to work.
+	Similar to MIFF behavior.  Claimed to be part of the resolution
+	for ImageMagick CVE CVE-2017-11449. Suggested by Petr Gajdos via
+	email on January 3, 2018.
 
-2015-06-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+2018-06-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* Magick++/lib/STL.cpp (adaptiveThresholdImage): Add a new
-	constructor which accepts a 'double' offset value.  The previous
-	version of this constructor is deprecated and subject to removal
-	in the future.  The size of the class is enlarged to store a
-	'double' and so this is a break in the ABI when this class was
-	used.  Code using this class should be re-compiled.
+	* coders/miff.c (ReadMIFFImage): Detect end of file while reading
+	image directory. Fixes SourceForge issue 565 "ImageMagick
+	CVE-2017-18272 applies to GraphicsMagick".  Thanks to Petr Gajdos
+	for reporting this issue to us.
 
-	* Magick++/lib/Image.cpp (adaptiveThreshold): Add a new version of
-	this method which accepts a 'double' offset value.  The previous
-	version of the method is deprecated and subject to removal in the
-	future.  Problem was reported by Dirk Lemstra.
+	* magick/import.c (ImportViewPixelArea): Use appropriate
+	bits_per_sample validations for FloatQuantumSampleType. Fixes
+	oss-fuzz 8780 "graphicsmagick/coder_PTIF_fuzzer:
+	Use-of-uninitialized-value in HorizontalFilter". (Credit to
+	OSS-Fuzz)
 
-2015-05-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+2018-06-09  Fojtik Jaroslav  <JaFojtik@seznam.cz>
 
-	* coders/gray.c (ReadGRAYImage): Based on feedback from Glenn,
-	return a gray image from the reader, even if a channelized format
-	specifier is given.
+	* coders/mat.c More than 4GiB are not supported in MAT!
 
-2015-05-26  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+2018-06-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* coders/gray.c (ReadGRAYImage): Fix read glitch caused by
-	incorrect memset(). Added missing break statement to switch.
-	Added more logging.
-	(RegisterGRAYImage): Register "gray" formats R, G, B, C, M, Y, K,
-	O such that they are not triggered by file extension.  It is
-	necessary to apply a magick prefix to the file name (or set image
-	magick in the API) in order to force using these formats.  This
-	avoids accidents in case the file extension was used for some
-	other purpose.
+	* coders/mat.c (ReadMATImage): Add casts to avoid arithmetic
+	overflow when computing size and offsets.  Fixes oss-fuzz 8801
+	"graphicsmagick/coder_MAT_fuzzer: Timeout in
+	graphicsmagick_coder_MAT_fuzzer". (Credit to OSS-Fuzz)
 
-2015-05-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* magick/blob.c (ReadBlobLSBDoubles, ReadBlobMSBDoubles): Only
+	byte-swap doubles or test doubles for NAN if we have read enough
+	bytes for at least one double value.
+	(ReadBlob): Add an assertion to enforce that ReadBlob() will never
+	report reading more bytes than requested due to some
+	implementation issue.
 
-	* coders/gray.c: Added support for "GRAYA" format.  Format
-	specifiers "R", "G", "B", "A", "C", "M", and "Y" may now be used
-	to save and restore the associated channel using the same raw
-	format as "GRAY".  These format specifiers were already supported
-	but did not appear to serve any useful function.
+2018-06-08  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* magick/blob.c (ReadBlob, WriteBlob): gzread(), BZ2_bzread(),
+	gzwrite(), BZ2_bzwrite() return type 'int' rather than 'size_t'
+	like their stdio equivalents.  Use correct signed type to avoid
+	returning a negative value into an unsigned type, forming a huge
+	positive value.  Fixes oss-fuzz 8600
+	"graphicsmagick/coder_MAT_fuzzer: Heap-buffer-overflow in
+	ReadBlobLSBDoubles". (Credit to OSS-Fuzz)
 
-	* configure.ac: Improve handling of libxml2 dependencies.  Only
-	test for and use libwmflite.  Full-up libwmf is no longer used.
-	* configure.ac: Deduplicate CFLAGS and LDFLAGS.
+2018-06-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/png.c (png_read_raw_profile): Try to shore up parsing of
+	raw profile reading to avoid heap read overruns.  Fixes oss-fuzz
+	8763 "graphicsmagick/coder_PNG32_fuzzer: Heap-buffer-overflow in
+	png_read_raw_profile". (Credit to OSS-Fuzz)
+
+2018-06-07  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Reduce stack usage for 64 bit architecture.
+
+2018-06-06  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Check return values of SeekBlob for more safety.
+
+2018-06-06  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadOneJNGImage): Use DestroyImageList() rather
+	than DestroyImage() on returned Image from supposed read of JPEG
+	data, in case multiple frames were unexpectedly returned.  Also
+	add "JPEG:" prefix to filename when reading from temporary file to
+	force that it can only be read as a JPEG file, disabling format
+	auto-detection based on file header.  Fixes oss-fuzz 8755
+	"graphicsmagick/coder_JNG_fuzzer: Indirect-leak in
+	AllocateImage". (Credit to OSS-Fuzz)
+
+2018-06-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/blob.c (EOFBlob): Implement EOF detection for ZipStream.
+	Does some archaic zlib not provide gzeof()?  Fixes oss-fuzz 8550
+	"graphicsmagick/coder_MAT_fuzzer: Timeout in
+	graphicsmagick_coder_MAT_fuzzer". (Credit to OSS-Fuzz)
+
+2018-06-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadOnePNGImage): Skip adding empty raw profile.
+	Fixes oss-fuzz "graphicsmagick/coder_PNG_fuzzer:
+	Heap-buffer-overflow in png_read_raw_profile". (Credit to
+	OSS-Fuzz)
+
+2018-06-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* NEWS.txt: Update NEWS with latest changes.
+
+	* coders/dcm.c (DCM_ReadRGBImage): Force the image to DirectClass
+	to avoid later use of uninitialized indexes.  Fixes oss-fuzz 8602
+	"graphicsmagick/coder_DCM_fuzzer: Use-of-uninitialized-value in
+	DCM_PostRescaleImage". (Credit to OSS-Fuzz)
+	(DCM_ReadPlanarRGBImage): Force the image to DirectClass to avoid
+	later use of uninitialized indexes.
+
+	* coders/png.c (ReadMNGImage): Free chunk memory in error
+	reporting path to avoid leak.  Fixes oss-fuzz 8721
+	"graphicsmagick/coder_MNG_fuzzer: Direct-leak in
+	ReadMNGImage". (Credit to OSS-Fuzz)
+
+2018-06-02  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/constitute.c (ReadImage): Assure that an error exception
+	is thrown if coder returns null without properly reporting an
+	exception.
+
+	* magick/blob.c (BlobToImage): Assure that an error exception is
+	thrown if coder returns null without properly reporting an
+	exception.
 
-	* coders/png.c (WriteOnePNGImage): Eliminate a "clobber"
-	compilation warning.
+	* coders/png.c (ReadMNGImage): Disable mystery "linked list is
+	corrupted" code.  Assure that exceptions are reported to the
+	correct place so they are not lost.  Fixes oss-fuzz 8710
+	"graphicsmagick/coder_MNG_fuzzer: Indirect-leak in
+	AllocateImage". (Credit to OSS-Fuzz)
 
-	* coders/jpeg.c (WriteJPEGImage): Eliminate a "clobber"
-	compilation warning.
+	* coders/tiff.c (ReadTIFFImage): Initialize allocated scanline,
+	strip, or tile to zero in order to avoid complaint about use of
+	uninitialized data if libtiff fails to write all the bytes.  Fixes
+	oss-fuzz 8551 "graphicsmagick/coder_TIFF_fuzzer:
+	Use-of-uninitialized-value in ImportGrayQuantumType". (Credit to
+	OSS-Fuzz)
 
-	* configure.ac: Don't compute libwmf2 and libxml2 linkage path
-	based on claimed installation prefix.  This is hoped to improve
-	configure reliability on multi-arch type systems.
+	* magick/annotate.c (RenderFreetype): Throw an exception if
+	DrawInfo font is null.  Should fix oss-fuzz 8557
+	"graphicsmagick/coder_PCD_fuzzer: Unknown signal in
+	RenderFreetype" and may fix oss-fuzz 8544
+	"graphicsmagick/coder_PCD_fuzzer: Null-dereference READ in
+	RenderFreetype". (Credit to OSS-Fuzz)
 
-2015-05-17  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/jpeg.c (ReadGenericProfile): Add/improve tracing for
+	profile size and when JPEG header is being read.
 
-	* configure.ac: Use the first -I, -L, and -l arguments produced by
-	freetype-config and don't produce arguments based on installation
-	prefix.  This is hoped to improve configure reliability on
-	multi-arch type systems.
+2018-06-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/png.c (ReadOneJNGImage): Report a useful exception for
+	the case when the JNG file fails to provide the necessary image
+	chunks to allocate the color image.  Inspired by oss-fuzz 8666
+	"graphicsmagick/coder_JNG_fuzzer: ASSERT: data != (const char *)
+	NULL" although the reported issue was not reproduced.
 
-	* magick/tempfile.c (AcquireTemporaryFileDescriptor): P_tmpdir is
-	not an environment variable.  Need to consider Windows environment
-	variables for Cygwin.
+2018-05-31  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* magick/random.c (InitializeMagickRandomKernel): For Microsoft
-	Windows, use CryptGenRandom() to salt the built-in random number
-	generator.
+	* coders/png.c (ReadMNGImage): Fix off-by-one in length validation
+	for TERM chunk which allowed one byte heap read overflow.  Fixes
+	oss-fuzz 8615 "graphicsmagick/coder_MNG_fuzzer:
+	Heap-buffer-overflow in mng_get_long". (Credit to OSS-Fuzz)
+	(ReadMNGImage): Fix leak of MngInfo in error reporting path.
+	Fixes oss-fuzz 8604 "graphicsmagick/coder_MNG_fuzzer: Direct-leak
+	in ReadMNGImage". (Credit to OSS-Fuzz)
+	(ReadMNGImage): Verify that claimed chunk size does not exceed
+	input size.  Fixes oss-fuzz 8564 "graphicsmagick/coder_MNG_fuzzer:
+	Out-of-memory in graphicsmagick_coder_MNG_fuzzer". (Credit to
+	OSS-Fuzz)
 
-2015-05-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/tiff.c (ReadTIFFImage): Reject files with excessive
+	samples-per-pixel or extra-samples. Avoids potential issues
+	observed in oss-fuzz 8634 "graphicsmagick/coder_BIGTIFF_fuzzer:
+	Undefined-shift in ImportAlphaQuantumType". (Credit to OSS-Fuzz)
 
-	* magick/utility.c (MagickRandReentrant): Quiet Coverity 10092
-	"Calling risky function".
-	(MagickRandNewSeed): Quiet Coverity 10093 "Calling risky
-	function".
+2018-05-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadMNGImage): Assure that object id index is
+	always less than MNG_MAX_OBJECTS to avoid overflow.  Fixes
+	oss-fuzz 8596 "graphicsmagick/coder_MNG_fuzzer:
+	Index-out-of-bounds in ReadMNGImage" and likely other issues yet
+	to be reported. (Credit to OSS-Fuzz)
+
+2018-05-30  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (CompareEdges): Per ticket #562,
+	function CompareEdges() did not conform to the qsort()
+	requirement that if CompareEdges(edge0,edge1) returns
+	-1 (i.e., edge0 "less than" edge1), then
+	CompareEdges(edge1,edge0) should return 1 (edge1
+	"greater than" edge0).  This has been fixed.
+
+2018-05-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadOneJNGImage): Deal with JDAA JNG chunk with
+	length zero.  Fixes oss-fuzz 8562
+	"graphicsmagick/coder_JNG_fuzzer: ASSERT: data != (const char *)
+	NULL". (Credit to OSS-Fuzz)
+
+	* coders/tiff.c (ReadTIFFImage): Check that the bits-per-sample is
+	supported by the implementation before attempting to decode the
+	image. Fixes oss-fuzz 8554 "graphicsmagick/coder_BIGTIFF_fuzzer:
+	Undefined-shift in MagickBitStreamMSBWrite". (Credit to OSS-Fuzz)
+
+	* coders/png.c (ReadMNGImage): Eliminate use of uninitialized
+	header magic data by checking for EOF first.  Fixes oss-fuzz 8597
+	"graphicsmagick/coder_MNG_fuzzer: Use-of-uninitialized-value in
+	ReadMNGImage". (Credit to OSS-Fuzz)
+
+2018-05-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* fuzzing/oss-fuzz-build.sh: More fixes based on what is observed
+	in oss-fuzz build log.
+
+2018-05-24  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/jnx.c The attribute should belong to only one scene and
+	not to whole image list.
+
+2018-05-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* fuzzing/oss-fuzz-build.sh: Changes to add CPPFLAGS to configure
+	executions to hopefully get oss-fuzz build closer to success.
 
-	* coders/tga.c (ReadTGAImage): Quiet Coverity 10201 "Identical
-	code for different branches".
+2018-05-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* PerlMagick/t/jpeg/read.t: Add a JNX reader test case.
 
-	* coders/pcx.c (ReadPCXImage): Quiet Coverity 10218 "Identical
-	code for different branches".
+	* coders/jnx.c (ReadJNXImage): JNX image depth should be 8.
 
-2015-05-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* fuzzing/oss-fuzz-build.sh: Apply patch from Alex Gaynor to
+	switch libpng to autotools build system, as well as configure
+	GraphicsMagick with '--with-quantum-depth=16'.
 
-	* magick/utility.c (GetGeometry): Fix handling of area geometries
-	in the form "5000000@".  Resolves SourceForge issue #299 "-resize
-	with @ and > in geometry specification".
+2018-05-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/tiff.c (ReadTIFFImage): Validate tile memory requests for
+	the TIFFReadRGBATile() case in the same way as the TIFFReadTile()
+	case.  Fixes oss-fuzz 8434 "graphicsmagick/coder_BIGTIFF_fuzzer:
+	Out-of-memory in graphicsmagick_coder_BIGTIFF_fuzzer". (Credit to
+	OSS-Fuzz)
 
-	* coders/tiff.c (WriteTIFFImage): Disable matte channel for
-	compression types which don't support it.  Resolves SourceForge
-	bug #297 "GM distorts image using -transform".
-	(WriteTIFFImage): When type is Optimize, disable matte channel if
-	image is opaque.
+2018-05-21  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-09  Jaroslav Fojtik  <JaFojtik@seznam.cz>
+	* coders/tile.c (ReadTILEImage): Remove any existing size request
+	when while image to tile.  This avoids size being used for both
+	the input image size and the tile image size.  Fixes SourceForge
+	issue #563 "tile:<image> appears to blow image up by 100% before
+	applying tiling".
 
-	* webp/src/utils/endian_inl.h: Fixed defect in intrinsic function
-	byteswap_ulong for Visual Studio less than 2005.
+2018-05-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-08  Jaroslav Fojtik  <JaFojtik@seznam.cz>
+	* fuzzing/oss-fuzz-build.sh: Patch from Paul Kehrer to disable
+	libpng test programs and binaries while building libpng in support
+	of oss-fuzz testing.
 
-	* VisualMagick/configure/system_page.cpp,
-	VisualMagick/configure/system_page.h: Suppress reloading .vcproj
-	when configuration type does not change.
+	* coders/dcm.c (DCM_ReadGrayscaleImage): If a palette was
+	provided, the image may be in PseudoClass but we need DirectClass
+	for gray image when GRAYSCALE_USES_PALETTE is not defined.  Fixes
+	oss-fuzz 7550 "graphicsmagick/coder_DCM_fuzzer:
+	Use-of-uninitialized-value in SyncImageCallBack". (Credit to
+	OSS-Fuzz)
+	(ReadDCMImage): Restore use of DCM_PostRescaleImage() in order to
+	obtain suitably scaled DICOM again.  Hopefully it is more robust
+	now.
+	(DCM_ReadPaletteImage): Assure that DirectClass pixels are
+	initialized.
 
-2015-05-08  Jaroslav Fojtik  <JaFojtik@seznam.cz>
+2018-05-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* VisualMagick/configure/system_page.cpp,
-	VisualMagick/configure/system_page.h,
-	VisualMagick/configure/target_page.h: Ability to re-use already
-	given paths. It is highly frustrating to enter path for different
-	configurations again and again.
+	* coders/tiff.c (ReadTIFFImage): Remove strange addition of
+	image->columns to pixel buffer offsets which now causes a heap
+	overflow since the buffer has been right-sized.  Perhaps the extra
+	offset plus the over-sized allocation was some attempt to avoid
+	buffer over/underflows due to bugs in libtiff. Fixes oss-fuzz 8384
+	"graphicsmagick/coder_BIGTIFF_fuzzer: Heap-buffer-overflow in
+	put1bitbwtile" which is described to be a regression. (Credit to
+	OSS-Fuzz)
 
-2015-05-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* magick/render.c (DrawImage): Fix wrong range checks which caused
+	spurious "Parsing of SVG images fail with "Non-conforming drawing
+	primitive definition (push)" failure.  Fixes SourceForge issue 561
+	"Parsing of SVG images fail with "Non-conforming drawing primitive
+	definition (push)"" which is due to problems caused by the fix for
+	SourceForge issue 517.
 
-	* coders/vid.c (ReadVIDImage): Fix use of uninitialized variable
-	reported by MSVC 2003 (but not GCC, Clang, or Coverity).
+	* coders/tiff.c (WritePTIFImage): Use '-define
+	ptif:minimum-geometry=<geometry>' to specify the smallest
+	subresolution frame which is produced by the PTIF (Pyramid TIFF)
+	writer.
 
-2015-05-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+2018-05-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* coders/miff.c (ReadMIFFImage): Fix possible leak of profiles in
-	error path.
+	* coders/tiff.c (WritePTIFImage): Allow 1x1 input image to be
+	supported.
 
-	* coders/mpc.c (ReadMPCImage): Fix memory leak of values
-	allocation.
-	(ReadMPCImage): Fix possible leak of profiles in error path. Fixes
-	Coverity 80697 "Resource leak".
+	* coders/png.c (ReadOneJNGImage): Unconditionally free JDAT chunk
+	memory.  Fixes oss-fuzz 8366 "graphicsmagick/coder_JNG_fuzzer:
+	Direct-leak in ReadOneJNGImage". (Credit to OSS-Fuzz)
 
-2015-05-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/tiff.c (WritePTIFImage): Fix leak of pyramid Image list
+	if ResizeImage() fails.  Fixes oss-fuzz 8364
+	"graphicsmagick/coder_PTIF_fuzzer: Indirect-leak in
+	CloneImage". (Credit to OSS-Fuzz)
 
-	* coders/miff.c (ReadMIFFImage): Fix memory leak of values
-	allocation.
+2018-05-17  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-05-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders/tiff.c (WriteTIFFImage): Add and use
+	ThrowTIFFWriterException() macro to consistently clean-up when
+	throwing writer exception.  May fix oss-fuzz 8321
+	"graphicsmagick/coder_EPT_fuzzer: Direct-leak in
+	TIFFClientOpen". (Credit to OSS-Fuzz)
+	(ReadTIFFImage): Add and use ThrowTIFFReaderException() macro to
+	consistently clean-up when throwing reader exception.
 
-	* coders/dpx.c (ReadDPXImage): Hopefully quiet Coverity 10305
-	"Untrusted loop bound".
+2018-05-16  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
 
-	* coders/tga.c (ReadTGAImage): Hopefully quiet Coverity 53418
-	"Untrusted loop bound".
+	* magick/alpha_composite.h (AlphaCompositePixel): The
+	macro definition for MagickAlphaCompositeQuantum in
+	alpha_composite.h computes an expression of the form:
 
-	* magick/tempfile.c (AcquireTemporaryFileDescriptor): Eliminate
-	all use of operating system provided temporary file allocation
-	functions (all apparently flawed in one way or another) and rely
-	exclusively on our own implementation.
+	a * b + c * d * e
 
-	* magick/constitute.c (ConstituteImage): Quiet Coverity 53399
-	"Logically dead code".
+	Code in function AlphaCompositePixel() (also in
+	alpha_composite.h) multiplies the result of this macro
+	by variable "delta" as follows:
 
-	* coders/webp.c (ReadWEBPImage): Quiet Coverity 53400 "Logically dead
-	code".
+	delta * a * b + c * d * e
 
-	* coders/miff.c (WriteRunlengthPacket): More work to quiet
-	Coverity 10186 and 10214 "Missing break in switch".
+	However, the intended result is actually:
 
-2015-05-02  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	delta * ( a * b + c * d * e )
 
-	* magick/tempfile.c (AcquireTemporaryFileDescriptor): Thoroughly
-	vet temporary file path.  Might quiet Coverity 64613 "Use of
-	untrusted string value".
+	The macro definition has been modified to enclose the
+	entire expression in parentheses.
 
-	* wand/magick_compat.c (ParseGeometry): Another try at quieting
-	Coverity 10248 "Copy into fixed size buffer" and 10078
-	"Overlapping buffer in memory copy" in this dead code.
+	The effects of this bug were particularly evident at the
+	boundary between a stroked polygon and a transparent
+	black region. More generally, an incorrect composited
+	pixel value was being computed by AlphaCompositePixel()
+	whenever the output alpha value was not 100% opaque.
 
-	* magick/tempfile.c (AcquireTemporaryFileDescriptor): Remove
-	unneeded, almost certainly never used, and potentially insecure
-	use of mkstemp().  Will quiet Coverity 10315 "Insecure temporary
-	file".
+2018-05-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-04-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* tests/rwblob.tap: Add a test for PTIF format.
 
-	* configure.ac: Keep Ghostscript gibberish from appearing in
-	Configure output.
+	* coders/tiff.c (WritePTIFImage): Fix Image blob referencing in
+	order to avoid double-free when writing PTIF to memory BLOB. Fixes
+	oss-fuzz 8280 "graphicsmagick/coder_PTIF_fuzzer: Heap-double-free
+	in Magick::BlobRef::~BlobRef". (Credit to OSS-Fuzz)
 
-	* coders/miff.c (WriteRunlengthPacket): Quiet Coverity 10186 and
-	10214 "Missing break in switch".
+2018-05-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* magick/pixel_cache.c (GetCacheInfo): Quiet Coverity 10208 "Data
-	race condition".
+	* coders/tiff.c (WriteTIFFImage): Use libtiff's
+	TIFFDefaultStripSize() function rather than an old porting macro
+	required by some defunct libtiff version.  Expected to fix
+	oss-fuzz 8248 "graphicsmagick/coder_EPT_fuzzer:
+	Floating-point-exception in WriteTIFFImage". (Credit to OSS-Fuzz)
 
-	* magick/blob.c (CloneBlobInfo): Quiet Coverity 10188 "Data race
-	condition".
-	(GetBlobInfo): Quiet Coverity 10191 "Data race condition".
+2018-05-13  Fojtik Jaroslav  <JaFojtik@seznam.cz>
 
-	* magick/image.c (AllocateImage): Quiet Coverity 10196 "Data race
-	condition".
-	(CloneImage): Quiet Coverity 10206 "Data race condition".
+	* coders/mat.c Fix potentional leak when compressed object is
+	corrupted. Fixes oss-fuzz 8251 (Credit to OSS-Fuzz)
 
-	* magick/map.c (MagickMapAllocateMap): Quiet Coverity 10192, 10193
-	and 10228 "Data race condition".
+2018-05-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* configure.ac: Use an algorithm to try to discover the best value
-	for GSCMYKDevice.
+	* coders/tiff.c (ReadTIFFImage): Fix leak of Image when
+	TIFFReadRGBAImage() reports failure.  Also harden buffer
+	allocation calculation.  Fixes oss-fuzz 8275
+	"graphicsmagick/coder_BIGTIFF_fuzzer: Indirect-leak in
+	AllocateImage". (Credit to OSS-Fuzz)
 
-	* VisualMagick/bin/delegates.mgk: Recipe for 'gs-cmyk' contained a
-	typo which breaks using '-type ColorSeparation'.
+	* coders/ept.c (ReadEPTImage): Add validations of 'count' and
+	'filesize' read from EPT file. In response to oss-fuzz 8248
+	"graphicsmagick/coder_EPT_fuzzer: Floating-point-exception in
+	WriteTIFFImage" but we are unable to recreate the oss-fuzz issue
+	since the EPT reader already immediately reports an EOF exception.
 
-	* coders/pwp.c (ReadPWPImage): Fix Coverity CID 64491 "Integer
-	handling issues".
+2018-05-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-2015-04-29  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* fuzzing/oss-fuzz-build.sh: Apply SourceForge patch #57 "Add
+	fuzzing support for jpeg + freetype delegates" by Alex Gaynor.
 
-	* coders/xcf.c (load_tile_rle): Quiet Coverity 10259 "Untrusted
-	loop bound".
+	* coders/png.c (read_user_chunk_callback): Fix memory leak and use
+	of uninitialized memory when handling eXIf chunk. Fixes oss-fuzz
+	8247 "graphicsmagick/coder_PNG24_fuzzer: Direct-leak in
+	png_malloc". (Credit to OSS-Fuzz)
 
-	* coders/sct.c (ReadSCTImage): Quiet Coverity 10285 "Untrusted
-	loop bound".
+2018-05-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* coders/pwp.c (ReadPWPImage): Quiet Coverity 10299 "Untrusted
-	loop bound".
+	* fuzzing/oss-fuzz-build.sh: Apply SourceForge patch #56 "Use a
+	few delegate libraries in fuzzing" by Alex Gaynor.
 
-	* coders/pcd.c (ReadPCDImage): Quiet Coverity 10301 "Untrusted
-	loop bound".
+2018-05-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* coders/tga.c (ReadTGAImage): Quiet Coverity 53418 "Untrusted
-	loop bound".
+	* tests/rwfile.tap: MIFF zip and bzip compression tests do not
+	fail if zlib and bzlib are not available because the compression
+	request is silently changed to no compression.
 
-	* wand/magick_compat.c (ParseGeometry): Fix overlap strcpy() in
-	dead code.  Quiets Coverity 10078 "Overlapping buffer in memory
-	copy" and 10248 "Copy into fixed size buffer".
+2018-05-07  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
 
-	* magick/segment.c (Classify): Fix Coverity 64317 "Resource leak".
+	* magick/render.c (DrawImage, InsertAttributeIntoInputStream):
+	For a reference such as 'class="classname"', the "classname"
+	is now allowed to be undefined.
 
-2015-04-28  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+	* coders.svg.c (ProcessStyleClassDefs): Class definitions
+	defined within a <style> block may now be empty.
 
-	* coders/xcf.c (ReadXCFImage): Fix Coverity 64064 "Resource leak".
+	* These relaxed conditions are not specifically called out in
+	the SVG spec as being either acceptable or unacceptable, but
+	other SVG renderers (e.g., Chrome) handle them this way. These
+	changes do not resolve, but are related to, ticket #307.
 
-	* coders/txt.c (ReadTXTImage): Fix Coverity 64061 "Resource leak".
+2018-05-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
 
-	* coders/rla.c (ReadRLAImage): Fix Coverity 64063 "Resource leak".
+	* utilities/Makefile.am (utilities/tests/montage.log): Fix
+	dependency rule so that effects.tap is fully executed before
+	execution of montage.tap starts.
 
-	* coders/dib.c (ReadDIBImage): Fix Coverity 64057 Resource leak".
+2018-05-04  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawImage, TraceXXX): The PrimitiveInfo
+	array used to store points generated by TraceEllipse(), the
+	other TraceXXX() functions, and DrawImage() was not always
+	being expanded when needed, resulting in writes beyond the
+	end of the currently allocated storage. To fix this problem,
+	a new data structure PrimitiveInfoMgr, and an associated
+	function, PrimtiveInfoRealloc(), were written to handle
+	expanding the PrimitiveInfo array as needed. DrawImage() and
+	the TraceXXX() functions were modified to prevent the out of
+	bounds writes to memory. This fixes ticket #516.
+
+2018-05-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadOneJNGImage): Add more JNG chunk
+	validations. Fixes an issue reported by "Trace Probe" via a
+	follow-up post to SourceForge issue 437 "assertion failure in
+	WriteBlob", although the issue described was not reproduced.
+
+	* coders/meta.c (ReadMETAImage): Detect and report 8BIMTEXT and
+	8BIMWTEXT decoding problems.  Fixes oss-fuzz 8125
+	"graphicsmagick/coder_8BIMTEXT_fuzzer: Use-of-uninitialized-value
+	in format8BIM". (Credit to OSS-Fuzz)
 
-	* magick/segment.c (Classify): Fix Coverity 64056 "Resource leak".
+2018-05-02  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
 
-	* magick/resize.c (SampleImage): Fix Coverity 64053, 64054, and
-	64062 "Resource leak".
+	* magick/render.c (TraceStrokePolygon): Excessively
+	large values of stroke-width were cascading through
+	other computations, causing the function to write beyond
+	the end of it's array of points when the stroke-linejoin
+	attribute value was "round". Code was added to reallocate
+	the array of points as needed, and to limit the size of
+	stroke-width (for computational purposes) to no more than
+	approximately twice the diagonal size of the output image.
+	Fixes ticket #515.
 
-	* magick/render.c (TraceStrokePolygon): Fix Coverity 64055, 64059,
-	and 64060 "Resource leak".
+	* The same limit on stroke-width was applied to all other
+	instances of the same computation in render.c.
 
-	* magick/magick.c (ListModuleMap): Quiet Coverity 64058 "Resource
-	leak".
+2018-05-01  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
 
-2015-04-28  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
+	* This change set fixes ticket #471.
 
-	* coders/dpx.c: Fix Coverity 10305 "Untrusted loop bound".
+	* magick/render.c (DrawImage): Polylines with fewer
+	than two points were being flagged as an error. The
+	SVG spec has no such restriction (fixed).
 
-	* coders/cineon.c: Fix Coverity 10310 "Untrusted loop bound".
-
-2015-04-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/memory.c: All use of user-provided allocation functions
-	is done via MagickFree(), MagickMalloc(), and MagickRealloc().
-
-2015-04-26  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/colormap.c (MagickConstrainColormapIndex): For out of
-	range condition, specifically return 0 rather than setting index
-	to zero, and then returning index.
-
-	* coders/pcx.c (ReadPCXImage): Fix Coverity 10197 "Negative loop
-	bound".
-
-	* coders/map.c (ReadMAPImage): Allocate pixels after return case
-	for 'ping' mode.
-	(ReadMAPImage): Fix problem added in last commit due to multiple
-	uses of 'packet_size'.
-
-	* magick/floats.c (_Gm_convert_fp16_to_fp32)
-	(_Gm_convert_fp24_to_fp32): Fix Coverity 10094 "Logically dead
-	code".
-
-	* coders/pcx.c (ReadPCXImage): Fix Coverity 10197 "Negative loop
-	bound".
-
-	* coders/wpg.c (UnpackWPG2Raster): Always test for EOF from
-	ReadBlobByte().  Should fix Coverity 10205 "Negative loop bound".
-
-2015-04-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/pcx.c (ReadPCXImage): Add some more integer-overflow
-	safety to computations.  Add some casts.
-
-	* coders/meta.c (formatIPTC): Fix Coverity 10221 "Infinite loop".
-
-	* magick/attribute.c (GenerateEXIFAttribute): Fix Coverity 10320
-	"Untrusted array index read" and "Untrusted loop bound".
-
-2015-04-24  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/gif.c (ReadGIFImage): Attempt to fix Coverity issue
-	10284 by using "opacity = (header[3] & 0xff)".
-
-2015-04-23  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* magick/blob.c (ReadBlobMSBLong, ReadBlobLSBLong): Attempt
-	to fix various "tainted" or "untrusted" variables
-	by masking off all but the lower 32 bits returned.
-
-2015-04-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/xcf.c (ReadXCFImage): Fix Coverity 10216 "Integer
-	overflowed argument".
-
-	* magick/transform.c (FlipImage): Fix Coverity 61461 "Division or
-	modulo by zero".
-
-	* coders/gif.c: Protect against integer overflow in array size
-	calculations.  Used unsigned type for colormap index.
-
-2015-04-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/map.c (ReadMAPImage): Maybe quiet Coverity 10326
-	"Untrusted pointer read".
-
-	* magick/utility.c (GlobExpression): See if testing for null
-	terminating character quiets Coverity 10246 "Untrusted value as
-	argument".
-
-	* magick/transform.c (FlipImage): Possibly quiet case #4 of
-	Coverity 10311 "Untrusted value as argument".
-
-	* magick/utility.c (Base64Encode): Quiet Coverity 10296 and 10272
-	"Use of untrusted scalar value".
-
-2015-04-22  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* magick/blob.c (ReadBlobMSBShort, ReadBlobLSBShort): Attempt
-	to fix various "tainted" or "untrusted" variables, e.g., in
-	coders/gif.c and coders/sgi.c by masking off all but the lower
-	16 bits returned.
-
-2015-04-21  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/tim.c (ReadTIMImage): Make TIM reader more robust against
-	EOF.
-
-	* coders/sct.c (ReadSCTImage): Make SCT reader more robust against
-	EOF.
-
-	* coders/pwp.c (ReadPWPImage): Test loop for EOF.
-
-	* coders/otb.c (ReadOTBImage): Make error reporting a bit more
-	robust.
-
-	* coders/jnx.c (ExtractTileJPG): Add some EOF checks.
-
-	* coders/cut.c (ReadCUTImage): Limit width/height to range of
-	signed integer.
-
-	* tests/rwfile.tap: Add a R/W file test for ART.
-
-	* tests/rwblob.tap: Add a R/W blob test for ART.
-
-	* coders/art.c (ReadARTImage): Improve error checking.
-
-2015-04-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/sun.c (ReadSUNImage): Try to quench Coverity 10280
-	"Untrusted loop bound".
-
-	* coders/mpc.c (ReadMPCImage): Port MIFF header reading fixes.
-
-2015-04-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/miff.c (ReadMIFFImage): MIFF reader failed to read some
-	MIFF headers properly.  Fixes SourceForge issue #298 "invalid next
-	size (normal)/memory corruption".
-
-2015-04-18  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadMNGImage): Fix Coverity 55862 "Resource leak"
-	and quiet Coverity 55825, 55826, and 55827 "Data race condition".
-
-2015-04-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/utility.c (GetToken): Fix an overlapping strlcpy() which
-	caused a crash in pedantic strlcpy() implementations while parsing
-	a SVG-style URL from text.  Several other issues remain.
-
-2015-04-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/command.c (ParseUnixCommandLine): Fix Coverity 59256
-	"Unused value".
-
-2015-04-15  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/display.c (MagickXROIImage): Fix Coverity 10179 "Missing
-	break in switch".
-	(MagickXCropImage): Fix Coverity 10211 "Missing break in switch".
-
-	* magick/utility.c (Base64Decode): Fix Coverity 10203 "Missing
-	break in switch".
-	(Tokenizer): Quench Coverity 10182 "Missing break in switch".  Not
-	believed to be an actual problem.
-
-	* magick/command.c (ParseUnixCommandLine): Fix Coverity 10174 and
-	10178 "Missing break in switch".
-	(ProcessBatchOptions): Fix Coverity 10180 "Missing break in
-	switch".
-	(ParseWindowsCommandLine): Fix Coverity 10220 "Missing break in
-	switch".
-
-	* coders/xwd.c (ReadXWDImage): Fix Coverity 10095 "Division or
-	modulo by zero".  3rd try.
-
-2015-04-14  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOneJNGImage): Fix Coverity 55829 and 55846
-	"Resource leak".
-
-2015-04-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/quantize.c (GrayscalePseudoClassImage): Fix Coverity
-	55831 "Resource leak".  2nd try.
-
-	* coders/vid.c (ReadVIDImage): Fix Coverity 55868 and 55874
-	"Resource leak".  2nd try.
-
-2015-04-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/psd.c (ReadPSDImage): Fix Coverity 55855 "Resource
-	leak". 2nd try.
-
-	* coders/pict.c (PictPixmapOp): Fix Coverity 55875 and 55883
-	"Resource leak". 2nd try.
-
-	* coders/pcx.c (WritePCXImage): Fix Coverity 55877 "Resource
-	leak". 2nd try.
-
-	* coders/meta.c (format8BIM): Fix Coverity 55842 "Resource
-	leak". 2nd try.
-
-	* coders/mat.c (WriteMATLABImage): Fix Coverity 55850 "Resource
-	leak". 2nd try.
-
-	* coders/dpx.c (ReadDPXImage): Fix Coverity 55878 "Resource leak".
-	2nd try.
-
-	* coders/preview.c (WritePreviewImage): Fix Coverity 55988
-	"Resource leak".
-
-2015-04-12  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOneJNGImage): Avoid some memory leaks
-	newly reported by Coverity (work in progress)
-
-2015-04-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/resize.c (ScaleImage): Fix Coverity 55824 "Division or
-	modulo by float zero".
-
-	* magick/annotate.c (AnnotateImage): Fix Coverity 55863
-	"Uninitialized scalar variable".
-
-	* wand/magick_wand.c (MagickDrawImage): Fix Coverity 55828
-	"Resource leak".
-	(MagickMontageImage): Fix Coverity 55835 "Resource leak".
-
-	* wand/drawing_wand.c (DrawComposite): Fix Coverity 55849
-	"Resource leak".
-
-	* magick/widget.c (MagickXColorBrowserWidget): Fix Coverity 55854
-	"Resource leak".
-
-	* magick/resize.c (ScaleImage): Fix Coverity 55841, 55853, 55858,
-	and 55860 "Resource leak".
-
-	* magick/render.c (ConvertPathToPolygon): Fix Coverity 55836
-	"Resource leak".
-	(DrawDashPolygon): Fix Coverity 55837 "Resource leak".
-
-	* magick/quantize.c (GrayscalePseudoClassImage): Fix Coverity
-	55831 "Resource leak".
-
-	* magick/paint.c (ColorFloodfillImage): Fix Coverity 55886
-	"Resource leak".
-
-	* magick/map.c (MagickMapAddEntry): Possibly silence 55844
-	"Resource leak".
-
-	* magick/image.c (CloneImage): Fix Coverity 55833 "Resource leak".
-
-	* magick/effect.c (BlurImage): Fix Coverity 55851 "Resource leak".
-
-	* magick/display.c (MagickXAnnotateEditImage): Fix Coverity 55830
-	"Resource leak".
-	(MagickXVisualDirectoryImage): Fix Coverity 55894 "Resource leak".
-
-	* magick/constitute.c (ReadImages): Fix Coverity 55834 "Resource
-	leak".
-	(ReadInlineImage): Fix Coverity 55843 "Resource leak".
-
-	* magick/compress.c (HuffmanEncode2Image): Fix Coverity 55839
-	"Resource leak".
-	(HuffmanDecodeImage): Fix Coverity 55859 "Resource leak".
-
-	* magick/color.c (GetColorHistogram): Fix Coverity 55845 "Resource
-	leak".
-	(ComputeCubeInfo): Fix Coverity 55857 "Resource leak".
-
-	* coders/yuv.c (ReadYUVImage): Fix Coverity 55890 "Resource leak".
-
-	* coders/wpg.c (UnpackWPG2Raster): Fix Coverity 55832 and 55848
-	"Resource leak".
-
-2015-04-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/vid.c (ReadVIDImage): Fix Coverity 55868 "Resource leak"
-	(ReadVIDImage): Fix Coverity 55874 "Resource leak".
-
-	* coders/txt.c (ReadTXTImage): Fix Coverity 55866 "Resource leak".
-
-	* coders/topol.c (ReadTOPOLImage): Fix Coverity 55865 "Resource
-	leak".
-
-	* coders/sgi.c (WriteSGIImage): Fix Coverity 55891 "Resource leak".
-
-	* coders/psd.c (ReadPSDImage): Fix Coverity 55855 "Resource leak".
-
-	* coders/pict.c (WritePICTImage): Fix Coverity 55867, 55875, 55883
-	"Resource leak".  Fix Coverity 55892 "Resource leak".
-
-	* coders/pdb.c (ReadPDBImage): Fix Coverity 55840, 55856, and
-	55885 "Resource leak".
-
-	* coders/pcx.c (WritePCXImage): Fix Coverity 55877 "Resource
-	leak".
-
-	* coders/mvg.c (ReadMVGImage): Fix Coverity 55873 "Resource leak".
-
-	* coders/mpeg.c (WriteMPEGImage): Fix Coverity 55880 "Resource
-	leak".
-
-	* coders/miff.c (WriteMIFFImage): Fix Coverity 55864 "Resource
-	leak".
-	(WriteMIFFImage): Fix Coverity 55872 "Resource leak".
-
-	* coders/meta.c (formatIPTCfromBuffer): Fix Coverity 55838
-	"Resource leak".
-	(format8BIM): Fix Coverity 55842 and 55852 "Resource leak".
-	(formatIPTC): Fix Coverity 5882 "Resource leak".
-
-	* coders/mat.c (ReadMATImage): Fix Coverity 55850 "Resource leak".
-
-	* coders/map.c (ReadMAPImage): Fix Coverity 55876 "Resource leak".
-
-	* coders/logo.c (ReadLOGOImage): Fix Coverity 55870 "Resource
-	leak".
-
-	* coders/label.c (ReadLABELImage): Fix Coverity 55869 "Resource
-	leak".
-
-	* coders/icon.c (ReadIconImage): Fix Coverity 55887 "Resource
-	leak".
-
-	* coders/fits.c (WriteFITSImage): Fix Coverity 55884 "Resource
-	leak".
-
-	* coders/dpx.c (WriteDPXImage): Fix Coverity 55861 "Resource
-	leak".
-	(ReadDPXImage): Fix Coverity 55878 "Resource leak".
-	(ReadDPXImage): Fix Coverity 55879 "Resource leak".
-
-	* coders/dib.c (WriteDIBImage): Fix Coverity 55881 "Resource
-	leak".
-	(WriteDIBImage): Fix Coverity 55895 "Resource leak".
-
-	* coders/cut.c (ReadCUTImage): Fix Coverity 55893 "Resource leak".
-
-	* coders/caption.c (ReadCAPTIONImage): Fix Coverity 55888
-	"Resource leak".
-	(ReadCAPTIONImage): Fix Coverity 55889 "Resource leak".
-	(ReadCAPTIONImage): Fix Coverity 55896 "Resource leak".
-
-	* magick/annotate.c (RenderX11): Silence Coverity 10106 "Logically
-	dead code".
-
-	* coders/xcf.c: Silence Coverity 10224, 10233, and 10236 "Improper
-	use of negative value".
-
-	* coders/mat.c (ReadMATImage): Silence Coverity 10175 "Improper
-	use of negative value"
-
-	* coders/tga.c (ReadTGAImage): Silence Coverity 10088 "Operands
-	don't affect result".
-
-	* magick/annotate.c (RenderFreetype): Silence Coverity 14396 and
-	44755 "Unused value".
-
-	* coders/wpg.c (LoadWPG2Flags): Silence Coverity 10273 and 10253
-	"Unused value".
-
-	* magick/montage.c (MontageImages): Silence Coverity 10255 "Unused
-	value".
-	(MontageImages): Silence Coverity 10264 "Unused value".
-
-2015-04-09  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOneJNGImage): Avoid using a NULL alpha_image
-	or color_image. (ReadJNGImage): Removed an extraneous CloseBlob().
-
-2015-04-08  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/utility.c (MagickCreateDirectoryPath): Silence Coverity
-	10098 "Logically dead code".
-
-	* magick/resource.c (InitializeMagickResources): Silence Coverity
-	10101 "Logically dead code".
-
-	* magick/magick.c (MagickSignalHandlerMessage): Fix Coverity 44725
-	"Logically dead code".
-
-	* magick/log.c (DestroyLogInfo): Silence Coverity 53659 and 53661
-	"Data race condition".
-	(ReadLogConfigureFile): Silence Coverity 53660 "Data race
-	condition".
-
-	* magick/effect.c (DespeckleImage): Fix error handling issue
-	caused by shadowed variable.  Fixes Coverity 10099 "Logically dead
-	code".
-
-	* magick/command.c (TimeImageCommand): Fix Coverity 10097
-	"Logically dead code".
-
-	* magick/attribute.c (ReadMSBLong): Hopefully silence Coverity
-	10276 "Unintended sign extension".
-
-	* coders/sgi.c (ReadSGIImage, WriteSGIImage): Fix Coverity 10243,
-	10244, 10247, 10254, and 10294 "Unintended sign extension".
-
-2015-04-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/xwindow.c (MagickXMakeImage): Quiet Coverity 10282
-	"Unused value".
-
-2015-04-06  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/tiff.c (WriteTIFFImage): Another change targeting
-	Coverity 44742 and 44746 "Unintended sign extension".
-
-2015-04-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/render.c (TracePath): Fix Coverity 10258 "Uninitialized
-	scalar variable".
-
-	* magick/widget.c (MagickXFontBrowserWidget): Fix Coverity 10323
-	"Sizeof not portable".  2nd try.
-
-	* coders/xwd.c (ReadXWDImage): Fix Coverity 10095, 10100, 10104
-	"Division or modulo by zero".  2nd try.
-
-	* magick/analyze.c (GetImageCharacteristics): Fix Coverity 10096
-	"Logically dead code".
-
-	* coders/yuv.c (ReadYUVImage): Fix Coverity 10260 "Structurally
-	dead code".
-
-	* coders/xcf.c (ReadXCFImage): Fix Coverity 10226 "Missing break
-	in switch".
-
-	* coders/tim.c (ReadTIMImage): Fix Coverity 10249 "Unused value".
-
-	* coders/tiff.c (CompressionSupported): Fix Coverity 44723
-	"Logically dead code".
-	(WriteTIFFImage): Fix Coverity 44742 and 44746 "Unintended sign
-	extension".
-
-	* coders/ps3.c (WritePS3Image): Validate results from TellBlob()
-	and SeekBlob().  Should quiet Coverity 10198 "Improper use of
-	negative value".
-
-	* coders/ps2.c (WritePS2Image): Validate results from TellBlob()
-	and SeekBlob().  Should quiet Coverity 10230 "Improper use of
-	negative value".
-
-	* coders/mpeg.c (WriteMPEGImage): Quiet Coverity 10176 "Missing
-	break in switch".
-
-	* coders/map.c (WriteMAPImage): Make MAP reader/writer more
-	robust.  May quiet 10326 "Untrusted pointer read".
-
-	* coders/locale.c (ReadLOCALEImage): Quiet Coverity 10108
-	"Logically dead code".
-
-	* coders/rle.c: Make URT RLE reader more robust.  Should quiet
-	Coverity CID 10070 "Bad bit shift operation", as well as 10235
-	"Improper use of negative value".
-
-2015-04-04  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (WriteOneJNGImage): Quiet Coverity CID issue 14370,
-	"Unused value" (status was ignored).
-
-	* coders/png.c (ReadOneJNGImage): Quiet Coverity CID issue 44724,
-	"Logically dead code" (skip_to_iend can't be true).
-
-	* coders/png.c (ReadOnePNGImage): Attempt to quiet Coverity
-	CID 10232 "Missing unlock", by using png_error() instead of
-	throwing an exception.
-
-2015-04-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/xwd.c (ReadXWDImage): Fix Coverity 10104 "Division or
-	modulo by zero".
-
-	* magick/resize.c (ResizeImage): Fix Coverity 53404 "Division or
-	modulo by zero".
-
-	* coders/ps3.c (WritePS3MaskImage): Fix Coverity 53415 "Improper
-	use of negative value".
-
-	* coders/meta.c (parse8BIM): Fix Coverity 53413 "Improper use of
-	negative value".
-	(parse8BIMW): Fix Coverity 53414 "Improper use of negative value".
-
-	* magick/utility.c (GetMagickGeometry): Fix Coverity 53403 and
-	53405 "Division or modulo by float zero".
-	(GetPathComponent): Fix Coverity 53417 "Wrong sizeof argument.
-
-	* magick/quantize.c (GrayscalePseudoClassImage): Fix Coverity
-	10256 "Wrong sizeof argument".
-
-	* magick/image.c (ResetImagePage): Fix Coverity 53401 "Division or
-	modulo by float zero" and 53402 "Division or modulo by float
-	zero".
-
-	* coders/histogram.c (WriteHISTOGRAMImage): Silence Coverity 10107
-	"Division or modulo by float zero".  2nd try.
-
-	* magick/xwindow.c (MagickXImportImage): Silence Coverity 10207
-	"Array compared against 0".
-
-	* magick/widget.c (MagickXColorBrowserWidget): Silence Coverity
-	53406 "Identical code for different branches".
-	(MagickXListBrowserWidget): Silence Coverity 53407 "Identical code
-	for different branches".
-
-	* magick/animate.c (MagickXMagickCommand): Silence Coverity 53410
-	"Identical code for different branches".
-
-	* coders/rgb.c (WriteRGBImage): Silence Coverity 53409 "Identical
-	code for different branches".
-
-	* coders/cmyk.c (WriteCMYKImage): Silence Coverity 53408
-	"Identical code for different branches".
-
-	* magick/xwindow.c (MagickXMakeImage): Silence Coverity 44727
-	"Dereference after null check".  2nd try.
-
-	* magick/utility.c (EscapeString): Silence Coverity 53416
-	"Dereference before null check".
-
-	* coders/gif.c (WriteGIFImage): Fix Coverity 10219 "Dereference
-	null return value".
-
-	* magick/log.c (InitializeLogInfo): Hopefully silence Coverity
-	53411 and 53412 "Data race condition".
-
-	* coders/cineon.c (AttributeToString): Silence Coverity 10079
-	"Buffer not null terminated".  2nd try.  The buffer is not
-	required to be null terminated!
-
-	* coders/pict.c (ReadPICTImage): 10171 "Resource leak".  2nd try.
-
-	* coders/wmf.c (util_set_brush): Silence Coverity 44739
-	"Out-of-bounds access".  2nd try.
-
-2015-03-29  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/log.c (SetLogEventMask): Silence Coverity 10069 "Value
-	not atomically updated".  Logging initialization is done
-	single-threaded entirely in InitializeLogInfo() now.
-
-2015-03-28  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOnePNGImage): Attempt to quiet Coverity
-	44734 "Data race condition" by freeing mng_info->png_pixels
-	and mng_info->quantum_scanline separately from MngInfoFreeStruct.
-
-2015-03-28  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/widget.c (XEditText): Silence Coverity 10072 "Overlapping
-	buffer in memory copy"
-
-	* coders/locale.c (ReadConfigureFile): Silence Coverity 10075
-	"Overlapping buffer in memory copy".
-
-	* magick/xwindow.c (MagickXMakeWindow): Silence Coverity 10076
-	"Overlapping buffer in memory copy".
-
-	* coders/dcm.c (funcDCM_TransferSyntax): Silence Coverity 10083
-	"Unchecked return value".
-
-	* magick/static.c (ExecuteStaticModuleProcess): Silence Coverity
-	10082 "Unchecked return value".
-
-	* coders/cals.c (ReadCALSImage): Silence Coverity 10086 "Unchecked
-	return value from library".
-	(ReadCALSImage): Silence Coverity 10085 "Unchecked return value".
-	(ReadCALSImage): Silence Coverity 10084 "Unchecked return value
-	from library".
-
-	* magick/enhance.c (ModulateImage): Silence Coverity 10087
-	"Unchecked return value".
-
-2014-03-24  Jaroslav Fojtik  <JaFojtik@seznam.cz>
-
-        * coders/wpg.c More paranoa in checking ReadBlobByte() negative return.
-
-2015-03-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/attribute.c (Generate8BIMAttribute): Silence Coverity
-	10195 "Argument cannot be negative".
-
-	* Magick++/lib/Image.cpp (syncPixels): Silence Coverity 44722
-	"Unchecked return value".
-	(fontTypeMetrics): Silence Coverity 44721 "Unchecked return
-	value".
-
-	* magick/render.c (ConvertPathToPolygon): Silence Coverity 10120
-	"Dereference after null check".
-
-	* magick/effect.c (EmbossImage): Silence Coverity 10114
-	"Dereference after null check".
-	(AdaptiveThresholdImage): Silence Coverity 10118 "Explicit null
-	dereferenced".
-
-	* coders/msl.c (MSLPushImage): Silence Coverity 10128 "Dereference
-	after null check".
-
-	* magick/render.c (DrawPolygonPrimitive): Silence Coverity 10136
-	"Dereference after null check".
-
-	* wand/drawing_wand.c (DrawSetStrokeDashArray): Silence Coverity
-	10117 "Dereference after null check".
-
-	* magick/draw.c (DrawSetStrokeDashArray): Silence Coverity 10150
-	"Dereference after null check".
-
-	* wand/drawing_wand.c (DrawPushGraphicContext): Silence Coverity
-	10151 "Dereference after null check".
-
-2015-03-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/meta.c (parse8BIM): Silence Coverity 10159 "Explicit null
-	dereferenced".
-	(parse8BIMW): Silence Coverity 10144 "Explicit null dereferenced".
-
-	* coders/uil.c (WriteUILImage): Silence Coverity 10202
-	"Dereference after null check".  In fact, UIL output was not
-	working at all due to this bug.
-
-	* magick/xwindow.c (MagickXMakeImage): Silence Coverity 44727
-	"Dereference after null check".
-
-	* Magick++/lib/Image.cpp (colorMapSize): Silence Coverity 44728
-	"Dereference after null check".
-
-	* coders/vid.c (ReadVIDImage): Silence Coverity 44730 "Explicit
-	null dereferenced".
-
-	* coders/mpc.c (ReadMPCImage): Silence Coverity 44732 "Dereference
-	after null check".
-
-	* Magick++/lib/Image.cpp (signature): Silence Coverity 44735
-	"Dereference null return value".
-
-	* coders/ps.c (ReadPSImage): Ghostscript options concatenation
-	should be more secure against buffer overflow.
-
-	* coders/pdf.c (ReadPDFImage): Applied patch by Chris Gilling such
-	that '-define pdf:stop-on-error=true' will stop PDF processing
-	immediately upon an error.
-	(ReadPDFImage): Ghostscript options concatenation should be more
-	secure against buffer overflow.
-
-2015-03-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/animate.c (MagickXAnimateImages): Silence Coverity 44736
-	"Dereference null return value".  Also fixed apparent memory leak
-	that Coverity did not notice.
-
-	* coders/fits.c (ReadFITSImage): Silence Coverity 10209
-	"Dereference before null check".
-
-	* magick/color_lookup.c (ReadColorConfigureFile): Silence Coverity
-	44743 "Dereference before null check".
-
-	* magick/xwindow.c (MagickXMakeImage): Silence Coverity 44745
-	"Dereference before null check".
-
-	* coders/pict.c (ReadPICTImage): Hopefully address consequences of
-	Coverity 10292 "Untrusted loop bound" although it will likely
-	still complain.
-
-	* magick/utility.c (LocaleCompare, LocaleNCompare): Try to create
-	an implementation that Coverity won't label an "tainted sink", and
-	therefore result in a Coverity "Use of untrusted scalar value"
-	report whenever a string from an external source is compared.  The
-	original implementations are not believed to be faulty.
-
-2015-03-17  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/command.c (ProcessBatchOptions): Silence Coverity 10080
-	"Buffer not null terminated".
-
-	* magick/widget.c (MagickXConfirmWidget): Silence Coverity 10089
-	"Copy-paste error".  This is an amazing find by Coverity.
-
-	* magick/xwindow.c (MagickXImportImage): Silence Coverity 10207
-	"Array compared against 0".
-
-	* magick/quantize.c (GrayscalePseudoClassImage): Silence Coverity
-	10256 "Wrong sizeof argument".
-
-	* coders/tiff.c (ReadTIFFImage): Fix Coverity 44747 and 44748
-	"Extra sizeof expression".
-
-2015-03-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* Magick++/lib/Magick++/Include.h (Magick): Fix compilation with
-	'clang' under Linux.  Build was broken yesterday.
-
-	* coders/tiff.c (QuantumTransferMode): Fix reading Old JPEG and
-	YCbCr sample images from libtiff pics-3.8.0.tar.gz image file
-	collection.  There was a regression for YCbCr added in last
-	release.
-
-2015-03-15  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/bmp.c (ReadBMPImage): Fix Coverity 44726 "Division or
-	modulo by float zero".  I don't think that this can actually
-	happen due to prior checks.
-
-	* magick/xwindow.c (MagickXMakeWindow): Silence Coverity 10281
-	"Copy into fixed size buffer".
-
-	* coders/pdf.c (ReadPDFImage): Silence Coverity 10241 "Copy into
-	fixed size buffer".
-
-	* magick/type.c (ReadTypeConfigureFile): Silence Coverity 10242
-	"Copy into fixed size buffer".
-
-	* magick/utility.c (GetPathComponent): Silence Coverity 10263
-	"Copy into fixed size buffer".
-
-	* coders/txt.c (ReadTXTImage): Silence Coverity 10287 "Copy into
-	fixed size buffer".
-
-	* coders/ps.c (WritePSImage): Silence Coverity 10289 "Copy into
-	fixed size buffer".
-
-	* magick/delegate.c (ReadConfigureFile): Silence Coverity 10297
-	"Copy into fixed size buffer".
-
-	* magick/log.c (ReadLogConfigureFile): Silence Coverity 10300
-	"Copy into fixed size buffer".
-
-	* coders/ps3.c (WritePS3Image): Silence Coverity 10303 "Copy into
-	fixed size buffer".
-
-	* coders/pdf.c (WritePDFImage): Silence Coverity 10304 "Copy into
-	fixed size buffer".
-
-	* coders/ps.c (ReadPSImage): Silence Coverity 10306 "Copy into
-	fixed size buffer".
-
-	* coders/msl.c (MSLStartElement): Silence Coverity 10308 "Copy
-	into fixed size buffer".
-
-	* coders/ps2.c (WritePS2Image): Silence Coverity 10309 "Copy into
-	fixed size buffer".
-
-	* Magick++/lib/Geometry.cpp (operator): Silence Coverity 44749
-	"Copy into fixed size buffer".
-
-	* Magick++/lib/Image.cpp (annotate): Silence Coverity 44750 "Copy
-	into fixed size buffer".
-
-	* coders/ept.c (ReadEPTImage): Silence Coverity 44751 "Copy into
-	fixed size buffer".
-
-	* coders/wmf.c (ipa_device_begin): Silence Coverity 44753 "Copy
-	into fixed size buffer".
-	(lite_font_map): Silence Coverity 44752 "Copy into fixed size
-	buffer".
-
-	* magick/random.c (InitializeMagickRandomKernel): Silence Coverity
-	10091 "Don't Call" in the case where /dev/random is available.
-
-	* coders/mpeg.c (WriteMPEGParameterFiles): Fix Coverity 10190
-	"Resource leak".  File descriptor was leaked under certain error
-	conditions.
-
-	* coders/wpg.c (UnpackWPG2Raster): Fix Coverity 10312
-	"Uninitialized scalar variable" gripe.
-
-	* magick/utility.c (ListFiles): Possibly address
-	Coverity 10245 "Sizeof not portable" gripe.
-
-	* magick/widget.c (MagickXFontBrowserWidget): Possibly address
-	Coverity 10323 "Sizeof not portable" gripe.
-
-	* coders/mat.c (WriteMATLABImage): FormatString() requires a
-	buffer of MaxTextExtent bytes.  Use sprintf instead.  Fix for
-	Coverity issue 10170.
-
-	* Magick++/lib/Geometry.cpp (string): FormatString() requires a
-	buffer of MaxTextExtent bytes. Fix for Coverity issue 44737.
-
-	* coders/wmf.c (draw_pattern_push): FormatString() requires a
-	buffer of MaxTextExtent bytes.  Fix for Coverity issue 44741.
-	(ipa_device_begin): FormatString() requires a buffer of
-	MaxTextExtent bytes.  Fix for Coverity issue 44740.
-	(util_set_brush): FormatString() requires a buffer of
-	MaxTextExtent bytes. Fix for Coverity issue 44739.
-	(ipa_region_clip): FormatString() requires a buffer of
-	MaxTextExtent bytes. Fix for Coverity issue 44738.
-
-2015-03-15  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (WritePNGImage) Avoid a Coverity gripe about
-	potential NULL dereference (actually it is impossible because
-	png_error() does not return. Fix for Coverity gripe 44731.
-
-	* coders/png.c (WritePNGImage) Avoid a null pointer dereference
-	while logging inherited color_type. Fix for Coverity issue 10185.
-
-	* coders/png.c (WriteOneJNGImage) Avoid possible unintended sign
-	extension. Fix for Coverity issue 44744.
-
-	* coders/png.c (WriteOnePNGImage) Quiet a false Coverity warning
-	about dereference after NULL check.  Fix for Coverity issue 44729.
-
-	* coders/png.c (ReadOnePNGImage): Redid the "Respect the
-	PixelsResource limit" patch of March 7, using unsigned arithmetic
-	to determine the width limit.  Sometimes the calculated
-	width limit was incorrectly zero.
-
-2015-03-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/image.c (SetImageInfo): Fix problems with reading
-	filenames that include a colon.  Resolves SourceForge bug #294
-	"display and convert (probably other things too) choke on
-	filenames with colons in".
-
-	* magick/utility.c (GetPathComponent): Fix SubImagePath
-	extraction. Fixes SourceForge bug #66 "converting runs slowly when
-	subimage is specified".
-
-2015-03-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* doc/options.imdoc (-geometry): Document the significance of 'x'
-	as used in a geometry specification.  In particular, document that
-	if width is specified without a trailing 'x' that height is set to
-	width.  This is in response to SourceForge bug #296 "Strange
-	-resize WIDTH results with version 1.3.21".
-
-2015-03-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/utility.c (GlobExpression): Remove use of IsSubimage().
-
-	* magick/image.c (IsSubimage): Re-implement with a more robust
-	solution.  Combined with fixes to ps.c and pdf.c, allows selecting
-	specific pages, as well as re-ordering.
-
-	* coders/ps.c (ReadPSImage): Set image frame scene ids
-	appropriately.
-
-	* coders/pdf.c (ReadPDFImage): Set image frame scene ids
-	appropriately.
-
-	* magick/utility.c (TranslateTextEx): -format %Q should report
-	JPEG quality estimate if it is available.  Resolves SourceForge
-	bug #293 "gm identify bug?".
-
-	* doc/options.imdoc: Documented JPEG-specific -format tags.
-
-2015-03-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* Magick++/lib/Image.cpp (repage): New method to reset page
-	settings.  Contributed by Dirk Lemstra.
-
-2015-03-07  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOnePNGImage): Respect the PixelsResource
-	limit.
-
-	* coders/png.c (ReadOnePNGImage): Moved quantum_scanline
-	and png_pixels into the MngInfo struct.  This prevents
-	memory leaks when reading malformed PNG images, but unfortunately
-	triggers a new complaint about a possible race condition.
-
-	* coders/png.c (ReadOnePNGImage): Removed two superflous calls to
-	CloseBlob().
-
-	* coders/png.c (ReadOnePNGImage): Do the allocation and free of
-	quantum_scanline outside the "pass" loop, i.e., do it once per
-	image rather than once per pass while decoding interlaced PNG
-	images.  Log these when -debug coders is enabled.
-
-	* coders/png.c: Fixed typo recently introduced in the JNG reader
-	(status != MagickFalse should be status == MagickFalse).
-
-2015-03-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/xwd.c (ReadXWDImage): Fix memory leaks in error paths.
-
-	* coders/xpm.c (ReadXPMImage): Fix memory leaks in error paths.
-
-	* coders/miff.c (ReadMIFFImage): Fix memory leak of Image in error
-	case.
-	(ReadMIFFImage): Fix memory leaks of zlib and bzlib2 context in
-	error path which reports decompression failure.
-
-	* coders/bmp.c (ReadBMPImage): BMP reader was wrongly rejecting
-	RLE-compressed files as being too small.  Fixes SourceForge bug
-	#295 "1.3.21 identify regression".  Also fixed 'ping' support code
-	which was still reading the pixels in 'ping' mode.
-	(ReadBMPImage): Fix memory leak when BMP is handled as a sequence.
-
-2015-03-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/palm.c (ReadPALMImage): PALM reader now applies PALM's
-	special non-linear colormap if the file does not provide a custom
-	colormap.  Custom colormap size is verified to not exceed image
-	colors.  Added logging statements regarding colormap.
-
-2015-02-28  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* www/index.rst: Update for 1.3.21 release.
-
-	* www/Changes.rst: Update for 1.3.21 release.
-
-	* NEWS.txt: Update NEWS for 1.3.21 release.
-
-	* version.sh: Bump/adjust library versioning.
-
-2015-02-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/delegate.c: Fix compilation under Cygwin. Thanks to Marco
-	Atzeri for advising us of this problem.
-
-2015-02-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/error.h (ThrowReaderException): More significant
-	exceptions (e.g. errors) should overwrite less significant
-	exceptions (e.g. warnings) thrown earlier.
-
-	* coders/bmp.c (ReadBMPImage): Detect 32-bit integer overflows and
-	other annoyances caused by intentionally broken files.  Also, only
-	warn if the file header claims the file is larger than it is since
-	this is a benign issue.
-
-	* magick/blob.c (OpenBlob): Fix "magic header bytes" log message
-	count value.
-
-2015-02-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* NEWS.txt: Updated NEWS with more changes.
-
-	* Magick++/lib/Magick++/Include.h (Magick): Add GetImageGeometry
-	to MagickLib namespace in order to avoid a compilation problem
-	noticed with Visual C++ 6.0.
-
-2014-02-22  Jaroslav Fojtik  <JaFojtik@seznam.cz>
-
-	* VisualMagick\configure\configure.cpp Fixed crash.
-        Renamed debug to configure_d.exe to prevent mess.
-
-2015-02-21  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/magick.c (InitializeMagick): Invoke
-	NTInitializeExceptionHandlers() under Windows.
-
-	* magick/nt_base.c (NTInitializeExceptionHandlers): Add a new
-	private function which disables pop-up Windows on exceptions and
-	registers a handler for Windows exceptions to clean up temporary
-	files prior to program exit.
-
-	* magick/magick.c (PanicDestroyMagick): Use
-	PurgeTemporaryFilesAsyncSafe() rather than PurgeTemporaryFiles().
-	(InitializeMagickSignalHandlers): Always register for SIGINT, even
-	under Microsoft Windows.
-
-	* magick/tempfile.c (PurgeTemporaryFilesAsyncSafe): New private
-	function to clean up temporary files prior to program exit.
-	Async-safe so it can be safely called from a signal handler.
-	Intentionally leaks memory.
-
-2015-02-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/attribute.c (GenerateEXIFAttribute): Fix crash while
-	parsing corrupt EXIF which was reported by Stijn Sanders on
-	2015-02-17.
-
-	* Magick++/lib/{Blob.cpp, Image.cpp}: Incorrect lock scope
-	resulted in Magick++ locking not actually working to protect
-	critical sections in spite of no detected problems with locking
-	these past 16 years.  Problem was detected using the
-	misc-unused-raii check from clang-tidy and was reported by Hyrum
-	Wright.
-
-	* coders/palm.c (ReadPALMImage): Add header logging to writer.
-	Writer still seeks and overwrites its own header so logging is not
-	entirely accurate yet.
-
-2015-02-16  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* libtool: Update GNU libtool to 2.4.6.
-
-	* coders/palm.c (ReadPALMImage): Fix support for transparency in
-	PALM reader.
-
-2015-02-15  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/palm.c (ReadPALMImage): Major re-work of PALM reader.
-	More log message improvements.  More header validation.
-
-2015-02-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/palm.c (ReadPALMImage): Improve log messages.  Add more
-	header validation.  Check image pixel limits.  Support 'ping'
-	mode.
-
-2015-02-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/palm.c (ReadPALMImage): PALM reader now supports 1, 2, 4,
-	8, and 16-bit test files we were able to generate using
-	'pnmtopalm'.  A progress monitor was added.  Memory leaks in error
-	paths were fixed.
-
-2015-02-12  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c: Insert "if (QuantumTick(...))" ahead of
-	each "if (!MagickMonitorFormatted(...)".
-
-2015-02-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/rla.c (ReadRLAImage): Assure that header ASCII strings
-	are properly terminated.  Resolves Coverity CID 10322.
-
-2015-02-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/nt_base.h (STDERR_FILENO): Provide definitions for
-	standard POSIX file numbers so that Visual Studio should compile.
-	Fixes SourceForge bug #291 "STDERR_FILENO (used in magick.c) is
-	not defined under Windows"
-
-2015-02-08  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* Magick++/lib/Image.cpp (Image::quiet()): Patch by Dirk Lemstra
-	to support silencing warnings in Magick++.  Adds a quiet() method
-	which blocks (ignores) warning exceptions when passed a true
-	argument.  Warning exceptions are still generated by default.
-
-	* coders/tiff.c: Support '-define tiff:report-warnings=true' to
-	enable that warnings reported by libtiff are thrown as warning
-	exceptions so that they may be caught or will be reported at the
-	gm command-line.
-
-2015-02-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/tiff.c (WriteTIFFImage): Use YCbCr encoding when JPEG
-	compression is requested for an RGB image.
-
-2015-02-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/tiff.c (QuantumTransferMode): Fix reading or writing
-	planar min-is-white or min-is-black images with an associated
-	alpha channel.
-
-2015-02-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/xpm.c (ReadXPMImage): Reading empty XPM file should not
-	cause bad memory access.
-
-	* coders/gif.c (DecodeImage): Assure that GIF decoder does not use
-	unitialized data.
-
-	* coders/jpeg.c (ReadJPEGImage): Verify that we support the number
-	of output components before proceeding to decode the image.
-
-2015-01-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/miff.c (ReadMIFFImage): MIFF needs to stop spinning if
-	zlib or bzlib report an error while decompressing.  Solves problem
-	with file provided by Jodie Cunningham on 2015-01-25.
-
-	* coders/vicar.c (ReadVICARImage): Fix Vicar reader's dogged
-	determination to continue reading when there is nothing left to
-	read.  Solves problem with file provided by Jodie Cunningham on
-	2015-01-25.
-
-	* magick/magick.c (PanicDestroyMagick): Replace memory allocation
-	functions with dummy functions rather than NULL pointers.
-	(InitializeMagickSignalHandlers): Register
-	MagickPanicSignalHandler() for SIGSEGV.
-	(MagickPanicSignalHandler): Produce an informative message for the
-	user.
-	(MagickSignalHandlerMessage): Include more detailed information
-	from the signal handler via a common routine used by default
-	signal handlers.
-
-2015-01-25  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/bmp.c (ReadBMPImage): An attempt to address CID 10291.
-
-2015-01-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/nt_base.c (Exit): Changed to return 'void'. Function can
-	not return a value if it does not return.
-
-	* magick/error.c (DefaultFatalErrorHandler): Invoke
-	PanicDestroyMagick() rather than DestroyMagick().  If we are
-	really that short on memory, DestroyMagick() might not work.
-
-	* magick/magick.c (MagickPanicSignalHandler): Only use async-safe
-	functions in signal handler.
-	(PanicDestroyMagick): New function for emergency release of
-	persistent resources just prior to program exit.  Async-safe and
-	does not acquire or release any heap memory.
-
-	* magick/export.c: Eliminate two 'clang' warnings.
-
-2015-01-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/pdb.c (ReadPDBImage): Fix typo.
-
-	* coders/cineon.c (ReadCINEONImage): Enforce that Cineon image
-	info channels is valid.  Solves problem with file provided by
-	Jodie Cunningham on 2015-01-24
-
-	* coders/fits.c (ReadFITSImage): Enforce valid bits-per-pixel
-	values.  Add detailed header logging.  Solves problem with file
-	provided by Jodie Cunningham on 2015-01-24
-
-2015-01-22  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadPNGImage): Check length of various MNG
-	chunks before using the chunk data.
-
-	* coders/png.c (WriteOnePNGImage): Use png_error() instead of
-	throwing an exception so cleanup in the setjmp block can happen,
-	including unlocking the semaphore.  Addresses Coverity CID 10184.
-
-2015-01-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/gif.c (WriteGIFImage): Don't use an unchecked value from
-	GetImageAttribute(), even if the access succeeded before.
-	Resolves Coverity CID 10219.
-
-	* coders/dpx.c (StringToAttribute): Make sure that string is not
-	accidentally shortened by one character if it occupies the full
-	field size.
-	(ReadDPXImage): Validate that the bits per sample claimed by the
-	file header is a supported depth before using it further in the
-	code.  This might resolve Coverity CID 10071 "Bad shift
-	operation".
-	(ReadDPXImage): Check for EOF while reading forward to element
-	data.  Might solve Coverity CID 10305.
-
-	* coders/dib.c (ReadDIBImage): Resolve Coverity CID 10228 "Integer
-	overflowed argument".
-	(ReadDIBImage): Hopefully resolve Coverity CID 10268 "Various",
-	which is primarily about placing too much trust in the claimed
-	number of colors.
-
-	* coders/pnm.c (WritePNMImage): Fix overwrite of status by
-	progress monitor.  Remaining issues may lurk within.  May resolve
-	Coverity CID 10288.
-
-	* coders/pdb.c: Resolve Coverity CID 11173 "Buffer not null
-	terminated".
-
-2015-01-21  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/magick.c (GetMagickInfoArray): Resolve Coverity CID 10212
-	"Missing unlock".
-
-	* magick/colormap.c (ReplaceImageColormap): Allocate new image
-	colormap up front in order to avoid the possibility that we are
-	left with an image with no colormap due to memory allocation
-	failure. If there is a memory allocation failure, then the
-	original colormap is preserved.  Resolves Coverity CID 10194
-	"Dereference after null check".
-
-	* magick/utility.c (MagickStripSpacesFromString): New private
-	utility function to strip spaces from a string.
-
-	* magick/color_lookup.c (GetColorInfoArray): Resolves Coverity CID
-	10231 "Missing unlock"
-	(ReadColorConfigureFile): Resolves Coverity CID 10261 "Use of
-	untrusted scalar value"
-	(GetColorInfo): Resolves Coverity CID 10077 "Overlapping buffer in
-	memory copy".
-
-2015-01-21  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c (ReadOnePNGImage): Use png_error() instead of
-	throwing an exception so cleanup in the setjmp block can happen,
-	including unlocking the semaphore.  Resolves Coverity CID 10232.
-
-	* coders/png.c (ReadOnePNGImage): Moved a logging statement into a
-	block where "attribute" has been checked for NULL.  Resolves
-	Coverity CIDs 10185 and 10187.
-
-	* coders/png.c (ReadMNGImage): Fixed a cut-and-paste typo
-	(change_delay should be change_timeout) reported by Coverity
-	CID 10090.
-
-2015-01-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/image.c (CloneImage): The definition is poor as to what a
-	non-orphan clone should do.  However, the definition surely does
-	not include crashing the software or supplanting the original
-	image in an image list.  Clone image blob and previous/next
-	pointers but do not supplant original image in list.  Resolves
-	Coverity CID 10155.
-
-2015-01-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/dpx.c (WriteRowSamples): Ensure that callback function is
-	always defined. Resolves Coverity CID 10122.
-	(ReadRowSamples): Ensure that callback function is always
-	defined. Resolves Coverity CID 10125.
-
-	* magick/random.c (InitializeMagickRandomKernel): Avoid possible
-	double-close of file.  Resolves Coverity CID 10257.
-
-	* coders/histogram.c (WriteHISTOGRAMImage): Avoid possible divide
-	by zero exception.  Resolves Coverity CID 10107.
-
-	* magick/error.c (MagickFatalError): Document that
-	MagickFatalError() is not supposed to return (program must quit)
-	and add GCC/Clang hints to that effect.
-
-	* magick/bit_stream.c (BitAndMasks): Avoid possible access
-	one-beyond end of BitAndMasks array.  It is not clear if there is
-	a possible bug with 32-bit quantums.  If there is a bug, it has
-	not been noticed via testing.  Resolves Coverity CID 10213.
-
-	* magick/tempfile.c (AcquireTemporaryFileDescriptor): Avoid buffer
-	overrun in the case of an astonishingly long environment variable
-	string.  Resolves Coverity CID 10267.
-	(AddTemporaryFileToList): Use strlcpy() rather than strlcpy().  In
-	practice, should not make a difference.  Will quiet Coverity CID
-	10321.
-
-	* magick/command.c (GMCommandSingle): Don't use the address of a
-	stack allocation to update argv[0]. Removed updating argv[0] until
-	a better design can be found.  Resolves Coverity CID 10223.
-	(GMCommandSingle): Plan B: Use static allocation from
-	SetClientName() to both store the new command name and provide
-	storage for argv[0].
-
-	* magick/utility.c (SystemCommand): Fix possible overwrite of
-	memory location due to uninitialized 'end' pointer.  Resolves
-	Coverity CID 10251.
-
-	* magick/blob.c (WriteBlobFile): Was not closing file in certain
-	error conditions.  Resolves Coverity CID 10237.
-
-	* coders/cineon.c (ReadCINEONImage): Don't trust file header so
-	much.  Resolves Coverity CIDs 10079, 10310, 10325.
-
-	* coders/art.c (ReadARTImage): Fix signed vs unsigned comparison
-	caused by earlier changes.
-
-2014-01-17 Fojtik Jaroslav  <JaFojtik@seznam.cz>
-
-	* coders/wpg.c Do not execute wpg raster read in ping mode.
-
-2014-01-15 Fojtik Jaroslav  <JaFojtik@seznam.cz>
-
-	* coders/mat.c Properly deallocating zip structures.
-
-2015-01-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/sfw.c (ReadSFWImage): Fix pixel cache access errors in
-	'ping' mode.
-
-2015-01-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/wmf.c (ReadWMFImage): Fix memory leak in 'ping' mode and
-	some error paths.
-
-2015-01-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/jbig.c (ReadJBIGImage): Fix memory leak in 'ping' mode.
-
-	* magick/delegate.c (InvokeDelegate): Fix memory leak of argument
-	list when invoking external program via MagickSpawnVP().
-
-2015-01-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/resource.c (InitializeMagickResources): Base image width
-	and height default limits on the range of a 32-bit signed integer,
-	even for 64-bit builds.  These limits are still beyond what most
-	computers in the world can handle.  Limits can be increased by the
-	user.
-
-	* coders/xwd.c (ReadXWDImage): Check image size limits
-	immediately.
-
-	* coders/xc.c (ReadXCImage): Check image size limits immediately.
-
-	* coders/webp.c (ReadWEBPImage): Check image size limits
-	immediately.
-
-	* coders/viff.c (ReadVIFFImage): Check image size limits
-	immediately.
-
-	* coders/vicar.c (ReadVICARImage): Check image size limits
-	immediately.
-
-	* coders/txt.c (ReadTXTImage): Check image size limits
-	immediately.
-
-	* coders/ttf.c (ReadTTFImage): Check image size limits
-	immediately.
-
-	* coders/tim.c (ReadTIMImage): Check image size limits
-	immediately.
-
-	* coders/tiff.c (ReadTIFFImage): Check image size limits
-	immediately.
-
-	* coders/tga.c (ReadTGAImage): Check image size limits
-	immediately.
-
-	* coders/sgi.c (ReadSGIImage): Check image size limits
-	immediately.
-
-	* coders/sct.c (ReadSCTImage): Check image size limits
-	immediately.
-
-	* coders/rle.c (ReadRLEImage): Check image size limits
-	immediately.
-
-	* coders/rla.c (ReadRLAImage): Check image size limits
-	immediately.
-
-	* coders/psd.c (ReadPSDImage): Check image size limits
-	immediately.
-
-	* coders/pnm.c (ReadPNMImage): Check image size limits
-	immediately.
-
-	* coders/pix.c (ReadPIXImage): Check image size limits
-	immediately.
-
-	* coders/pict.c (ReadPICTImage): Check image size limits
-	immediately.
-
-	* coders/pdb.c (ReadPDBImage): Check image size limits
-	immediately.
-
-	* coders/pcx.c (ReadPCXImage): Check image size limits
-	immediately.
-
-	* coders/pcd.c (ReadPCDImage): Check image size limits
-	immediately.
-
-	* coders/otb.c (ReadOTBImage): Check image size limits
-	immediately.
-
-	* coders/null.c (ReadNULLImage): Check image size limits
-	immediately.
-
-	* coders/mvg.c (ReadMVGImage): Check image size limits
-	immediately.
-
-	* coders/mtv.c (ReadMTVImage): Check image size limits
-	immediately.
-
-	* coders/mpc.c (ReadMPCImage): Check image size limits
-	immediately.
-
-	* coders/miff.c (ReadMIFFImage): Check image size limits
-	immediately.
-
-	* coders/jpeg.c (ReadJPEGImage): Check image size limits
-	immediately.
-
-	* coders/jp2.c (ReadJP2Image): Check image size limits
-	immediately.
-
-	* coders/jbig.c (ReadJBIGImage): Check image size limits
-	immediately.
-
-	* coders/hdf.c (ReadHDFImage): Check image size limits
-	immediately.
-
-	* coders/gif.c (ReadGIFImage): Check image size limits
-	immediately.
-
-	* coders/fpx.c (ReadFPXImage): Check image size limits
-	immediately.
-
-	* coders/fax.c (ReadFAXImage): Check image size limits
-	immediately.
-
-	* coders/dpx.c (ReadDPXImage): Check image size limits
-	immediately.
-
-	* coders/dps.c (ReadDPSImage): Check image size limits
-	immediately.
-
-	* coders/dib.c (ReadDIBImage): Check image size limits
-	immediately.
-
-	* coders/dcm.c (ReadDCMImage): Check image size limits
-	immediately.
-
-	* coders/cut.c (ReadCUTImage): Check image size limits
-	immediately.
-
-	* coders/cineon.c (ReadCINEONImage): Check image size limits
-	immediately.
-
-	* coders/avs.c (ReadAVSImage): Check image size limits
-	immediately.
-
-	* coders/art.c (ReadARTImage): Check image size limits
-	immediately.
-
-	* coders/sun.c (ReadSUNImage): Check image size limits in advance
-	of allocating memory for pixels.
-
-	* coders/bmp.c (ReadBMPImage): Check image size limits in advance
-	of allocating memory for pixels.
-
-	* coders/sun.c (ReadSUNImage): There is no definition for Sun map
-	type RMT_RAW so it can not be supported.  Update DirectClass
-	pixels directly rather using SyncImage().  Problem was reported by
-	Jodie Cunningham.
-
-2015-01-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/pict.c (ReadPICTImage): Fix PICT reader crash when
-	reading corrupted file.
-
-	* coders/sun.c (ReadSUNImage): Sun reader was still not as robust
-	as it should be.  Now it is.
-
-2014-01-10 Fojtik Jaroslav  <JaFojtik@seznam.cz>
-
-	* coders/wpg.c Fixed reading behind EOF issue.
-
-2015-01-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/dpx.c (LSBPackedU32WordToOctets): Fix typo which adds
-	severe corruption to encoded little-endian 32-bit packed output.
-	The good news is that since the corruption is severe, it is easily
-	visually detected.  The problem has corrupted all such
-	(little-endian 10-bit) output since it was originally implemented
-	on 2007-06-17 (changeset 11686, first released in GraphicsMagick
-	1.1.8).  GraphicsMagick preserves the endianness of input DPX
-	files by default, defaults to big-endian, and DPX files are
-	commonly big-endian, so this problem may not have occured for many
-	usages.  Problem was reported by Steve Dabner on the
-	GraphicsMagick discussion mailing list.
-
-2015-01-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/magick.c (MagickPanicSignalHandler): Print a message in
-	the case of signals SIGXCPU and SIGXFSZ.
-
-	* coders/bmp.c (ReadBMPImage): Don't hang in endless loop if EOF
-	is encountered while checking for "BA" header.
-
-	* coders/icon.c (ReadIconImage): Limit icon image allocation size.
-
-2015-01-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/icon.c (ReadIconImage): Removed all of the
-	previously-existing DIB reading code from icon.c and use new
-	"ICODIB" reader to read DIB icons, or the PNG reader to read PNG
-	icons.
-
-	* coders/dib.c (ReadDIBImage): Added an "ICODIB" coder for
-	internal use which reads a Windows BMP 3 DIB followed by a Windows
-	ICO alpha mask.  This allows existing DIB code to be used to read
-	ICO directory entries.
-
-2015-01-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* coders/icon.c: The Windows ICO reader is now more robust.  Still
-	a work in progress since some files still can not be read or read
-	incorrectly.
-
-2015-01-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/resource.c (ListMagickResourceInfo): "kilo" for binary
-	prefixes is supposed to be "Ki".
-
-	* magick/utility.c (FormatSize): "kilo" for binary prefixes is
-	supposed to be "Ki".
-
-2015-01-01  Glenn Randers-Pehrson  <glennrp@simple.dallas.tx.us>
-
-	* coders/png.c: Use WidthResource and HeightResource instead
-	of fixed 1-million limit for rows and columns.
-
-2015-01-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* magick/utility.c (FormatSize): Add 'i' to value range
-	identifiers since these are all in units of 2^10 rather than 1000.
-
-	* magick/pixel_cache.c (CheckImagePixelLimits): Fix typo and
-	produce an informative error message.
-
-	* magick/resource.c: Added support for Image width and height
-	pixels resource limits.
-
-	* magick/resource.h (ResourceType): New resource enumerations
-	WidthResource and HeightResource.
-
-	* magick/enum_strings.c (StringToResourceType): Added support for
-	parsing '-limit Width' and '-limit Height'.
-
-	* magick/pixel_cache.c (CheckImagePixelLimits): New function to
-	test image to see if it exceeds pixels limits.
-
-	* coders/viff.c (ReadVIFFImage): Make the VIFF reader robust with
-	detecting and reporting problems.
-
-2014-12-31  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
-
-	* Rotate Changelog for new year.  Update documentation copyrights
-	for new year.
-
-
+	* coders/svg.c (SVGStartElement) Inner <svg> elements
+	could modify the output image dimensions if a geometry
+	string was supplied. Now the output image dimensions
+	are determined by the outermost <svg> only.
+
+2018-05-01  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (TraceEllipse, TraceRectangle,
+	TraceRoundRectangle): Per the SVG spec, rectangles and
+	round rectangles having a width or height of zero are
+	not rendered. Also per the spec, ellipses having an x
+	or y radius of zero are not rendered.  Fixes ticket #457.
+
+2018-04-30  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.h, (PrimitiveInfo), magick/render.c: Added
+	member "flags" to PrimitiveInfo to support indicating closed
+	shapes (e.g., rectangle, circle, path closed using 'z' or 'Z').
+	Updated code in render.c (functions TraceXXX) to indicate
+	closed shapes.  This replaces the previous policy of detecing
+	closed shapes by comparing the first and last points to see if
+	they are identical (within MagickEpsilon). The old policy
+	prevented open subpaths with the same first and last point from
+	being rendered properly (per the SVG spec) when round or square
+	endcaps were enabled.  Part of the fix for ticket #322.
+
+	* magick/render.c (ConvertPrimitiveToPath): Modified duplicate
+	point elimination code so that the first and last points of
+	a subpath are always preserved.  Consequences: (1) Allows
+	for the correct rendering of the sequence "move x1 y1 line
+	x1 y1" with round or square endcaps.  Part of the fix for
+	ticket #322. (2) Fixes a bug in which eliminating the last
+	point as a duplicate caused a closed shape to no longer be
+	closed. This would manifest itself, for example, as a small
+	"nub" on the boundary of a filled circle.
+
+	* magick/render.c (GetPixelOpacity): Fixed a bug in the
+	code that computed the distance between a point and a
+	segment (polygon edge).  Prior to this fix, for zero length
+	segments this code would generate a divide-by-zero and
+	incorrect output. Part of the fix for ticket #322.
+
+	* magick/render.c (DrawPolygonPrimitive): Polygons/paths with
+	zero or one points are no longer rendered per the SVG spec.
+
+	* magick/render.c (DrawStrokePolygon): Per the SVG spec, a
+	polygon consisting of a single move-to command is not stroked.
+
+	* magick/render.c (TracePath): Per the SVG spec, if the
+	endpoints (x1, y1) and (x2, y2) of an arc subpath are identical,
+	then this is equivalent to omitting the elliptical arc segment
+	entirely.  For rendering purposes the zero length arc is
+	treated like a zero length "line to" command to the current
+	point.
+
+	* magick/render.c (TraceStrokePolygon): Added code to detect
+	zero length open subpaths and return a stroked polygon containing
+	no points when round or square endcaps are not enabled.  This
+	satisfies the SVG spec requirement that zero length subpaths are
+	only stroked if the 'stroke-linecap' property has a value of
+	round or square.
+
+	* magick/render.c (TracePath): Fixed a bug in which if a "move to"
+	command was followed by additional pairs of points, indicating
+	implied "line to" commands, each point was added twice.
+
+2018-04-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pcx.c (ReadPCXImage): Colormap from PCX header is only
+	used if colors <= 16. Determination of DirectClass image was
+	wrong.  Fixes oss-fuzz 8093 "graphicsmagick/coder_PCX_fuzzer:
+	Use-of-uninitialized-value in IsMonochromeImage". (Credit to
+	OSS-Fuzz)
+
+2018-04-29  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* version.sh: Updates to prepare for the 1.3.29 release.
+
+	* coders/pict.c (DecodeImage): Assure that scanline is initialized
+	to avoid use of uninitialized data.  Fixes oss-fuzz 8063
+	"graphicsmagick/coder_WPG_fuzzer: Use-of-uninitialized-value in
+	ReadPICTImage". (Credit to OSS-Fuzz)
+
+	* coders/dpx.c (ReadDPXImage): Assure that NULL pixels is not
+	used.  Fixes oss-fuzz 8078 "graphicsmagick/coder_DPX_fuzzer:
+	Null-dereference WRITE in ReadDPXImage". (Credit to OSS-Fuzz)
+
+	* NEWS.txt: Update NEWS file with information about changes since
+	last release.
+
+2018-04-28  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dib.c (ReadDIBImage): Disable EOF tests for "ICODIB"
+	subformat due to icon file provided by SourceForge issue #557
+	"ErrorCorruptImage: Magick: Unexpected end-of-file ()" where an
+	EOF error was reported due to no mask data being supplied.
+
+	* coders/png.c (ReadOneJNGImage): The embedded JPEG image is
+	required to have the same dimensions as the JNG image as provided
+	by JHDR.  Fixes SourceForge bug 555 "heap-buffer-overflow in
+	AcquireCacheNexus when processing jng file".  It is likely that
+	this issue is precipitated by using 'montage' which seems to set a
+	default non-zero image size.
+	(ReadMNGImage): By default limit the maximum loops specifiable by
+	the MNG LOOP chunk to 512 loops, but allow this to be modified by
+	'-define mng:maximum-loops=value'.  Also assure that the value is
+	in the range of 0-2147483647 as per the MNG specification.  This
+	is to address the denial of service issue described by
+	CVE-2018-10177.  This problem was reported to us by Petr Gajdos
+	via email on Fri, 20 Apr 2018.
+
+	* coders/dpx.c (ReadDPXImage): Move misplaced channel validation
+	code.  Fixes oss-fuzz 8041 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage" and oss-fuzz 8055
+	"graphicsmagick/enhance_fuzzer: Use-of-uninitialized-value in
+	EnhanceImage". (Credit to OSS-Fuzz)
+
+2018-04-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xpm.c (StringToListMod): Algorithm fixes to fix use of
+	uninitialized data.  Fixes oss-fuzz 8046
+	"graphicsmagick/coder_XPM_fuzzer: Use-of-uninitialized-value in
+	StringToListMod". (Credit to OSS-Fuzz)
+
+2018-04-26  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xpm.c (ReadXPMImage): Reduce memory consumption further.
+	Hopefully fixes oss-fuzz 8013 "graphicsmagick/coder_XPM_fuzzer:
+	Out-of-memory in graphicsmagick_coder_XPM_fuzzer". (Credit to
+	OSS-Fuzz)
+
+	* magick/utility.c (StringToList): Only allocate the memory
+	required when converting string to an ASCII list.  May or may not
+	fix oss-fuzz 8013 "graphicsmagick/coder_XPM_fuzzer: Out-of-memory
+	in graphicsmagick_coder_XPM_fuzzer". (Credit to OSS-Fuzz)
+
+2018-04-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/bmp.c (ReadBMPImage): Fix benign use of uninitialized
+	data when testing header magick.  Fixes oss-fuzz 7980
+	"graphicsmagick/coder_BMP_fuzzer: Use-of-uninitialized-value in
+	LocaleNCompare". (Credit to OSS-Fuzz)
+
+	* coders/dpx.c (ReadDPXImage): ColorDifferenceCbCr does require
+	even image width. Fixes oss-fuzz 7966
+	"graphicsmagick/coder_DPX_fuzzer: Unknown signal in
+	TentUpsampleChroma". (Credit to OSS-Fuzz)
+
+2018-04-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): ColorDifferenceCbCr element
+	requires two samples/pixel, not one. Fixes oss-fuzz 7951
+	"graphicsmagick/coder_DPX_fuzzer: Heap-buffer-overflow in
+	ReadDPXImage". (Credit to OSS-Fuzz)
+
+2018-04-22  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pdb.c (ReadPDBImage): Assure that pixels buffer is
+	initialized.  Fixes oss-fuzz 7937
+	"graphicsmagick/coder_PDB_fuzzer: Use-of-uninitialized-value in
+	ReadPDBImage". (Credit to OSS-Fuzz)
+
+	* coders/mvg.c (ReadMVGImage): Assure that MVG viewbox parameters
+	were supplied.  Fixes oss-fuzz 7936
+	"graphicsmagick/coder_MVG_fuzzer: Use-of-uninitialized-value in
+	ReadMVGImage". (Credit to OSS-Fuzz)
+
+	* coders/dpx.c (ReadDPXImage): Element descriptors CbYCrY422 and
+	CbYACrYA4224 require that the image width be evenly divisible by 2
+	so enforce that.  Fixes oss-fuzz 7935
+	"graphicsmagick/coder_DPX_fuzzer: Heap-buffer-overflow in
+	ReadDPXImage". (Credit to OSS-Fuzz)
+
+2018-04-21  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Reject DPX files which claim to use
+	signed data.  Fixes oss-fuzz 7758
+	"graphicsmagick/coder_DPX_fuzzer: Use-of-uninitialized-value in
+	WriteDPXImage". (Credit to OSS-Fuzz)
+	(ReadDPXImage): Validate that the image elements do update all of
+	the channels, including the alpha channel.  Now report an error if
+	a color channel is missing.  Fixes oss-fuzz 7758
+	"graphicsmagick/coder_DPX_fuzzer: Use-of-uninitialized-value in
+	WriteDPXImage".
+
+	* coders/gif.c (DecodeImage): Finally fix oss-fuzz 7732
+	"graphicsmagick/coder_GIF_fuzzer: Heap-buffer-overflow in
+	DecodeImage" which was not actually fixed with previous
+	changes. (Credit to OSS-Fuzz)
+
+2018-04-21  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/topol.c Emit error when tile storage overflows image data;
+        fixes oss-fuzz 7769 thanks to oss-fuzz.
+
+2018-04-20  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (ConvertPrimitiveToPath):  Fixed a bug
+	in which SVG paths containing multiple open subpaths were
+	not being processed correctly, resulting in incorrect
+	output.  This fixes ticket #94.
+
+2018-04-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/gif.c (DecodeImage): Fix use of uninitialized memory
+	during error condition in decoder. Fixes oss-fuzz 7732
+	"graphicsmagick/coder_GIF_fuzzer: Heap-buffer-overflow in
+	DecodeImage". (Credit to OSS-Fuzz)
+
+	* coders/txt.c (ReadTXTImage): Assure that all image pixels are
+	initialized to black.
+
+	* Magick++/demo/zoom.cpp (main): Add a -read-blob option to read
+	input file into a Blob so that it is read by the Blob reader
+	rather than the file reader.  Default the output Geometry to the
+	input image geometry in case the user does not specify a resize
+	resolution or geometry.
+
+	* Magick++/tests/readWriteBlob.cpp (main): Improve the quality of
+	code which reads a file into memory for Blob testing.
+
+	* magick/blob.c (BlobToImage): Add exception reports for the cases
+	where 'magick' was not set and the file format could not be
+	deduced from its header.  Previously a null Image pointer was
+	being returned without any exception being thrown.
+
+2018-04-15  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Assure that CbCr layer initializes
+	all channels if it is the first element of a planar DPX.  Fixes
+	oss-fuzz 7703 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/pict.c (ReadPICTImage): Don't refer to filename member of
+	ImageInfo which was just destroyed. Much thanks to Alex Gaynor for
+	finding this.  Should fix oss-fuzz 6867
+	"graphicsmagick/coder_PCT_fuzzer: Heap-use-after-free in
+	GetLocaleExceptionMessage". (Credit to OSS-Fuzz).
+
+2018-04-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/sgi.c (ReadSGIImage): Assure that iris pixels are fully
+	initialized.  Fixes oss-fuzz 7543
+	"graphicsmagick/coder_SGI_fuzzer: Use-of-uninitialized-value in
+	SGIEncode". (Credit to OSS-Fuzz).
+
+	* coders/xcf.c (ReadXCFImage): Restore SetImage() which was
+	previously commented out.  This is needed to assure initialized
+	pixels.  Fixes oss-fuzz 7430 "graphicsmagick/coder_XCF_fuzzer:
+	Use-of-uninitialized-value in AlphaCompositePixel". (Credit to
+	OSS-Fuzz).
+
+	* coders/pict.c (ReadPICTImage): Properly initialize "black
+	canvas" that tiles may be composed on.  Fixes oss-fuzz 7574
+	"graphicsmagick/enhance_fuzzer: Use-of-uninitialized-value in
+	EnhanceImage". (Credit to OSS-Fuzz).
+
+	* coders/rle.c (ReadRLEImage): Check for EOF when reading comment.
+	Fixes oss-fuzz 7667 "graphicsmagick/coder_RLE_fuzzer:
+	Use-of-uninitialized-value in ReadRLEImage". (Credit to OSS-Fuzz).
+
+	* coders/pdb.c (WritePDBImage): Avoid use of uninitialized
+	bytes. Fixes oss-fuzz 7638 "graphicsmagick/coder_PDB_fuzzer:
+	Use-of-uninitialized-value in WritePDBImage". (Credit to
+	OSS-Fuzz).
+
+	* coders/rla.c (ReadRLAImage): Add many more validations,
+	including scanline offsets and number of channels.  Fixes oss-fuzz
+	7653 "graphicsmagick/coder_RLA_fuzzer: Timeout in
+	graphicsmagick_coder_RLA_fuzzer". (Credit to OSS-Fuzz).
+
+	* coders/txt.c (ReadTXTImage): Implement missing subrange logic to
+	read only the specified range of frames.  Limits frames read from
+	oss-fuzz test case
+	clusterfuzz-testcase-minimized-coder_TEXT_fuzzer-6061076048248832
+	"graphicsmagick/coder_TEXT_fuzzer: Timeout in
+	graphicsmagick_coder_TEXT_fuzzer". (Credit to OSS-Fuzz).
+
+	* Magick++/lib/Image.cpp (read): Set subrange = 1 since this
+	interface is intended to read just one frame from the input file.
+	Use the STL-based interfaces to read multiple frames.
+
+	* coders/fits.c (ReadFITSImage): Verify FITS header before reading
+	further.  Rejects file from oss-fuzz 7650
+	"graphicsmagick/coder_FITS_fuzzer: Out-of-memory in
+	graphicsmagick_coder_FITS_fuzzer".  (Credit to OSS-Fuzz).
+
+	* PerlMagick/Magick.xs (Get): Fix PerlMagick compilation problem
+	due to rename/repurposing of image->clip_mask.
+
+2018-04-13  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/image.c, magick/image.h:  In order to be able to
+	support SVG masks, and to be able to further extend the
+	Image data structure without changing its size, new data
+	structure ImageExtra (struct _ImageExtra) has been added.
+	Header file image.h contains only a forward declaration;
+	the members of ImageExtra are defined in file image.c.
+	Image member variable Image * clip_mask has been replaced
+	by ImageExtra * extra, and function prototypes that enable
+	access to ImageExtra have been added to image.h.  The
+	clip_mask member variable now resides in ImageExtra.  All
+	references to Image::clip_mask in the GraphicsMagick
+	source code have either been replaced with direct references
+	to ImageExtra::clip_mask (image.c), or have been replaced
+	with calls to access function ImageGetClipMask().
+
+	* magick/render.c, magick/render.h:  In order to be able to
+	support SVG masks, and to be able to further extend the
+	DrawInfo data structure without changing its size, new data
+	structure DrawInfoExtra (struct _DrawInfoExtra) has been added.
+	Header file render.h contains only a forward declaration;
+	the members of DrawInfoExtra are defined in file render.c.
+	DrawInfo member variable char * clip_path has been replaced by
+	DrawInfoExtra * extra, and function prototypes that enable
+	access to DrawInfoExtra have been added to render.h.  The
+	clip_path member variable now resides in ImageExtra.  All
+	references to DrawInfo::clip_path in the GraphicsMagick
+	source code have either been replaced with direct references
+	to DrawInfoExtra::clip_path (render.c), or have been
+	replaced with calls to access function DrawInfoGetClipPath().
+
+	* magick/image.c (new functions CompositePathImage,
+	CompositeMaskImage, GetImageCompositeMask,
+	SetImageCompositeMask):  Defined new data structure ImageExtra,
+	added create/destroy logic, and implemented associated access
+	functions.  Implemented SVG masks.
+
+	* magick/render.c (DrawImage, new function DrawCompositeMask):
+	Defined new data structure DrawInfoExtra, added create/destroy
+	logic, and implemented associated access functions.  Impemented
+	SVG masks.
+
+	* magick/pixel_cache.c (SyncCacheNexus, new function
+	CompositeCacheNexus):  Fixed references to Image::clip_mask.
+	Implemented SVG masks.
+
+	* coders/svg.c (SVGStartElement, SVGEndElement): Implemented
+	SVG masks.
+
+	* locale/c.mgk, magick/gm_messages.mc, magick/local_c.h:
+	Added new error codes to support SVG masks.
+
+	* coders/ps3.c, magick/enhance.c: Fixed references to
+	Image::clip_mask.
+
+	* magick/draw.c, wand/drawing_wand.c: Fixed references to
+	DrawInfo::clip_path.
+
+2018-04-13  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Crash on row overflow fixed oss-fuzz 7639 thanks to oss-fuzz.
+
+2018-04-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Add more header validations.
+	Always assure that scanline is initialized for Luma channel. Fixes
+	oss-fuzz 7544 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/pdb.c (ReadPDBImage): Add more EOF checks to avoid benign
+	use of uninitialized data.  Fixes oss-fuzz 7545
+	"graphicsmagick/coder_PDB_fuzzer: Use-of-uninitialized-value in
+	ReadPDBImage".
+
+	* coders/wpg.c (InsertRow, UnpackWPGRaster): x & y should be
+	'unsigned long' to match type used by pixel cache APIs and image
+	rows/columns.
+
+2018-04-08  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Stop reading when last row is reached.
+	This should stop oss-fuzz 7528 thanks to oss-fuzz.
+
+
+2018-04-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xcf.c (ReadXCFImage): Fix use of uninitialized data in
+	magick header string for runt file.  Fixes oss-fuzz 7521
+	"graphicsmagick/coder_XCF_fuzzer: Use-of-uninitialized-value in
+	LocaleNCompare". (Credit to OSS-Fuzz).
+
+2018-04-09  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* OVERVIEW: Change set 9aaeeca0224c modified the drawing
+	of clipping paths to conform to the SVG spec.  This change
+	set restores the previous behavior for non-SVG clients of
+	render.c, while still satisfying the SVG spec for SVG clients.
+
+	* magick/render.h (DrawInfo): Added a bit field in member
+	"flags" to indicate that drawing should be SVG compliant.
+
+	* magick/render.c (DrawImage): Now recognizes keyword
+	"svg-compliant", and tags DrawInfo accordingly.  This
+	allows for existing features in render.c to be changed
+	to comply with the SVG spec without impacting the previous
+	behavior expected by non-SVG clients.
+
+	* magick/render.c (DrawImage): Now uses DrawInfo "flags"
+	bit for SVG compliance in conjunction with "flags" bit
+	for "clipping path" to determine when to ignore changes
+	to fill color, stroke color, etc.  This restores the
+	previous behavior for clipping paths for non-SVG clients.
+
+	* coders/svg.c (SVGStartElement): The initial set of
+	MVG commands for rendering an SVG file now includes
+	new keyword "svg-compliant" (to indicate that certain
+	graphical elements should be drawn according to the
+	SVG spec), and includes an intialization of the SVG
+	"fill-rule" to "nonzero" (the SVG default) instead of
+	the internally initialized value of "evenodd".
+
+	* coders/wpg.c: Fixed C99 "//" comments.
+
+2018-04-08  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pict.c (ReadPICTImage): Copy tile exception info to main
+	image and don't composite tile if it has a problem.  Fixes
+	oss-fuzz 7169 "graphicsmagick/enhance_fuzzer:
+	Use-of-uninitialized-value in EnhanceImage". (Credit to OSS-Fuzz)
+
+	* coders/dib.c (ReadDIBImage): Do not increase decode bits/pixel
+	if compression=2, but use it to increase pixel packet size when
+	estimating bytes per line for decode buffer.  Fixes oss-fuzz issue
+	7324 "graphicsmagick/coder_WPG_fuzzer: Use-of-uninitialized-value
+	in ReadDIBImage". (Credit to OSS-Fuzz)
+
+	* coders/dpx.c (ReadDPXImage): When handling the first element of
+	a planar DPX, assure that the other channels are
+	initialized. Fixes oss-fuzz 7841 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/tim.c (ReadTIMImage): Only 4 and 8 bit TIM requires a
+	colormap. For other depths, force reading as DirectClass even if
+	the TIM file provides a colormap.  Fixes oss-fuzz 7407
+	"graphicsmagick/coder_TIM_fuzzer: Use-of-uninitialized-value in
+	SyncImageCallBack". (Credit to OSS-Fuzz)
+
+2018-04-08  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c The unread data contains crap in memory,
+	erase current image data. This should mute oss-fuzz 6604.
+
+	* coders/wpg.c - condition "if(y<1) continue;" is redundant
+	and could be removed completely.
+	Allow logging in MatlabV4 module.
+
+	* coders/svg.c - Do not use C++ syntax in C code - removed.
+
+2018-04-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/wpg.c (UnpackWPGRaster): Fix uninitialized row 0 when
+	row-based RLE is used.  Fixes oss-fuzz 6603
+	"graphicsmagick/enhance_fuzzer: Use-of-uninitialized-value in
+	BlendCompositePixel". (Credit to OSS-Fuzz)
+
+	* coders/pcd.c: Fix many issues, including oss-fuzz 6016
+	"graphicsmagick/coder_PCD_fuzzer: Heap-double-free in
+	MagickRealloc" and oss-fuzz 6108 "graphicsmagick/coder_PCD_fuzzer:
+	Unknown signal in AllocateThreadViewDataSet". (Credit to OSS-Fuzz)
+
+2018-04-06  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dcm.c (funcDCM_BitsStored): Limit DICOM significant bits
+	to 16.  Otherwise rescale map code blows up.  Fixes oss-fuzz 7435
+	"graphicsmagick/coder_DCM_fuzzer: Out-of-memory in
+	graphicsmagick_coder_DCM_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/pix.c (ReadPIXImage): Detect EOF.  Reject RLE lenth of
+	zero.  Fixes oss-fuzz 7440 "graphicsmagick/coder_PIX_fuzzer:
+	Out-of-memory in graphicsmagick_coder_PIX_fuzzer". (Credit to
+	OSS-Fuzz)
+
+2018-04-05  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Insist on having an element
+	descriptor we understand since otherwise we can not decode the
+	image.  Fixes oss-fuzz 7410 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/avs.c, etc... (WriteAVSImage): Cache image list length
+	before writing image sequence so that progress monitor is
+	scalable.  Helps with oss-fuzz 7404
+	"graphicsmagick/coder_AVS_fuzzer: Timeout in
+	graphicsmagick_coder_AVS_fuzzer". (Credit to OSS-Fuzz)
+
+2018-04-05  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement, SVGEndElement),
+	magick/render.c (DrawImage): The current text position
+	is now maintained by DrawImage() instead of by
+	SVGStartElement() and SVGEndElement().  This change was
+	made to support the recently implmemented "use" and
+	"class" elements, which may make changes to the font
+	size that are not visible to the code in svg.c.
+
+	* coders/svg.c (GetStyleTokens, SVGStartElement): The
+	list of SVG attributes is now reordered so that
+	"font-size", "class", and "style" are processed first.
+	This ensures that a change to the font size will be
+	processed before any dimensional attribute whose value
+	may depend on the font size (e.g., a width value
+	specified in "em" units).
+
+	* coders/svg.c (ProcessStyleClassDefs): Fixed two memory
+	leaks associated with making an early return when
+	malformed input is detected.
+
+	* magick/render.c (ExtractTokensBetweenPushPop): Fixed
+	an uninitialized variable condition which can occur when
+	malformed input is detected.
+
+	* magick/render.h (DrawInfo), magick/render.c: DrawInfo
+	member "unused1" has been renamed "flags".  It is now
+	used to tag a DrawInfo as being a clipping path or a
+	compositing mask.
+
+2018-04-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pdb.c (ReadPDBImage): Update DirectClass pixels to avoid
+	use of uninitialized memory for 2 bits/pixel.  Fixes oss-fuzz 7350
+	"graphicsmagick/coder_PDB_fuzzer: Use-of-uninitialized-value in
+	WritePDBImage".  (Credit to OSS-Fuzz)
+
+	* coders/palm.c (ReadPALMImage): Fix use of uninitialized memory.
+	Fixes oss-fuzz 7325 "graphicsmagick/coder_PALM_fuzzer:
+	Use-of-uninitialized-value in TransparentImageCallBack". (Credit
+	to OSS-Fuzz)
+
+	* coders/dcm.c (DCM_ReadNonNativeImages): Break out of reading
+	loop on EOF and properly report exception.  Fixes oss-fuzz 7349
+	"graphicsmagick/coder_DCM_fuzzer: Timeout in
+	graphicsmagick_coder_DCM_fuzzer". (Credit to OSS-Fuzz)
+
+2018-04-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xcf.c (ReadXCFImage): Require that XCF file offsets be in
+	ascending order to avoid DOS.  Fixes oss-fuzz 7333
+	"graphicsmagick/coder_XCF_fuzzer: Out-of-memory in
+	graphicsmagick_coder_XCF_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/wpg.c (UnpackWPGRaster): Fix memory leak in error return
+	path. Fixes oss-fuzz 7338 "graphicsmagick/enhance_fuzzer:
+	Direct-leak in UnpackWPGRaster". (Credit to OSS-Fuzz)
+
+2018-04-03  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): This changeset adds
+	support for SVG geometric transforms specified using the
+	style="transform: ..." syntax.  This syntax is sometimes
+	used when exporting SVG files from Adobe Illustrator.
+
+2018-04-02  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Validate DPX packing method.  Fixes
+	oss-fuzz 7296 "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+2018-04-02  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement, SVGEndElement),
+	magick/render.c (DrawImage): This changeset adds support for
+	"class" styling attributes within a <style> section within
+	the <defs> section, and the ability to reference them from
+	other SVG elements by class="classname".  SVG files exported
+	from Adobe Illustrator make extensive use of "class" definitions.
+
+2018-04-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pict.c (ReadPICTImage): Fix leak of tile image on EOF.
+	This is a recent regression.  Fixes oss-fuzz 7287
+	"graphicsmagick/coder_PCT_fuzzer: Indirect-leak in
+	CloneImage". (Credit to OSS-Fuzz)
+
+	* magick/pixel_cache.c (OpenCache): Use image->scene rather than
+	GetImageIndexInList(image) for scene-id part of cache info file
+	name.
+
+	* coders/txt.c (WriteTXTImage): Optimize the progress indicator
+	since it is very inefficient with a large number of scenes and
+	oss-fuzz 7090 "graphicsmagick/coder_TEXT_fuzzer: Timeout in
+	graphicsmagick_coder_TEXT_fuzzer" consistently shows
+	GetImageListLength() in its stack traces.
+
+	* coders/dcm.c (ReadDCMImage): DICOM reader was no longer
+	immediately quitting with excessive samples per pixel.  This
+	caused spinning for a very long time when reading planar images
+	with large samples per pixel.  This is a regression due to recent
+	changes.  Fixes oss-fuzz 7269 "graphicsmagick/coder_DCM_fuzzer:
+	Timeout in graphicsmagick_coder_DCM_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/xcf.c (ReadXCFImage): Destroy layer info before returning
+	due to exception.  This is a new regression due to adding more
+	checks. Fixes oss-fuzz 7277 "graphicsmagick/coder_XCF_fuzzer:
+	Direct-leak in ReadXCFImage". (Credit to OSS-Fuzz)
+
+	* coders/pdb.c (ReadPDBImage): Assure that all bytes of scanline
+	are initialized while decoding.  Fixes oss-fuzz 7051
+	"graphicsmagick/coder_PDB_fuzzer: Use-of-uninitialized-value in
+	WritePDBImage". (Credit to OSS-Fuzz)
+
+2018-03-31  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pcx.c (ReadPCXImage): Assure that scanline is
+	initialized.  Fixes oss-fuzz 6612
+	"graphicsmagick/coder_PCX_fuzzer: Use-of-uninitialized-value in
+	WriteRLEPixels". (Credit to OSS-Fuzz)
+
+	* coders/wpg.c (ReadWPGImage): Detect unexpected EOF and avoid use
+	of uninitialized data.  Fixes oss-fuzz 6601
+	"graphicsmagick/enhance_fuzzer: Use-of-uninitialized-value in
+	ImportIndexQuantumType". (Credit to OSS-Fuzz)
+
+	* coders/sgi.c (ReadSGIImage): Assure that RLE decode buffer is
+	initialized.  Fixes oss-fuzz 6599
+	"graphicsmagick/coder_SGI_fuzzer: Use-of-uninitialized-value in
+	SyncImageCallBack" and oss-fuzz 6600
+	"graphicsmagick/coder_SGI_fuzzer: Use-of-uninitialized-value in
+	SGIEncode". (Credit to OSS-Fuzz)
+
+	* coders/viff.c (ReadVIFFImage): Fix blob I/O size validation to
+	avoid use of uninitialized data. Fixes oss-fuzz 6597
+	"graphicsmagick/coder_VIFF_fuzzer: Use-of-uninitialized-value in
+	ThresholdImage". (Credit to OSS-Fuzz)
+	(ReadVIFFImage): Don't execute SetImageType(image,BilevelType) on
+	an image which has no pixels yet in order to avoid use of
+	uninitialized data. Fixes oss-fuzz 6597.  (Credit to OSS-Fuzz)
+
+	* coders/wbmp.c (ReadWBMPImage): Fix blob I/O size validation to
+	avoid use of uninitialized data. Fixes oss-fuzz 7047
+	"graphicsmagick/coder_WBMP_fuzzer: Use-of-uninitialized-value in
+	ReadWBMPImage". (Credit to OSS-Fuzz)
+
+	* coders/wpg.c (ExtractPostscript): Allow non-Postscript content
+	but force reading using the magick we already detected.  Also log
+	the format that we detected.
+
+	* coders/xcf.c (ReadOneLayer): Reject layer size of 0x0.  Fixes
+	oss-fuzz 6636 "graphicsmagick/coder_XCF_fuzzer: Direct-leak in
+	MagickMallocAligned". (Credit to OSS-Fuzz)
+	(ReadXCFImage): Verify that seek offsets are within the bounds of
+	the file data. Fixes oss-fuzz 6682
+	"graphicsmagick/coder_XCF_fuzzer: Out-of-memory in
+	graphicsmagick_coder_XCF_fuzzer". (Credit to OSS-Fuzz)
+
+	* magick/pixel_cache.c (ModifyCache): Destroy CacheInfo if
+	OpenCache() fails so it is not leaked.
+
+	* coders/wpg.c (ExtractPostscript): Enforce that embedded file is
+	a Postscript file.  Fixes oss-fuzz 7235
+	"graphicsmagick/coder_WPG_fuzzer: Indirect-leak in MagickRealloc".
+	This is indicated to be a regression. (Credit to OSS-Fuzz)
+
+2018-03-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pict.c (ReadPICTImage): Check image pixel limits before
+	allocating memory for tile.  Fixes oss-fuzz 7217
+	"graphicsmagick/coder_PICT_fuzzer: Out-of-memory in
+	graphicsmagick_coder_PICT_fuzzer".
+
+2018-03-29  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pcd.c (ReadPCDImage): Add checks for EOF. Fixes oss-fuzz
+	issue 7180 "graphicsmagick/coder_PCDS_fuzzer: Timeout in
+	graphicsmagick_coder_PCDS_fuzzer".  (Credit to OSS-Fuzz)
+
+2018-03-29  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement, SVGEndElement),
+	magick/render.c (DrawImage): This changeset implements the SVG
+	"use" element.  Graphical elements (e.g., "rect", "text", etc.)
+	can be tagged with an identifier using 'id="identifier"' when
+	defined within the "defs" section.  They can then be referenced
+	elsewhere in the SVG file using:
+
+	<use xlink:href="#identifier" ... />
+
+	When referencing a graphical element by its identifier, the
+	following syntaxes are now treated as being the same:
+
+	href="#identifier"
+	href="url(#identifier)"
+	xlink:href="#identifier"
+	xlink:href="url(#identifier)"
+
+2018-03-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/tim.c (ReadTIMImage): Reader was not observing subimage
+	and subrange to quit after the specified frame range.  Inspired by
+	oss-fuzz 7132 "graphicsmagick/coder_TIM_fuzzer: Timeout in
+	graphicsmagick_coder_TIM_fuzzer" (Credit to OSS-Fuzz)
+
+2018-03-27  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): Enable setting the
+	background color from the SVG file when the client
+	specifies style="background:color" inside the <svg>
+	... </svg> element.
+
+2018-03-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/mtv.c (ReadMTVImage): Add some elementary tracing to MTV
+	reader.
+
+	* coders/png.c (ReadMNGImage): Fix SourceForge issue 554
+	"Divide-by-zero in ReadMNGImage (coders/png.c)".  (Credit to Trace
+	Probe)
+
+	* coders/bmp.c (ReadBMPImage): Assure that start position always
+	advances to avoid looping BMPs.  Fixes oss-fuzz 7045
+	"graphicsmagick/coder_BMP_fuzzer: Timeout in
+	graphicsmagick_coder_BMP_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/pict.c (DecodeImage): Verify that sufficient backing data
+	exists before allocating memory to read it.  Fixes oss-fuzz 6629
+	"graphicsmagick/coder_PCT_fuzzer: Out-of-memory in
+	graphicsmagick_coder_PCT_fuzzer".
+	(ReadPICTImage): Destroy tile_image in ThrowPICTReaderException()
+	macro to simplify logic.
+
+2018-03-25  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Check whether datablock is really read.
+	Fixes oss-fuzz 7056 (Credit to OSS-Fuzz)
+
+	* coders/txt.c Duplicate image check for data with fixed geometry
+	previous check is skipped. Fixes oss-fuzz 7090.
+
+2018-03-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dcm.c (ReadDCMImage): Validate that samples per pixel is
+	in valid range.  Fixes oss-fuzz 6260
+	"graphicsmagick/coder_DCM_fuzzer: Out-of-memory in
+	graphicsmagick_coder_DCM_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/meta.c (format8BIM): Allocate space for null termination
+	and null terminate string.  Fixes oss-fuzz 5985
+	"graphicsmagick/coder_8BIMTEXT_fuzzer: Heap-buffer-overflow in
+	formatIPTCfromBuffer". (Credit to OSS-Fuzz)
+
+	* coders/fits.c (ReadFITSImage): Include number of FITS scenes in
+	file size validations.  Fixes oss-fuzz 6781
+	"graphicsmagick/coder_FITS_fuzzer: Timeout in
+	graphicsmagick_coder_FITS_fuzzer". (Credit to OSS-Fuzz)
+
+2018-03-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/meta.c (format8BIM): Validate size request prior to
+	allocation. Fixes oss-fuzz issue 5974
+	"graphicsmagick/coder_8BIMTEXT_fuzzer: Out-of-memory in
+	graphicsmagick_coder_8BIMTEXT_fuzzer". (Credit to OSS-Fuzz)
+
+2018-03-23  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Fix forged amount of frames 7076. (Credit to OSS-Fuzz)
+
+        * coders/topol.c Check for forged image that overflows file size
+        (fuzz 6836).
+
+2018-03-23  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c, render.h (DrawInfo, CloneDrawInfo,
+	DrawClipPath, DrawImage, GetDrawInfo): According to the SVG
+	spec, a clipping path is defined only by the geometry of its
+	constituent elements, and is not dependent on fill color/opacity,
+	stroke color/opacity, or stroke width.  To ensure conformity
+	with the spec, when a clipping path is created, these SVG
+	elements are set to appropriate values, and any attempt to
+	modify them is ignored.
+
+	Also, whenever a clipping path is drawn, the associated image
+	attributes are now updated from the parent image structure.
+	This ensures that any added or modified attributes are up to
+	date.
+
+2018-03-22  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/topol.c Use rather MagickSwabArrayOfUInt32() to
+        flip all array elements at once.
+
+        * magick/annotate.c Compilation issue - using C++ syntax in C code.
+
+2018-03-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadDPXImage): Validate header length and offset
+	properties.  Fixes oss-fuzz "graphicsmagick/coder_DPX_fuzzer:
+	Use-of-uninitialized-value in WriteDPXImage". (Credit to OSS-Fuzz)
+
+2018-03-20  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/annotate.c (RenderType): According to the SVG
+	spec, the 'font-family' element can be a comma-separated
+	list of one or more font family names.  Function RenderType
+	in file annotate.c has been modified to support multiple
+	font family names as follows.  The comma-separated list is
+	processed until the first available font family is found.
+	If no font family is found, or if font substitution occurred,
+	then the entire font family string is tested to see if it
+	exactly matches a font name, or if the font family string
+	with blanks changed to hypens exactly matches a font name.
+	If a font name match is found, the matched font overrides
+	the font substution.  The font name matching functionality
+	is beyond what's in the SVG spec and is provided as a
+	convenience to the user.
+
+2018-03-20  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Fix forged amount of frames 6755. (Credit to OSS-Fuzz)
+
+2018-03-20  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/topol.c Redesign ReadBlobDwordLSB() to be more effective.
+
+2018-03-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/xpm.c (ReadXPMImage): Reject XPM if its condensed version
+	contains non-whitespace control characters.  Fixes oss-fuzz 7027
+	"graphicsmagick/coder_XPM_fuzzer: Timeout in
+	graphicsmagick_coder_XPM_fuzzer". (Credit to OSS-Fuzz)
+
+2018-03-19  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/topol.c Fix tile index overflow fuzz 6634. (Credit to OSS-Fuzz)
+
+2018-03-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dcm.c (DCM_ReadGrayscaleImage): Don't use rescale map if
+	it was not allocated.  This issue was induced in this development
+	cycle due to disabling generating the rescale map.  Fixes oss-fuzz
+	7021 "graphicsmagick/coder_DCM_fuzzer: Null-dereference READ in
+	DCM_ReadGrayscaleImage". (Credit to OSS-Fuzz)
+
+2018-03-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/color_lookup.c (QueryColorDatabase): Defend against
+	partial scanf() expression matching, resulting in use of
+	uninitialized data.  Likely fixes oss-fuzz 6596
+	"graphicsmagick/coder_XPM_fuzzer: Use-of-uninitialized-value in
+	IsMonochromeImage". (Credit to OSS-Fuzz)
+
+	* coders/rle.c (ReadRLEImage): Validate number of colormap bits to
+	avoid undefined shift behavior.  Fixes oss-fuzz 6630
+	"graphicsmagick/enhance_fuzzer: Undefined-shift in
+	ReadRLEImage". (Credit to OSS-Fuzz)
+
+	* coders/dcm.c (DCM_ReadRGBImage): Don't use rescale map if it was
+	not allocated.  This issue was induced in this development cycle
+	due to disabling generating the rescale map.  Fixes oss-fuzz 6995
+	"graphicsmagick/coder_DCM_fuzzer: Null-dereference READ in
+	DCM_ReadRGBImage". (Credit to OSS-Fuzz)
+
+	* coders/dib.c (DecodeImage): Report failure to decode to expected
+	amount of pixel data as an error.  Fixes oss-fuzz 7007
+	"graphicsmagick/enhance_fuzzer: Use-of-uninitialized-value in
+	EnhanceImage". (Credit to OSS-Fuzz)
+
+	* coders/bmp.c (ReadBMPImage): Add file size and offset/seek
+	validations.  Fixes oss-fuzz 6623
+	"graphicsmagick/coder_BMP_fuzzer: Timeout in
+	graphicsmagick_coder_BMP_fuzzer". (Credit to OSS-Fuzz)
+
+2018-03-17  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* dcraw/dcraw.c Updated to version 9.27
+
+2018-03-15  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/gif.c (ReadGIFImage): Fix botched fixes for use of
+	uninitialized data when reading GIF extension blocks.  Hopefully
+	ok now.
+
+2018-03-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/gif.c (ReadGIFImage): Fix use of uninitialized data when
+	reading GIF extension blocks.  Fixes oss-fuzz 6609
+	"graphicsmagick/coder_GIF_fuzzer: Use-of-uninitialized-value in
+	MagickArraySize". This seems to be a totally benign issue. (Credit
+	to OSS-Fuzz)
+
+	* magick/magick.c (MagickSignal): Use an alternate signal stack,
+	if available.  This is required for Go lang C language extensions
+	since Go lang requests an alternate signal sack, and uses small
+	stacks for its threads.  If the library user has not allocated an
+	alternate signal stack, then behavior should be just as before.
+	Issue was originally reported by yzh杨振宏 on March 1, 2018 via
+	the graphicsmagick-help SourceForge mailing list.
+
+2018-02-28  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/pixel_cache.c (AcquireCacheNexus): Add a check that the
+	pixel cache is compatible with the image dimensions.  Fixes
+	oss-fuzz issues 5978 5988 5989 5990 5993 6016, and 6056, which are
+	all related to the PICT writer. (Credit to OSS-Fuzz)
+
+	* magick/draw.c (DrawGetStrokeDashArray): Check for failure to
+	allocate memory.  Patch submited by Petr Gajdos via email on
+	February 28, 2018.
+
+2018-02-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/fits.c (ReadFITSImage): Fix signed integer overflow when
+	computing pixels size.  Fixes oss-fuzz 6586
+	"graphicsmagick/coder_FITS_fuzzer: Integer-overflow in
+	ReadFITSImage". (Credit to OSS-Fuzz)
+
+2018-02-27  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement, SVGEndElement): From the
+	SVG spec:  "The 'foreignObject' element allows for inclusion
+	of a foreign namespace which has its graphical content drawn
+	by a different user agent."  Code has been added to consume
+	and discard the 'foreignObject' element and any settings (e.g.,
+	fill color) internal to it.  Previously, settings internal
+	to the 'foreignObject' element would persist and "leak" into
+	the graphic elements that followed it, resulting in undesired
+	side effects (e.g., fill color other than the expected default).
+
+2018-02-27  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawPolygonPrimitive): Fixed a bug
+	introduced by changeset 39102dd1d456.  For SVG, this
+	changeset applied both the group AND the fill opacity
+	values to fill patterns (similarly for stroke).  For WMF,
+	however, this caused the fill pattern to be rendered as
+	100% transparent.  A closer reading of the SVG spec does
+	NOT show that the fill opacity should be applied to the
+	fill pattern, so as of this latest changeset only the group
+	opacity value is applied to fill and stroke patterns.
+
+2018-02-27  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/bmp.c (ReadBMPImage): Fix divide by zero regression added
+	by latest fixes.  Fixes oss-fuzz 6583
+	"graphicsmagick/coder_BMP_fuzzer: Divide-by-zero in ReadBMPImage".
+	(Credit to OSS-Fuzz)
+
+2018-02-26  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pict.c (ReadPICTImage): Validate that PICT rectangles do
+	not have zero dimensions.  Specify expected file type when reading
+	from a temporary file.  Trace PICT rectangle dimensions.  More
+	detection of blob EOF and more error handling.  Fixes oss-fuzz
+	issue 6193 "graphicsmagick/coder_PCT_fuzzer: Unknown signal in
+	AllocateImageColormap" and likely many oss-fuzz ASAN/UBSAN issues
+	reported against "PCT" and "PICT" since this one problem appears
+	to be causing a spew of reports.
+
+	* coders/png.c (ReadMNGImage): Detect and handle failure to
+	allocate global PLTE.  Problem was reported via email from Petr
+	Gajdos on February 26, 2018.
+
+2018-02-25  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/blob.c (ReadBlobLSBDouble): Make sure imported double is
+	a normal value.
+	(ReadBlobLSBDoubles): Make sure imported doubles are normal
+	values.
+	(ReadBlobLSBFloat): Make sure imported float is a normal value.
+	(ReadBlobLSBFloats): Make sure imported floats are normal values.
+	(ReadBlobMSBFloat): Make sure imported float is a normal value.
+	(ReadBlobMSBFloats): Make sure imported floats are normal values.
+	(ReadBlobMSBDouble): Make sure imported double is a normal value.
+	(ReadBlobMSBDoubles): Make sure imported doubles are normal
+	values.
+
+	* magick/import.c (ImportFloat32Quantum): Make sure imported float
+	is a normal value.
+	(ImportFloat64Quantum): Make sure imported double is a normal
+	value.
+
+	* magick/image.h (RoundDoubleToQuantum): Restore previous behavior
+	(from earlier today).
+	(RoundFloatToQuantum): Restore previous behavior (from earlier
+	today).
+
+	* coders/bmp.c (ReadBMPImage): Fix UBSAN runtime error: left shift
+	of 205 by 24 places cannot be represented in type 'int'.
+
+	* coders/ept.c (ReadEPTImage): Fix dereference of NULL pointer
+	which was detected by UBSAN in the test suite.
+
+	* magick/image.h (RoundDoubleToQuantum): Check double value for
+	NaN and infinity in order to avoid undefined behavior.
+	(RoundFloatToQuantum): Check float value for NaN and infinity in
+	order to avoid undefined behavior.
+
+	* magick/common.h (MAGICK_ISNAN): Add a isnan() wrapper macro.
+	(MAGICK_ISINF): Add a isinf() wrapper macro.
+
+2018-02-25  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Fix oss-fuzz issue 6273 - Heap-use-after-free in
+	GetLocaleExceptionMessage. (Credit to OSS-Fuzz)
+
+2018-02-24  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dcm.c (DCM_PostRescaleImage): Remove use of
+	DCM_PostRescaleImage() since its implementation is wrong and
+	accesses non-allocated heap memory.  Problem was reported by Petr
+	Gajdos via email on February 8, 2018.
+
+	* coders/jp2.c (ReadJP2Image): Use a ThrowJP2ReaderException macro
+	to automatically clean up when throwing an exception.
+
+	* coders/bmp.c (ReadBMPImage): Report an error if RLE decode does
+	not produce the expected number of bytes.  Fixes oss-fuzz issue
+	6015 "graphicsmagick/coder_BMP_fuzzer: Out-of-memory in
+	graphicsmagick_coder_BMP_fuzzer". (Credit to OSS-Fuzz)
+
+2018-02-23  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawImage): Fixed a bug in which graphical
+	elements defined within <defs> ... </defs> were being rendered,
+	contrary to the SVG spec.
+
+2018-02-23  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawPolygonPrimitive): When filling or
+	stroking a polygon using a pattern, the fill (or stroke)
+	and group/object opacity values were not being applied to
+	the pattern (fixed).
+
+2018-02-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/bmp.c (ReadBMPImage): Fix SeekBlob() return value checks.
+	Add more EOF checks.  Require that a provided ba_offset be a
+	forward seek in order to avoid the possibility of endless looping.
+
+2018-02-23  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Fix oss-fuzz issue 6301. (Credit to OSS-Fuzz)
+
+2018-02-22  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/alpha_composite.c (BlendQuantumOpacity): The
+	pixel compositing equation used when compositing an
+	image into the output was incorrect and has been fixed.
+
+	* magick/render.c (DrawPolygonPrimitive): When
+	compositing polygon edge pixels over a transparent
+	black background, the code would composite as if the
+	background were opaque black, resulting in the edge
+	pixels being too dark (fixed).
+
+2018-02-21  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawImage): Per the SVG spec, opacity,
+	fill-opacity, and stroke-opacity values are now clamped
+	to [0,1].
+
+	Also fixed two bugs introduced by changeset 91de8039f27d
+	(dated 2018-02-12): (1) a group/object opacity value
+	specified using a percentage was not being converted to a
+	value in [0,1]; (2) if fill-opacity or stroke-opacity was
+	1, and the group/object opacity value was set to 1, the
+	resulting fill-opacity or stroke-opacity value would be
+	set to 0 instead of 1.
+	
+2018-02-19  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/viff.c (ReadVIFFImage): Fix excessive memory usage.
+	Fixes oss-fuzz 6006 "graphicsmagick/coder_XV_fuzzer: Out-of-memory
+	in graphicsmagick_coder_XV_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/txt.c (ReadInt): Avoid benign signed integer overflow due
+	to accepting an arbitrary number of digits.  Fixes oss-fuzz 6002
+	"graphicsmagick/coder_TEXT_fuzzer: Integer-overflow in
+	ReadInt". (Credit to OSS-Fuzz)
+
+	* coders/viff.c (ReadVIFFImage): Verify that there is sufficient
+	data to back up colormap allocation request.  Fixes oss-fuzz 5986
+	"graphicsmagick/coder_VIFF_fuzzer: Out-of-memory in
+	graphicsmagick_coder_VIFF_fuzzer". (Credit to OSS-Fuzz)
+
+	* magick/memory.c: Define MAGICK_MEMORY_HARD_LIMIT=value to abort
+	when memory request exceeds value.  Useful to find location of
+	excessive memory requests.
+
+2018-02-19  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): Per the SVG spec, the
+	SVG coder now initializes the MVG coder (which renders
+	SVG graphical elements) with the the SVG defaults for
+	fill color, fill-opacity, stroke color, stroke-opacity,
+	and stroke-width.  This makes the SVG coder independent
+	of the MVG coder intial state.
+
+2018-02-19  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): Fixed initialization of
+	x and y attributes per the SVG spec:  for graphical elements
+	"image", "pattern", "text", "rect", and "use", if the x or y
+	attribute is not specified, the effect is as if a value of
+	"0" were specified.
+
+2018-02-18  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/sun.c (ReadSUNImage): Fix edge case which broke file-size
+	validation logic.  Fixes oss-fuzz issue 5981
+	"graphicsmagick/coder_SUN_fuzzer: Out-of-memory in
+	graphicsmagick_coder_SUN_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/txt.c (ReadTXTImage): Validate that file size is
+	sufficient for claimed image properties.  Fixes oss-fuzz issue
+	5960 "graphicsmagick/coder_TXT_fuzzer: Out-of-memory in
+	graphicsmagick_coder_TXT_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/tga.c (ReadTGAImage): Only allow 1 and 8 bit
+	colormapped/grey images. Fixes oss-fuzz issue 6314
+	"graphicsmagick/coder_ICB_fuzzer: Undefined-shift in
+	ReadTGAImage". (Credit to OSS-Fuzz)
+
+	* coders/bmp.c (ReadBMPImage): Detect and report when BMP height
+	value is out of range (too negative). Fixes oss-fuzz issue 6394
+	"graphicsmagick/coder_BMP_fuzzer: Integer-overflow in
+	ReadBMPImage". (Credit to OSS-Fuzz)
+
+	* coders/rla.c (ReadRLAImage): Detect when RLE decoding is
+	producing too many samples and report as an error.  Fixes oss-fuzz
+	issue 6312 "graphicsmagick/coder_RLA_fuzzer: Timeout in
+	graphicsmagick_coder_RLA_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/fits.c (ReadFITSImage): Validate that file size is
+	sufficient for claimed image properties.  Fixes oss-fuzz issue
+	6429 "graphicsmagick/coder_FITS_fuzzer: Timeout in
+	graphicsmagick_coder_FITS_fuzzer". (Credit to OSS-Fuzz)
+
+	* magick/image.c (CloneImage): Check image pixel limits in
+	CloneImage() when it is used to change the image dimensions.  This
+	avoids depending on the using code to detect and report such
+	issues.
+
+	* coders/xcf.c (ReadXCFImage): Check image pixel limits after each
+	CloneImage() to assure that image is within specified resource
+	limits.  Fixes oss-fuzz issue 6399 "graphicsmagick/enhance_fuzzer:
+	Timeout in graphicsmagick_enhance_fuzzer". (Credit to OSS-Fuzz)
+
+2018-02-16  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (TracePath): TracePath() was not
+	correctly processing multiple sets of cubic or quadratic
+	Bezier coordinates when the previous path data command was
+	not a cubic or quadratic Bezier command.  This would result
+	in the first control point being equal to the current path
+	point instead of being computed using the current path
+	point and the second control point of the previous Bezier
+	command.
+
+2018-02-15  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (TracePath): TracePath() was not
+	consuming commas (if present) at the end of a set of
+	points when multiple sets of points were specified for
+	various path commands (e.g., line, Bezier). This
+	resulted in the remaining sets of points being ignored
+	(fixed).
+
+2018-02-15  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (TraceArcPath): No points are generated
+	by TraceArcPath() if the starting and ending arc points
+	are the same.  For this case, the coordinate count was not
+	being set to zero before returning (fixed).
+
+2018-02-15  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawImage): Clipping of polygons in
+	DrawImage() would sometime result in a starting pixel
+	location that was greater than the ending pixel location,
+	causing a subsequent call to GetImagePixelsEx() to fail
+	due a column count <= 0.  Modified the clipping code to
+	eliminate this condition, and also to return early if
+	the polygon lies completely outside the image boundaries.
+	Also fixed variable declarations from a previous commit
+	that were causing problems for the C89 compiler.
+
+2018-02-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/topol.c (ReadTOPOLImage): Detect EOF immediately rather
+	than spinning.  Fixes oss-fuzz issue 6303
+	"graphicsmagick/coder_TOPOL_fuzzer: Timeout in
+	graphicsmagick_coder_TOPOL_fuzzer". (Credit to OSS-Fuzz)
+
+	* coders/dcm.c (DCM_SetupRescaleMap): Avoid excessive left shift.
+	Fixes oss-fuzz issue 6256 "graphicsmagick/coder_DCM_fuzzer:
+	Undefined-shift in DCM_SetupRescaleMap". (Credit to OSS-Fuzz)
+
+2018-02-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/wpg.c (ExtractPostscript): Detect EOF on input while
+	transferring bytes to Postscript file.  Fixes oss-fuzz issue 6087
+	"graphicsmagick/coder_WPG_fuzzer: NULL".  Later identified to be
+	CVE-2017-17682 as previously discovered in ImageMagick.  (Credit to
+	OSS-Fuzz)
+
+	* coders/pdb.c (ReadPDBImage): Quit attempting to read image data
+	immediately at EOF. Fixes oss-fuzz issue 6252
+	"graphicsmagick/coder_PDB_fuzzer: Timeout in
+	graphicsmagick_coder_PDB_fuzzer".  (Credit to OSS-Fuzz)
+
+2018-02-12  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/topol.c (ReadTOPOLImage): Avoid index out of bounds when
+	input filename does not use a file extension. Fixes oss-fuzz issue
+	6237 "graphicsmagick/coder_TOPOL_fuzzer: Index-out-of-bounds in
+	ReadTOPOLImage".  (Credit to OSS-Fuzz)
+
+2018-02-12  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (DrawImage): Object/group opacity,
+	when set in DrawImage(), would overwrite the fill
+	and stroke opacities. This has been fixed so that
+	the object opacity is now combined with the fill
+	and stroke opacities per the SVG spec.
+
+2018-02-12  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/mat.c Fix oss-fuzz issue 6021. (Credit to OSS-Fuzz)
+
+2018-02-11  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dcm.c (ReadDCMImage): Avoid undefined left shift of
+	short.  Fix memory leaks in error reporting paths.  Fixes oss-fuzz
+	issue 6217 "graphicsmagick/coder_DCM_fuzzer: Undefined-shift in
+	ReadDCMImage". (Credit to OSS-Fuzz)
+
+	* coders/dpx.c (ReadDPXImage): Avoid divide by zero exception in
+	the case where reference high equals reference low. Fixes oss-fuzz
+	issue 6215 "graphicsmagick/coder_DPX_fuzzer: Divide-by-zero in
+	ReadDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/topol.c (ReadTOPOLImage): Avoid index out of bounds when
+	input filename does not use a file extension.
+
+	* coders/cut.c (ReadCUTImage): Avoid index out of bounds when
+	input filename does not use a file extension. Fixes oss-fuzz issue
+	6218 "graphicsmagick/coder_CUT_fuzzer: Index-out-of-bounds in
+	ReadCUTImage".  (Credit to OSS-Fuzz)
+
+	* coders/pwp.c (ReadPWPImage): Force temporary file to be read as
+	a SFW file rather than autodetecting the format.  Fixes oss-fuzz
+	issue 6220 "graphicsmagick/coder_PWP_fuzzer: Indirect-leak in
+	AllocateImage".  (Credit to OSS-Fuzz)
+
+2018-02-10  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pdf.c (WritePDFImage): Assure that xref memory is not
+	leaked if an exception is thrown.  Fixes oss-fuzz issue 5968
+	"graphicsmagick/coder_EPDF_fuzzer: Direct-leak in MagickRealloc".
+	(Credit to OSS-Fuzz)
+
+	* coders/tim.c (ReadTIMImage): Verify that 4/8 bit PSX TIM
+	provides a CLUT and verify indexes.  Fixes oss-fuzz issue 5972
+	"graphicsmagick/coder_TIM_fuzzer: Null-dereference WRITE in
+	ReadTIMImage".  (Credit to OSS-Fuzz)
+
+	* coders/topol.c (ReadTOPOLImage): Add additional header
+	validations.  Fixes oss-fuzz issue 5975
+	"graphicsmagick/coder_TOPOL_fuzzer: Floating-point-exception in
+	ReadTOPOLImage".  (Credit to OSS-Fuzz)
+
+	* coders/bmp.c (ReadBMPImage): Avoid possible division by zero
+	when decoding CIE primary values. (Credit to OSS-Fuzz)
+
+	* magick/export.c (ExportViewPixelArea): Only compute
+	unsigned_maxvalue if sample_bits <= 32.
+
+	* magick/import.c (ImportViewPixelArea): Assure that
+	double_maxvalue minus double_minvalue is not zero, or excessively
+	close to zero to avoid divide by zero exception or impossible
+	scaling factor. (Credit to OSS-Fuzz)
+	(ImportViewPixelArea): Only compute unsigned_maxvalue if
+	sample_bits <= 32.
+
+2018-02-09  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dib.c (ReadDIBImage): Validate that image width is not
+	too negative such that it's absolute value can not fit in 32-bit
+	unsigned width. Resolves oss-fuzz issue 6179
+	"graphicsmagick/coder_ICO_fuzzer: Integer-overflow in
+	ReadDIBImage". (Credit to OSS-Fuzz)
+
+	* coders/dcm.c (funcDCM_BitsStored): Validate DICOM datum size.
+	Use a different means to determine the maximum value which does
+	not use excessive shifting.  Resolves oss-fuzz issue 6165
+	"graphicsmagick/coder_DCM_fuzzer: Undefined-shift in
+	funcDCM_BitsStored". (Credit to OSS-Fuzz)
+
+2018-02-08  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/dpx.c (ReadWordU32BE): Add casts to avoid default type
+	promotion from unsigned char to 'int' leading to undefined
+	behavior for 24 bit shift. Fixes oss-fuzz issue 6058
+	"graphicsmagick/coder_DPX_fuzzer: Undefined-shift in
+	ReadWordU32BE". (Credit to OSS-Fuzz)
+	(ReadDPXImage): Require that the file has at least one element.
+	Add bountiful casts for values which are left-shifted.  Fixes
+	oss-fuzz issue 5962 "graphicsmagick/coder_DPX_fuzzer:
+	Undefined-shift in ReadDPXImage". (Credit to OSS-Fuzz)
+
+	* coders/dcm.c (DCM_ReadOffsetTable): Add casts Add casts to avoid
+	default type promotion from unsigned char to 'int' leading to
+	undefined behavior for 16 bit shift. Fixes oss-fuzz issue 5980
+	"graphicsmagick/coder_DCM_fuzzer: Undefined-shift in
+	DCM_ReadOffsetTable". (Credit to OSS-Fuzz)
+
+	* magick/module_aliases.h (ModuleAliases): Add missing mapping
+	from "ICODIB" format to "DIB" module.
+
+	* magick/import.c (ImportUInt32Quantum): Add casts to avoid
+	default type promotion from unsigned char to 'int' leading to
+	undefined behavior for 24 bit shift.  Fixes oss-fuzz
+	"graphicsmagick/coder_P7_fuzzer: Undefined-shift in
+	ImportRGBQuantumType". (Credit to OSS-Fuzz)
+
+2018-02-07  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Fix oss-fuzz issue 5964
+	"graphicsmagick/coder_MAT_fuzzer: Heap-use-after-free in
+	GetLocaleExceptionMessage". (Credit to OSS-Fuzz)
+
+2018-02-07	Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/render.c (IsPoint): Fixed a bug in which
+	IsPoint() would reject as a valid coordinate value
+	strings that did not begin with an integer: e.g.,
+	"0.25" would be accepted, but ".25" would not.
+
+2018-02-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/cut.c (ReadCUTImage): Fix DestroyImageInfo() of NULL
+	pointer leading to assertion.  Fixes oss-fuzz issue 6067
+	"graphicsmagick/coder_CUT_fuzzer: Unknown signal in
+	DestroyImageInfo".
+
+	* coders/tga.c (ReadTGAImage): Throw exception rather than
+	assertion for unexpected comment size.  Fixes oss-fuzz issue 5961
+	"graphicsmagick/coder_ICB_fuzzer: ASSERT: (size_t)
+	(tga_info.id_length+1) == commentsize".
+
+2018-02-06  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pdf.c (WritePDFImage): Free 'xref' allocation before
+	error return.  Fixes oss-fuzz issue 5968
+	"graphicsmagick/coder_EPDF_fuzzer: Direct-leak in MagickRealloc".
+
+2018-02-04  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/pdb.c (ReadPDBImage): Fix heap buffer overflow if blob is
+	already at EOF when comment is read.  Fixes oss-fuzz issue 5997
+	"graphicsmagick/coder_PDB_fuzzer: Heap-buffer-overflow in
+	SetImageAttribute".
+
+	* coders/dpx.c (ReadDPXImage): Fix memory leak of user data if
+	user data is truncated.  Fix consumption of one uninitialized
+	stack bytes.  Fixes oss-fuzz issue 5973:
+	graphicsmagick/enhance_fuzzer: Direct-leak in ReadDPXImage.
+
+	* coders/pnm.c (ReadPNMImage): Detect and avoid division by zero.
+	Fixes Issue 5959 in oss-fuzz: graphicsmagick/coder_P7_fuzzer:
+	Divide-by-zero in ReadPNMImage
+
+	* magick/xwindow.c (MagickXClientMessage): Eliminate valgrind
+	gripe about use of uninitialized stack data by clearing allocation
+	to zero.
+	(MagickXMakeImage): Eliminate valgrind gripe about use of
+	uninitialized heap data by clearing allocation to zero.
+
+	* coders/pwp.c (ReadPWPImage): Remove bogus EOF test on an image
+	with a closed blob.  Fixes Issue 5957 in oss-fuzz:
+	graphicsmagick/coder_PWP_fuzzer: ASSERT: image->blob->type !=
+	UndefinedStream.
+
+	* www/Changes.rst: Fix typo with spelling "ChangeLog-2017.html".
+	Resolves SourceForge issue #544 "dead link 2017 changelog page on
+	GraphicsMagick web site".
+
+2018-02-03  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/static.c (OpenModule): Assure that status is initialized.
+	Resolves Coverity 261207 "Uninitialized scalar variable".
+
+	* wand/magick_wand.c (MagickHasColormap): New function to test if
+	the image has a colormap.
+	(MagickIsGrayImage): New function to test if the image uses only
+	gray pixels.
+	(MagickIsMonochromeImage): New function to test if the image uses
+	only monochrome pixels.
+	(MagickIsOpaqueImage): New function to test if the image uses only
+	opaque pixels.
+	(MagickIsPaletteImage): New function to test if the image is based
+	on a color palette.  Above functions are written by Troy Patteson
+	and submitted via SourceForge patch #54 "Wand API patches: has
+	colormap, is gray image, is monochrome image, is opaque image, is
+	palette image".
+
+	* fuzzing: Added initial OSS-Fuzz integration by Alex Gaynor.
+	From SourceForge patch #55 "OSS-Fuzz integration"
+
+	* coders/png.c (ReadMNGImage): Fix free using possibly unallocated
+	pointer value.
+
+	* magick/blob.c (SeekBlob): Remove implicit extension of blob
+	allocation size based on seek offset.  Besides making an
+	assumption about how the blob memory was allocated, this
+	reallocation feature provides a memory DOS opportunity.  Resolves
+	issue reported by Alex Gaynor via email entitled "Security issue
+	with memory management in Magick++" to the graphicsmagick-security
+	list on 31 Jan 2018.
+	(SeekBlob):
+
+	* coders/jpeg.c (ReadIPTCProfile): Revert inadvertent wrong return
+	codes added by change on December 9, 2017.  Fixes SourceForge bug
+	542 "Improper call to JPEG library in state 201" since 1.3.28.
+
+2018-02-01  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/annotate.c (RenderFreetype): Fixed the text
+	opacity computation in RenderFreeType(). This bug caused
+	the text fill color to bleed into the character cell when
+	the SVG "fill-opacity" is less than 1.0.
+
+2018-02-01  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* magick/attribute.c (CloneImageAttributes): Fixed a bug
+	in which the source image attributes would always replace
+	the destination image attributes instead of being appended
+	to them, and the destination image attributes would become
+	a memory leak.
+
+2018-01-31  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): Fixed a bug in which the
+	x,y location values for a <text> or <tspan> were overwritten
+	by the x,y values for the next <tspan> before the previous
+	values were used.  This caused the text associated with the
+	previous <text> or <tspan> to appear at the location
+	specified for the next <tspan>.
+
+2018-01-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/static.c: Use !defined(SupportMagickModules) to enable
+	static module loader.  Fixes SourceForge bug #543 "Multiple
+	definition of "OpenModule" (etc) when cross-compiling shared".
+
+2018-01-29  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): A terminating '>' in
+	a geometry string is interpreted to mean that the dimensions
+	of an image should only be changed if its width or height
+	exceeds the geometry specification.  For an unapparent and
+	undocumented reason, a terminating '>', if present, was
+	being nulled out, making this feature unusable for SVG files
+	(now fixed).
+
+2018-01-29  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (ReadSVGImage): If there is a geometry string
+	in image_info->size (e.g., gm convert -size "50x50%" in.svg
+	out.png), AllocateImage() sets image->columns and image->rows
+	to the width and height values from the size string.  However,
+	this makes no sense if the size string was something like
+	"50x50%" (we'll get columns = rows = 50).  So we set columns
+	and rows to 0 after AllocateImage(), which is the same as if
+	no size string was supplied by the client.  This also results
+	in svg_info.bounds to be set to 0,0 (i.e., unknown), so that
+	svg_info.bounds will later be set using the image size
+	information from either the svg "canvas" width/height or from
+	the viewbox.  Later, variable "page" is set from
+	svg_info->bounds. Then the geometry string in image_info->size
+	gets applied to the (now known) "page" width and height when
+	SvgStartElement() calls GetMagickGeometry(), and the intended
+	result is obtained.
+
+
+2018-01-24  Greg Wolfe  <gregory.wolfe@kodakalaris.com>
+
+	* coders/svg.c (SVGStartElement): When the density (DPI)
+	is specified using the ImageInfo::density member, the derived
+	scale factor is incorrectly applied a second time to the
+	width and height members of variable RectangleInfo page.
+	Fixes SourceForge ticket #451.
+
+2018-01-23  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/static.c: Use a lazy-loader for static modules with the
+	same external interface as the lazy-loader for dynamic modules.
+
+2018-01-20  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* NEWS.txt: Prepare for 1.3.28 release.
+
+2018-01-17  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* NEWS.txt: Update with changes since previous release.
+
+2018-01-14  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* PerlMagick/Magick.xs: Compiler warnings reduction.
+
+	* magick/pixel_cache.h: Mark GetPixels(), GetIndexes(), and
+	GetOnePixel() as deprecated.  Compilers may produce a warning if
+	these functions are used.
+
+	* magick/pixel_cache.c (InterpolateColor): Return black pixel if
+	InterpolateViewColor() reports failure.
+
+	* coders/png.c (ReadMNGImage): Fix memory leak of chunk and
+	mng_info in error path.
+
+	* coders/gif.c (ReadGIFImage): Fix memory leak of global colormap.
+
+2018-01-13  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/symbols.h: Fix SourceForge issue #538 "13 symbols in
+	common with ImageMagick despite --enable-symbol-prefix".
+
+	* coders/bmp.c (ReadBMPImage): Fix non-terminal loop due to
+	unexpected bit-field mask value.  Fixes SourceForge issue #541
+	"Infinite Loop in ReadBMPImage (coders/bmp.c)".
+
+	* coders/jpeg.c (JPEGMessageHandler): Revert code added on
+	2017-07-08 to promote certain warnings from libjpeg to errors.
+	Add code to rationalize claimed image dimensions based on file
+	size.  Resolves SourceForge issue #539 "Images with libjpeg
+	warnings result in error".
+
+2018-01-11  Fojtik Jaroslav  <JaFojtik@seznam.cz>
+
+	* coders/wpg.c Recursive ReadImage could return multiple scenes
+          fixed.
+
+2018-01-07  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* coders/png.c (ReadOnePNGImage): Quit 'passes' loop if we
+	encountered an error
+
+	* magick/pixel_cache.c (SetNexus): Fix heap overwrite in
+	AcquireCacheNexus() due to SetNexus() not using an allocated
+	staging area for the pixels like it should.  This problem impacts
+	all 1.3.X releases.  Resolves SourceForge issues 532
+	"heap-buffer-overflow bug in ReadWPGImage" and #531
+	"heap-buffer-overflow in AcquireCacheNexus".
+
+	* magick/pixel_cache.c (InterpolateViewColor): Now returns
+	MagickPassFail rather than void.  Code using this function is
+	updated to check the return status.
+
+2018-01-01  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/describe.c (DescribeImage): Discriminate between
+	AcquireImagePixels() returning NULL or finding a transparent
+	pixel.  This avoids use of a null pointer in the case where
+	AcquireImagePixels() returns NULL.
+
+2017-12-31  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* magick/static.c: Change static module initialization to be based
+	on an initialized list rather than a squence of function calls in
+	order to simplify maintenance and possibly address future
+	requirements.
+
+2017-12-30  Bob Friesenhahn  <bfriesen@simple.dallas.tx.us>
+
+	* Copyright.txt: Bump copyright years and rotate ChangeLog.

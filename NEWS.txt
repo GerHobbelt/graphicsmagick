@@ -6,19 +6,1164 @@
 GraphicsMagick News
 ===================
 
-This file was last updated on February 28, 2015
+This file was last updated on June 23, 2018
 
 Please note that this file records news for the associated development
 branch and that each development branch has its own NEWS file. See the
-ChangeLog file for full details.
+ChangeLog file, and/or the Mercurial changesets, for full details.
+
+Due to significant issues being discovered and addressed for almost
+every release, it is recommended to update to the most current
+release and not attempt to patch older releases.
 
 .. contents::
   :local:
 
-1.3.21 (February 28, 2015)
+1.3.30 (June 23, 2018)
+=========================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* GraphicsMagick is now participating in Google's oss-fuzz project due
+  to the contributions and assistance of Alex Gaynor. Since February 4
+  2018, 238 issues have been opened by oss-fuzz and 230 of those
+  issues have been resolved.  The issues list is available at
+  https://bugs.chromium.org/p/oss-fuzz/issues/list under search term
+  "graphicsmagick".  Issues are available for anyone to view and
+  duplicate if they have been in "Verified" status for 30 days, or if
+  they have been in "New" status for 90 days.  There are too many
+  fixes to list here.  Please consult the GraphicsMagick ChangeLog
+  file, Mercurial repository commit log, and the oss-fuzz issues list
+  for details.
+
+* SVG/Rendering: Fix heap write overflow of PrimitiveInfo and
+  PointInfo arrays.  This is another manefestation of CVE-2016-2317,
+  which should finally be fixed correctly due to active
+  detection/correction of pending overflow rather than using
+  estimation.
+
+Bug fixes:
+
+* Many oss-fuzz fixes are bug fixes.
+
+* Drawing/Rendering: Many more fixes by Gregory J Wolfe (see the ChangeLog).
+
+* MIFF: Detect end of file while reading image directory.
+
+* SVG: Many more fixes by Gregory J Wolfe (see the ChangeLog).
+
+* The AlphaCompositePixel macro was producing wrong results when the
+  output alpha value was not 100% opaque. This is a regression
+  introduced in 1.3.29.
+
+* TILE: Fix problem with tiling JPEG images because the size request
+  used by the TILE algorithm was also causing re-scaling in the JPEG
+  reader.  The problem is solved by stripping the size request before
+  reading the image.
+
+New Features:
+
+* None
+
+API Updates:
+
+* The size of PrimitiveInfo (believed to be an internal/private
+  structure but in a header which is installed, has been increased to
+  store a 'flags' argument. This is intended to be an internal
+  interface but but may be detected as an ABI change.
+
+Feature improvements:
+
+* None
+
+Windows Delegate Updates/Additions:
+
+* None
+
+Build Changes:
+
+* The oss-fuzz build script (fuzzing/oss-fuzz-build.sh) now includes
+  many delegate libraries such as zlib, libpng, libtiff, libjpeg, and
+  freetype, resulting in more comprehensive testing.  The Q16 build is
+  now being tested rather than the 'configure' default of Q8.
+
+Behavior Changes:
+
+* JPEG: The JPEG reader now allows 3 warnings of any particular type
+  before giving up on reading and throwing an exception.  This choice
+  was made after observing files which produce hundreds of warnings
+  and consume massive amounts of memory before reading the image data
+  has even started.  It is currently unknown how many files which were
+  previously accepted will be rejected by default.  The number of
+  allowed warnings may be adjusted using '-define
+  jpeg:max-warnings=<value>'.  The default limit will be adjusted
+  based on reported user experiences and may be adjusted prior to
+  compilation via the MaxWarningCount definition in coders/jpeg.c.
+
+
+1.3.29 (April 29, 2018)
+=========================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* GraphicsMagick is now participating in Google's oss-fuzz project due
+  to the contributions and assistance of Alex Gaynor. Since February 4
+  2018, 180 issues have been opened by oss-fuzz and 173 of those
+  issues have been resolved.  The issues list is available at
+  https://bugs.chromium.org/p/oss-fuzz/issues/list under search term
+  "graphicsmagick".  Issues are available for anyone to view and
+  duplicate if they have been in "Verified" status for 30 days, or if
+  they have been in "New" status for 90 days.  There are too many
+  fixes to list here.  Please consult the GraphicsMagick ChangeLog
+  file, Mercurial repository commit log, and the oss-fuzz issues list
+  for details.
+
+* JNG: Require that the embedded JPEG image have the same dimensions
+  as the JNG image as provided by JHDR. Avoids a heap write overflow.
+
+* MNG: Arbitrarily limit the number of loops which may be requested by
+  the MNG LOOP chunk to 512 loops, and provide the '-define
+  mng:maximum-loops=value' option in case the user wants to change the
+  limit.  This fixes a denial of service caused by large LOOP
+  specifications.
+
+Bug fixes:
+
+* Many oss-fuzz fixes are bug fixes.
+
+* DICOM: Pre/post rescale functions are temporarily disabled (until
+  the implementation is fixed).
+
+* JPEG: Fix regression in last release in which reading some JPEG
+  files produces the error "Improper call to JPEG library in state
+  201".
+
+* ICON: Some DIB-based Windows ICON files were reported as corrupt to
+  an unexpectedly missing opacity mask image.
+
+* In-memory Blob I/O: Don't implicitly increase the allocation size
+  due to seek offsets.
+
+* MNG: Detect and handle failure to allocate global PLTE. Fix divide
+  by zero.
+
+* DrawGetStrokeDashArray(): Check for failure to allocate memory.
+
+* BlobToImage(): Now produces useful exception reports to cover the
+  cases where 'magick' was not set and the file format could not be
+  deduced from its header.
+
+New Features:
+
+* None
+
+API Updates:
+
+* Wand API: Added MagickIsPaletteImage(), MagickIsOpaqueImage(),
+  MagickIsMonochromeImage(), MagickIsGrayImage(), MagickHasColormap()
+  based on contributions by Troy Patteson.
+
+* New structure ImageExtra added and Image 'clip_mask' member is
+  replaced by 'extra' which points to private ImageExtra allocation.
+  The ImageGetClipMask() function now provides access to the clip mask
+  image.
+
+* New structure DrawInfoExtra and DrawInfo 'clip_path' is replaced by
+  'extra' which points to private DrawInfoExtra allocation.  The
+  DrawInfoGetClipPath() function now provides access to the clip path.
+
+* New core library functions: GetImageCompositeMask(),
+  CompositeMaskImage(), CompositePathImage(), SetImageCompositeMask(),
+  ImageGetClipMask(), ImageGetCompositeMask(), DrawInfoGetClipPath(),
+  DrawInfoGetCompositePath()
+
+* Deprecated core library functions: RegisterStaticModules(),
+  UnregisterStaticModules().
+
+Feature improvements:
+
+* Static modules (in static library or shared library without
+  dynamically loadable modules) are now lazy-loaded using the same
+  external interface as the lazy-loader for dynamic modules.  This
+  results in more similarity between the builds and reduces the fixed
+  initialization overhead by only initializing the modules which are
+  used.
+
+* SVG: The quality of SVG support has been significantly improved due
+  to the efforts of Greg Wolfe.
+
+* FreeType/TTF rendering: Rendering fixes for opacity.
+
+Windows Delegate Updates/Additions:
+
+* None
+
+Build Changes:
+
+* None
+
+Behavior Changes:
+
+* None
+
+
+1.3.28 (January 20, 2018)
+=========================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* BMP: Fix non-terminal loop due to unexpected bit-field mask value
+  (DOS opportunity).
+
+* PALM: Fix heap buffer underflow in builds with QuantumDepth=8.
+
+* SetNexus() Fix heap overwrite under certain conditions due to using
+  a wrong destination buffer.  This issue impacts all 1.3.X releases.
+
+* TIFF: Fix heap buffer read overflow in LocaleNCompare() when parsing
+  NEWS profile.
+
+Bug fixes:
+
+* DescribeImage(): Eliminate possible use of null pointer.
+
+* GIF: Fix memory leak of global colormap in error path.
+
+* GZ: Writing to gzip files with the extension ".gz" was not working
+  with Zlib 1.2.8.
+
+* JNG: Fix buffer read overflow (a tiny fixed overflow of just one byte).
+
+* JPEG: Promoting certain libjpeg warnings to errors caused much more
+  problems than expected.  The promotion of warnings to errors is
+  removed.  Claimed pixel dimensions are validated by file size before
+  allocating memory for the pixels.
+
+* IntegralRotateImage(): Assure that reported error in rotate by 270
+  case does immediately terminate processing.
+
+* MNG: Fix possible null pointer reference related to DEFI chunk
+  parsing.  Fix minor heap read overflow (constrained to just one
+  byte) due to an ordering issue in a limit check.  Fix memory leaks
+  in error path.
+
+* WebP: Fix stack buffer overflow in WriteWEBPImage() which occurs
+  with libwebp 0.5.0 or newer due to a structure type change in the
+  structure passed to the progress monitor callback.
+
+* WPG: Memory leaks fixed.
+
+New Features:
+
+* None
+
+API Updates:
+
+* InterpolateViewColor(): This function now returns MagickPassFail (an
+  unsigned int) rather than void so that errors can be efficiently
+  reported.
+
+* The magick/pixel_cache.h header is updated to add deprecation
+  attributes such that code using GetPixels(), GetIndexes(), and
+  GetOnePixel() will produce deprecation warnings for compilers which
+  support them.  These functions will not be removed in the 1.3.X
+  release series and when they are removed, pre-processor macros will
+  be added so a replacement function is used instead.  There is a
+  long-term objective to eliminate functionally-redundant pixel cache
+  functions to only the ones with the best properties since this
+  reduces maintenance and may reduce the depth of the call stack
+  (improving performance).
+
+Feature improvements:
+
+* None
+
+Windows Delegate Updates/Additions:
+
+* None
+
+Build Changes:
+
+* PerlMagick: Sanitize PACKAGE_VERSION so that Perl is not confused by
+  any trailing alpha character.
+
+* Improved symbol renaming due to adding --enable-symbol-prefix.  Some
+  symbols (for static const strings) were not being included in the
+  renaming.
+
+
+Behavior Changes:
+
+* None
+
+1.3.27 (December 9, 2017)
+=========================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* CMYK: Fix heap overwrites in raw CMYK writer.  Fix heap overwrites
+  in raw CMYK reader (noticed when doing montage).
+
+* GIF: Assure that global colormap is initialized.
+
+* DescribeImage(): Fix possible heap write overflow when describing
+  visual image directory. Fix possible heap read overflow while
+  accessing heap data, and possible information disclosure while
+  describing the IPTC profile.
+
+* DICOM: Fix huge memory allocation based on bogus length value (DOS
+  opportunity).
+
+* DrawDashPolygon(): Fix heap out of bounds read in render code.
+
+* GRAY: Fix heap overwrites in raw GRAY reader (noticed when doing
+  montage).
+
+* JNG: Fix heap overruns.  Fix assertions.
+
+* JNG: Prevent a crash due to zero-length color_image while reading a
+  JNG image. (CVE-2017-11102).  Reject JNG files with unreasonable
+  dimensions given the file size (avoid DOS).
+
+* JNX: Fix DOS due to excessive memory allocations with corrupt file.
+
+* JPEG: Do not allocate backing image pixels until a scanline has been
+  successfully read.  Avoids DOS opportunity with suitably
+  manufactured file.
+
+* MAP: Fix null pointer dereference or segmentation violation.
+
+* MAT: Fix heap write overflow.
+
+* MNG: Reject over-large (65k by 65k) image.  Fix heap overwrites.
+
+* PAM: Fix heap buffer overflow in PAM writer for 1 bit/sample + alpha.
+
+* PICT: Fix excessive memory allocation due to malformed image file.
+
+* PNG: Fix heap buffer overflow in PNG writer when promoting from
+  indexed PNG to RGBA.
+
+* PNM: Fix DOS due to excessive memory allocations with corrupt file.
+
+* RGB: Fix heap overwrite in raw RGB writer. Fix heap overwrites in
+  raw RGB reader (noticed when doing montage).
+
+* RLE: Fix DOS opportunities due to false claims in image header.  Fix
+  heap out of bounds read.
+
+* SFW: Avoid possible heap write overflow.
+
+* SUN: Fix heap read overflow.  Fix DOS due to excessive memory
+  allocations with corrupt file.
+
+* SVG: Fix heap write overflow.
+
+* TIFF: Use heuristics to avoid DOS (excessive memory use) due to
+  false claims by input file.  It is possible that this may reject
+  some valid files.  Fix possible small heap overwrite beyond the
+  allocated scanline buffer due to the NumberOfObjectsInArray() macro
+  rounding up rather than down.
+
+* UIL: Fix heap overwrite in writer.
+
+* WPG: Fix DOS issues (memory, disk space, CPU time) due to
+  insufficient validations.  Fix heap overwrites.
+
+* XBM: Fix DOS issue where code remains stuck in loop and does not
+  return.
+
+* XV 332 (PNM): Fix null pointer dereference due to malformed file.
+
+* TracePSClippingPath()/TraceSVGClippingPath(): Fix heap out of bounds
+  read.
+
+* Validate path entries in the MAGICK_CODER_MODULE_PATH and
+  MAGICK_FILTER_MODULE_PATH environment variables and convert all
+  paths to real paths if possible. This avoids possible use of
+  relative paths to load modules (a possible security issue), or the
+  possibility of adding a directory which was in the path, but
+  missing, and may improve efficiency by removing non-existent paths.
+
+Bug fixes:
+
+* AVS: Memory leaks eliminated.
+
+* CINEON: Fix possible use of NULL pointer.
+
+* CMYK: Memory leaks eliminated.
+
+* CUT: Memory leaks eliminated.  Fix possible use of NULL pointer.
+
+* DCM: Fix possible use of NULL pointer.
+
+* DrawImage(): Avoid "negative" strncpy().  This seems to be benign
+  with glibc but perhaps not with other implementations.
+
+* DPX: Memory leaks eliminated.
+
+* EMF: Fix possible use of NULL pointer.
+
+* FindMagickModule(): Fix possible use of NULL pointer.
+
+* FITS: Fix memory leak.
+
+* GIF: Fix memory leak.
+
+* HDF: Memory leaks eliminated.
+
+* HISTOGRAM: Fix memory leak.
+
+* JNG: Memory leaks eliminated. Memory use after free and double-free
+  issues eliminated.  Error reporting fixes.
+
+* Magick::Options::strokeDashArray(): Fix possible use of NULL pointer.
+
+* MagickXFileBrowserWidget(): Fix possible use of NULL pointer.
+
+* MAT: Memory leaks eliminated.
+
+* MagickMapCloneMap(): Fix possible assertion failure.
+
+* MNG: Memory use after free issues eliminated.  Fix possible use of
+  NULL pointer.  Fix memory leaks.
+
+* MontageImageCommand(): Fix memory leaks.
+
+* MPC: Fix memory leak in writer.
+
+* MPEG: Fix memory leaks in writer.
+
+* MTV: Memory leaks eliminated.
+
+* NTRegistryKeyLookup(): Fix possible use of NULL pointer.
+
+* NTGetTypeList(): Fix possible use of NULL pointer.
+
+* PCD: Memory leaks eliminated.
+
+* PCL: Fix null pointer dereference in PCL writer.
+
+* PCX: Memory leaks eliminated.
+
+* PALM: Fix possible use of NULL pointer. Fix memory leak.
+
+* PICT: Memory leaks eliminated.
+
+* PNG: Fix small (one-off) heap read overflow.
+
+* PNM: Fix memory leaks.
+
+* PS: Fix use of null pointer in error path.
+
+* PWP: Fix possible use of null pointer.
+
+* ReplaceImageColormap(): Throw an exception rather than assertion if
+  the input image is not colormapped.
+
+* RGB: Fix memory leak.
+
+* SegmentImage(): Fix possible use of NULL pointer.
+
+* SetImageProfile(): Fix possible assertion failure.
+
+* SGI: Check for EOF while reading SGI file header.
+
+* SUN: Fix memory leak.
+
+* TIFF: Fix possible use of NULL pointer.  Fix memory leaks in writer.
+
+* TIM: Fix memory leak.
+
+* TOPOL: Fix possible use of NULL pointer.  Fix memory leaks.
+
+* VIFF: Fix memory leak.
+
+* WEBP: Detect partial write to output file.
+
+* WPG: Fix possible use of null pointer. Fix excessive use of disk
+  resources due to insufficient validations.
+
+* WriteImage(): Restore use of GetBlobStatus() to test if an I/O error
+  was encountered while writing output file. This assures that I/O
+  failure in writers which do not themselves verify writes is assured
+  to be reported.
+
+* WMF: Memory use after free issues eliminated.
+
+* YUV: Fix memory leaks.
+
+
+New Features:
+
+* PNG: Implemented eXIf chunk support.
+
+* WEBP: Add support for EXIF and ICC metadata provided that at least
+  libwebp 0.5.0 is used.
+
+* Magick++ Image autoOrient(): New Image method to auto-orient an
+  image so it looks right-side up by default.
+
+Feature improvements:
+
+* None
+
+Windows Delegate Updates/Additions:
+
+* Libtiff is updated to libtiff 4.0.9.
+
+Build Changes:
+
+* JPEG/PNG: The SETJMP_IS_THREAD_SAFE definition is used to determine
+  if setjmp/longjmp are thread safe.  If these interfaces are thread
+  safe, then concurrent reads/writes are possible.  This definition is
+  false for Solaris but true for Linux.  JPEG and PNG will be fully
+  concurrent if this definition is enabled.
+
+Behavior Changes:
+
+* PALM: PALM writer is disabled.
+
+* ThrowLoggedException(): Capture the first exception at
+  ErrorException level or greater, or only capture exception if it is
+  more severe than an already reported exception.
+
+* DestroyJNG(): This internal function is now declared static and is
+  removed from shared library or DLL namespace.
+
+
+1.3.26 (July 4, 2017)
+=====================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* DPX: Fix excessive use of memory (DOS issue) due to file header
+  claiming large image dimensions but insufficient backing
+  data. (CVE-2017-10799).
+
+* JNG: Fix memory leak when reading invalid JNG image (CVE-2017-8350).
+
+* MAT: Fix excessive use of memory (DOS issue) due to continuing
+  processing with insufficient data and claimed large image
+  size. Verify each file extent to make sure that it is within range
+  of file size. (CVE-2017-10800).
+
+* META: Fix heap overflow while parsing 8BIM chunk (CVE-2016-7800).
+
+* PCX: Fix denial of service issue.
+
+* RLE: Fix abnomally slow operation (denial of service issue) with
+  intentionally corrupt colormapped file.
+
+* PICT: Fix possible buffer overflow vulnerability given suitably
+  truncated input file.
+
+* PNG: Enforce spec requirement that the dimensions of the JPEG
+  embedded in a JDAT chunk must match the JHDR dimensions
+  (CVE-2016-9830).
+
+* PNG: Avoid NULL dereference when MAGN chunk processing fails.
+
+* SCT: Fix stack-buffer read overflow (underflow?) while reading SCT
+  header.
+
+* SGI: Fix denial of service issues.  Delay large memory allocations
+  until file header has fully passed sanity checks.
+
+* TIFF: Fix out of bounds read when reading CMYKA TIFF which claims to
+  have only 2 samples per pixel (CVE-2017-6335).
+
+* TIFF: Fix out of bounds read when reading RGB TIFF which claims to
+  have only 1 sample per pixel (CVE-2017-10794).
+
+* WPG: Fix heap overflow (CVE-2016-7996).  Fix assertion crash
+  (CVE-2016-7997).
+
+Bug fixes:
+
+* DifferenceImage(): Fix Fix all-black difference image if an input
+  file is colormapped.
+
+* EXIF orientation was not being properly detected for some files.
+
+* -frame: The `import` command -frame handling was improperly
+  implemented and was using already freed data.
+
+* GIF: Fixes for "Excessive LZW string data" problem.
+
+* Magick++: Bug fixes to PathSmoothCurvetoRel::operator() and
+  PathSmoothCurvetoRel::operator().
+
+* PAM: Support writing GRAYSCALE PAM format.
+
+* PNG: Fix memory leaks.
+
+* SVG: Fixed a memory leak.  Fixed a possible null pointer dereference.
+
+* TclMagick: Problem that TkMagick could not resolve functions from
+  TclMagick under Linux is fixed.
+
+* TclMagick: Fix parser validatation in magickCmd() to avoid crash
+  given a syntax error.
+
+* TIFF: Fix for reading old JPEG files (avoids "Improper call to JPEG
+  library in state 0. (LibJpeg).").
+
+* TXT: Fixed memory leak.
+
+* XCF: Error checking is improved.
+
+New Features:
+
+* EXIF rotation: Support is added such that the EXIF orientation tag
+  is updated when the image is rotated.
+
+* MAT: Now support reading multiple images from Matlab V4 format.
+
+* Magick++: Orientation method now updates orientation in EXIF
+  profile, if it exists.
+
+* Magick++: Added Image attribute method which accepts a character
+  pointer argument, and will remove the attribute if the value
+  argument is NULL.
+
+* -orient: The -orient command line option now also updates the
+  orientation in the EXIF profile, if it exists.
+
+* PGX: Support PGX JPEG 2000 format for reading and writing (within
+  the bounds of what JasPer supports).
+
+* Wand API: Added MagickAutoOrientImage(),
+  MagickGetImageOrientation(), MagickSetImageOrientation(),
+  MagickRemoveImageOption(), and MagickClearException().
+
+
+Feature improvements:
+
+* None
+
+Windows Delegate Updates/Additions:
+
+* TIFF: Updated to libtiff 4.0.8.
+
+Build Changes:
+
+* TclMagick: Updated configure to use latest TEA tcl.m4 version 3.10.
+  Support for AM_DISTCHECK_CONFIGURE_FLAGS so that 'make distcheck'
+  remembers configuration options, and also to uninstall pkgIndex.tcl.
+
+* VisualMagick Configure: A 'quantum' command line argument is added
+  to set the default quantum depth in the wizard drop-down list.  This
+  This allows setting the quantum depth when the /nowizard argument
+  was supplied.
+
+Behavior Changes:
+
+* The installer for the Windows build no longer includes IMDisplay
+  (simple display program), ImageMagickDLL, and PerlMagick for
+  ActiveState Perl.  These are still available to build from the
+  source tree.  All of these depend on proprietary components.
+
+1.3.25 (September 5, 2016)
+==========================
+
+Special Issues:
+
+* None
+
+Security Fixes:
+
+* EscapeParenthesis(): I was notified by Gustavo Grieco of a heap
+  overflow in EscapeParenthesis() used in the text annotation code.
+  While not being able to reproduce the issue, the implementation of
+  this function is completely redone.  This issue was assigned
+  CVE-2016-7447 after the release.
+
+* Utah RLE: Reject truncated/absurd files which caused huge memory
+  allocations and/or consumed huge CPU.  Problem was reported by
+  Agostino Sarubbo based on testing with AFL.  This issue was assigned
+  CVE-2016-7448 after the release.
+
+* SVG/MVG: Fix another case of CVE-2016-2317 (heap buffer overflow) in
+  the MVG rendering code (also impacts SVG).  This issue (remaining
+  part) was assigned CVE-2016-7446 after the release.
+
+* TIFF: Fix heap buffer read overflow while copying sized TIFF
+  attributes.  Problem was reported by Agostino Sarubbo based on
+  testing with AFL.  This issue was assigned CVE-2016-7449 after the
+  release.
+
+Bug fixes:
+
+* GetToken(): Fix obscure bug (read beyond end of string buffer)
+  noticed while parsing a MVG file.  This problem was reported by
+  Gustavo Grieco.
+
+* MVG rendering: Fix undesired hard errors when some objects were
+  drawn outside of the image bounds.  Requests to draw objects
+  entirely outside of the image should be silently ignored.
+
+* MVG/SVG rendering: Fix gradient size sanity checks which were
+  causing gradient requests to fail.  Due to a design weakness in that
+  gradient images allocate resources rather than being computations at
+  point of use, the maximum gradient image size is now hard-limited to
+  5000x5000 pixels until the design problem is fixed.  Some SVG icons
+  (as small as 8x8 pixels) authored using Inkscape request absurdly
+  huge gradients.  Gradient sizes as large as 20,000x20,000 have been
+  observed in SVG icon files delivered by packages on an Ubuntu Linux
+  system.
+
+* SVG: Fix some memory leaks which occur on parsing error.
+
+New Features:
+
+* None
+
+Feature improvements:
+
+* ElapsedTime(): Use clock_gettime() (when available with default
+  linkage) to obtain elapsed time.
+
+* DescribeImage(): Provide 6 digits of seconds precision in in elapsed
+  time output.  Previously the resolution was rounded up to a full
+  second.
+
+Windows Delegate Updates/Additions:
+
+* webp: Updated bundled libwebp to release 0.5.1.
+
+* libxml: Updated bundled libxml2 to release 2.9.4.
+
+* lcms: Updated bundled lcms2 to release 2.8.
+
+* png: Update bundled libpng to release 1.6.24.
+
+Build Changes:
+
+* OpenMP is properly configured for clang 3.8 using its own '-lomp'
+  rather than '-lgomp'.
+
+Behavior Changes:
+
+* SVG: Some SVG files may be rejected due to absurdly large gradient
+  requests.
+
+* The 'identify' and 'info' functionality only shows the pixel read
+  rate if image was not read in 'ping' mode. Provide 6 digits of
+  seconds precision in in elapsed time output.
+
+1.3.24 (May 30, 2016)
 ==========================
 
 .. _`GCC bug 53967` : http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53967
+
+Special Issues:
+
+* A shell exploit (CVE-2016-5118) was discovered associated with a
+  filename syntax where file names starting with '|' are intepreted as
+  shell commands executed via popen().  Insufficient sanitization in
+  the SVG and MVG renderers allows such filenames to be passed through
+  from potentially untrusted files.  There might be other ways for
+  untrusted inputs to produce such filenames.  Due to this issue,
+  support for the feature is removed entirely.
+
+* A shell exploit was discovered associated with the gnuplot delegate
+  and which is triggered by the 'gplt' entry in delegates.mgk.  A
+  remote exploit is possible if the attacker can cause a provided SVG
+  or MVG file to be rendered (or the user opens a provided file).  The
+  gnuplot program must be installed in order for the exploit to be
+  successful.  It is strongly recommended to remove this entry in all
+  delegates.mgk files.
+
+* Due to `GCC bug 53967`_, several key agorithms (e.g. convolution)
+  may execute much faster (e.g. 2-3X) for x86-64 and/or when SSE is
+  enabled for floating point math (`-mfpmath=sse`) if the GCC option
+  `-frename-registers` is used. Default 32-bit builds do not
+  experience the problem since they use '387 math.  It is not clear in
+  what version of GCC this problem started but it was not noticed by
+  the developers until the GCC 4.6 timeframe.  Other compilers do not
+  suffer from this bug.  Please lobby the GCC project to fix this
+  embarrassing performance bug.
+
+Security Fixes:
+
+* BLOB: Remove support for reading input from a shell command, or
+  writing output to a shell command, by prefixing the specified
+  filename (containing the command) with a '|'.  This feature provided
+  a remote shell execution opportunity.
+
+* DIB: Fixed out of bounds reads.  Added more header validations.
+
+* JNG: File size limits are enforced.
+
+* MAT: Fixed denial of service opportunity.  Fix hang on corrupt deflate stream.
+
+* META: Fixed out of bounds reads and writes.
+
+* MIFF: Fixed thrown assertion.
+
+* MSL: Ignore the file extension on MSL files.  It is necessary to add
+  a "msl:" prefix to MSL files to read the as an image.
+
+* MVG: No longer assume that files ending with extension ".mvg" are
+  MVG files.  MVG parsing does more validity checking on its input.
+  Assure that enough PrimitiveInfo structures are allocated in advance
+  to support a given vector path (heap overflow problem).
+
+* PCX: Fixed unreasonable memory allocation due to intentionally
+  corrupt file.
+
+* PDB: Fixed a heap buffer overflow and out of bounds read.
+
+* PICT: Fixed an out of bounds write.
+
+* PS: Ghostscript is now always run with -dSAFER for safer execution.
+
+* PSD: Fixed segmentation violations, heap buffer overflows, and out
+  of bounds writes.
+
+* RLE: Fixed out of bounds reads and writes.
+
+* ReadImages(): Fixed a possible infinite recursion due to a crafted input file.
+
+* RotateImage(): Fixed thrown assertion.
+
+* SGI: Fixed out of bounds writes.
+
+* SUN: Fixed out of bounds reads and writes.
+
+* SVG: Fixed heap and stack buffer overflows, as well as segmentation
+  violations (CVE-2016-2317 and CVE-2016-2318).  Also fixed endless
+  loop, unexpectedly large memory allocation, divide by zero, and
+  recursion issues.
+
+* TIFF: Fixed an assertion while reading.  Fixed benign heap overflow.
+
+* TMP: Adding a "tmp:" prefix to a filename no longer removes the file
+  since this seems dangerous.
+
+* VIFF: Fix excessive memory allocation with intentionally corrupted input file.
+
+* XCF: Fixed a heap buffer overflow.
+
+* XPM: Fixed several heap buffer overflows, and out of bound
+  reads/writes.  Also fixed a case of excessive memory allocation.
+
+* delegate.mgk: The default delegate.mgk file has been pared down in
+  order to reduce security exposure.
+
+* gnuplot ('gplt' delegate in delegates.mgk): Support for rendering
+  gnuplot files is removed since the format is inherently insecure.
+
+* File names: File names starting with a '|' character are no longer
+  interpreted as shell commands to be executed as input or output.
+
+
+Bug fixes:
+
+* BMP: Fix reading 24-bit Microsoft BMP which claims to have a
+  colormap.
+
+* FILE: `file://` URLs are properly supported now (they never worked
+  before).
+
+* JP2: It is now possible to write lossless JPEG 2000 "JP2" format.
+
+* SVG: Support font-size "medium".
+
+New Features:
+
+* Blob I/O C APIs: Added signed versions of short and long Read/Write
+  functions.
+
+* FILE: `file://` URLs are properly supported now (they never worked
+  before).
+
+* MAT: Matlab V4 is now partially supported.
+
+* Magick++: Added double-precision xResolution() and yResolution()
+  methods to support setting the horizontal and vertical resolution
+  with double floating point precision.
+
+* Mogrify now supports a -preserve-timestamp option to preserve file
+  access and modification timestamps.
+
+Feature improvements:
+
+Windows Delegate Updates/Additions:
+
+* Updated bundled libpng to release 1.6.19.
+
+* Updated bundled libwebp to release 0.4.4.
+
+* Update bundled libxml2 to release 2.9.3.
+
+* Update bundled freetype to release 2.6.2.
+
+Build Changes:
+
+* Added ``--enable-broken-coders`` configure option to enable file
+  format support which may be broken or cause security issues.  The
+  PSD format is now classified as "broken" (until it is fixed).
+
+Behavior Changes:
+
+* PSD format is not included in the build by default.
+
+* Files ending with ".mvg" and ".msl" are not assumed to be image
+  files by default.
+
+* File names starting with '|' are no longer treated as shell
+  commands.
+
+* Gnuplot and POV delegate support is removed from the default
+  delegate.mgk file.
+
+1.3.23 (November 7, 2015)
+==========================
+
+Special Issues:
+
+* Due to `GCC bug 53967`_, several key agorithms (e.g. convolution)
+  may execute much faster (e.g. 2-3X) for x86-64 and/or when SSE is
+  enabled for floating point math (`-mfpmath=sse`) if the GCC option
+  `-frename-registers` is used. Default 32-bit builds do not
+  experience the problem since they use '387 math.  It is not clear in
+  what version of GCC this problem started but it was not noticed by
+  the developers until the GCC 4.6 timeframe.  Other compilers do not
+  suffer from this bug.  Please lobby the GCC project to fix this
+  embarrassing performance bug.
+
+
+Security Fixes:
+
+* ScaleImage(): While not strictly a security issue, requesting to
+  scale an image while retaining the original number of rows will lead
+  to a program crash or memory corruption due to double-free.
+
+Bug fixes:
+
+* ScaleImage(): Fix problem with new width/height match original
+  (regression added by 1.3.22).
+
+* ScaleImage(): Fix double-free when new rows matches original rows
+  (regression added by 1.3.22).
+
+* MinGW build fix related to eliminating a sleep() macro which
+  conflicts with a MinGW-provided inline sleep() function.
+
+* PNG: Issue a warning instead of an error when attempting to read a
+  PNG file containing a zero-length profile.  This allows the file to
+  be read.
+
+* identify: Fix problem in that `identify -format "%A"` (to test if
+  transparency is supported in image) does not always produce the
+  correct results.
+
+New Features:
+
+* None.
+
+Feature improvements:
+
+* None.
+
+Performance Improvements:
+
+* None.
+
+Windows Delegate Updates/Additions:
+
+* None.
+
+Build Changes:
+
+* Configure: Removed CFLAGS and LDFLAGS deduplication code which
+  caused problems for user-provided CFLAGS and LDFLAGS which added and
+  then removed compiler/linker options.  Specifically, this fixes a
+  problem with creating OS X universal builds.
+
+* Configure: Add tests for 'ps2write' and 'eps2write' which are
+  available in recent Ghostscript.
+
+Behavior Changes:
+
+* None
+
+
+1.3.22 (October 4, 2015)
+==========================
+
+.. _`GCC bug 53967` : http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53967
+
+
+Thanks:
+
+* Coverity: We thank Coverity for providing free service for free
+  software projects, and thank Jodie Cunningham for getting the
+  project set up in Coverity.
+
+Special Issues:
+
+* Due to `GCC bug 53967`_, several key agorithms (e.g. convolution)
+  may execute much faster (e.g. 2-3X) for x86-64 and/or when SSE is
+  enabled for floating point math (`-mfpmath=sse`) if the GCC option
+  `-frename-registers` is used. Default 32-bit builds do not
+  experience the problem since they use '387 math.  It is not clear in
+  what version of GCC this problem started but it was not noticed by
+  the developers until the GCC 4.6 timeframe.  Other compilers do not
+  suffer from this bug.  Please lobby the GCC project to fix this
+  embarrassing performance bug.
+
+* Magick++: Any libraries or applications using Magick++ should be
+  rebuilt in order to use this new release.  Libraries and
+  applications will be able to continue to use prior versions of
+  Magick++ without being re-built, while benefiting from updated C
+  libraries, provided that the system supports library versioning.
+
+Security Fixes:
+
+* General Coverity fixes.  Some might have security consequences.
+
+* Ghostscript options concatenation is more secure against buffer
+  overflow.
+
+* Windows: Built-in random number generator is now salted using
+  CryptGenRandom().  This improves the robustness of the temporary
+  file allocator.
+
+Bug fixes:
+
+* Coverity Fixes: Large amounts of fixes due to Coverity static
+  analysis.  See the ChangeLog and Mercurial for details. Coverity now
+  reports zero issues.
+
+* General: Fix problems with reading filenames that include a colon.
+
+* General: Fixed performance problem with sub-image path extraction
+  when there are many files in the directory.
+
+* General: Add missing options in utility help messages.
+
+* BMP: Reader was wrongly rejecting RLE-compressed files as being too
+  small (regression added in 1.3.21 release).
+
+* BMP: Fix inverted alpha channel when writing BGRA8888 format.
+
+* DrawAffineImage(): Fix problem with negative x offset.
+
+* DrawAffineImage(): Fix problem that sometimes output rows are skipped when using OpenMP.
+
+* EXIF: Properly validate GPS_OFFSET.
+
+* -format: %Q now reports JPEG quality estimate if it is available.
+
+* -geometry: Fix handling of area geometries in the form "5000000@".
+
+* MagickGetImageGravity(): Prototype was missing in header files.
+
+* MIFF: Memory leak fixes.
+
+* MIFF: MIFF reader failed to read some MIFF headers properly.
+
+* MIFF: Detect buffer overrun attempt while reading zip compressed data.
+
+* PDF: Set image frame scene ids appropriately.
+
+* PNG: Memory leak fixes.
+
+* PS: Set image frame scene ids appropriately.
+
+* PTIF: Mark reduced frames as SubfileType 0x2 instead of 0x1.
+
+* SetImageProfile(): Avoid crash given NULL profile pointer.
+
+* TIFF: Fix reading Old JPEG and YCbCr sample images from libtiff
+  pics-3.8.0.tar.gz image file collection.
+
+* TIFF: Disable matte channel for compression types which don't
+  support it.
+
+* XPM: Memory leak fixes.
+
+* XWD: Memory leak fixes.
+
+New Features:
+
+* GRAYA: New subformat for gray coder which supports alpha channel.
+  Format specifiers "R", "G", "B", "A", "C", "M", and "Y" may now be
+  used to save and restore the associated channel using the same raw
+  format as "GRAY".
+
+* Magick++: Image::repage() method added to support resetting 'page'.
+
+* PDF: Added '-define pdf:stop-on-error=true' optoin to cause PDF
+  reading to quit immediately upon any error.
+
+* Subframe specification: Now specific PS and PDF pages may be
+  selected, including re-ordering.
+
+Feature improvements:
+
+* PALM: Still a work in progress.  Closer to working using netpbm's
+  implementation as a reference.
+
+Performance Improvements:
+
+* None.
+
+Windows Delegate Updates/Additions:
+
+* dcraw: Update bundled dcraw to release 9.26.0.
+
+* lcms: Update bundled lcms2 to release 2.7.
+
+* png: Updated bundled libpng to release 1.6.17.
+
+* tiff: Update bundled libtiff to release 4.0.6.
+
+* ttf: Update bundled freetype to release 2.6.
+
+* webp: Updated bundled libwebp to release 0.4.3.
+
+* libxml: Update bundled libxml2 to release 2.9.2.
+
+Build Changes:
+
+* lcms ("Little CMS") v1 is no longer supported.
+
+* VisualMagick: Remember and re-use already given paths.
+
+Behavior Changes:
+
+Magick++: adaptiveThreshold() now accepts a 'double' value and the
+previous version of the method (using 'unsigned int') is deprecated.
+The STL function-object equivalent of the deprecated method is removed
+entirely.
+
+
+1.3.21 (February 28, 2015)
+==========================
 
 .. _`AddressSanitizer` : https://code.google.com/p/address-sanitizer/
 
@@ -73,7 +1218,7 @@ Special Issues:
 
 Security Fixes:
 
-  * Annotate: Some requestable text-subsitution attributes caused a
+  * Annotate: Some requestable text-substitution attributes caused a
     crash.
 
   * All formats: Image dimensions are checked to assure that they are
@@ -115,7 +1260,7 @@ Security Fixes:
     overflows in buffer-size calculations are detected to avoid heap
     overwrite.
 
-  * TIFF: Fix crashes for photometrics which may delivery one or three
+  * TIFF: Fix crashes for photometrics which may deliver one or three
     samples per pixel (was assuming always three).
 
   * VIFF: Fixes to prevent buffer overflow.  Validate colormap indexes.
@@ -239,13 +1384,13 @@ Bug fixes:
 New Features:
 
   * compose: Supports composite operator names similar to the major
-    \*Magick brand, without losing any any compatibility with previous
+    \*Magick brand, without losing any compatibility with previous
     naming.
 
   * ICO: Windows ICO reader now supports reading PNG-encoded files.
 
   * Magick++ Geometry: New methods limitPixels() and fillArea() to
-    support '@' and '^' geometry qualifiers.  This enancement breaks
+    support '@' and '^' geometry qualifiers.  This enhancement breaks
     the ABI due to previous use of inline methods and no place to put
     the new flags.
 
@@ -258,7 +1403,7 @@ New Features:
   * Magick++ Image::resize(): New method to resize image specifying
     geometry, filter, and blur.
 
-  * Magick++ STL extentImage: New New function object to invoke image
+  * Magick++ STL extentImage: New function object to invoke image
     extent method.
 
   * Magick++ Image::quiet().  New method which blocks (ignores)
@@ -282,7 +1427,7 @@ New Features:
   * Windows Exceptions: A handler is registered (due to calling
     InitializeMagick()) to capture Windows Exceptions in a similar
     manner to the existing POSIX signal handler.  If an application is
-    using the library and wants to provide it own Windows exception
+    using the library and wants to provide its own Windows exception
     handling, then it should make any changes after invoking
     InitializeMagick().
 
@@ -358,7 +1503,7 @@ Bug fixes:
     drawing primitive to be printed to stderr.
 
   * PS, PS2, PS3, PDF: Only use resolution from image or -density if
-    units was properly specified.  Without units, resolution is
+    units were properly specified.  Without units, resolution is
     worthless.
 
   * PS, PS2, PS3, PDF: Use resolution from image if it appears to be
@@ -368,7 +1513,7 @@ Bug fixes:
     reported instead of success.
 
   * Rotation clipping/shearing errors for short wide images at some
-    angles is fixed.
+    angles are fixed.
 
   * -geometry: Deal with resize geometry missing width or height
     (e.g. '640x' or 'x480') by substituting the missing value with one
@@ -440,7 +1585,7 @@ New Features:
     to the major brand.
 
   * -operator: New quantum operators ThresholdBlackNegateQuantumOp and
-    ThresholdWhiteNegateQuantumOp These correspond to -operator
+    ThresholdWhiteNegateQuantumOp. These correspond to -operator
     "Threshold-Black-Negate" and "Threshold-White-Negate".
 
   * TIFF: Now support setting the TIFF "Software" tag for users who do
@@ -540,7 +1685,7 @@ Bug fixes:
     <freetype/freetype.h> can be included.
 
   * CMS profile: Only delete the CMS transform if it is non-null.
-    Fixes assersion observed when lcms returned a null profile and
+    Fixed assertion observed when lcms returned a null profile and
     GraphicsMagick attempted to deallocate it.
 
   * Drawing: Improve error handling logic so that drawing returns
@@ -564,9 +1709,9 @@ Bug fixes:
     greater than 8.
 
   * MIFF writer: RLE compressed format used inverted alpha from the
-    other subformats and contrary to the MIFF specification.
+    other subformats contrary to the MIFF specification.
 
-  * MIFF reader: Fixes Fixes to be able to read MIFF written by
+  * MIFF reader: Fixes to be able to read MIFF written by
     ImageMagick 6.X, including DirectClass grayscale images (except
     for RLE compressed).
 
@@ -750,7 +1895,7 @@ New Features:
 
   * GM utility: New 'batch' command was contributed by Kenneth Xu
     which supports executing any number of other GM utility
-    sub-commands in a single invokation in a sort of "batch" script.
+    sub-commands in a single invocation in a sort of "batch" script.
     Input may be piped from standard input, from a specified file, or
     from a 'GM >' command prompt.  This utilities front-end allows any
     other program/script to drive 'gm' using a co-process model and
@@ -766,7 +1911,7 @@ New Features:
     EXIF profiles is not yet updated so the EXIF profile will be wrong
     after using -auto-orient.
 
-  * C API: AutoOrientImage(), new New function to automatically orient
+  * C API: AutoOrientImage(), new function to automatically orient
     the image so that it is upright for normal viewing.
 
   * Wand API: MagickGetImagePage()/MagickSetImagePage(), new functions
@@ -797,7 +1942,7 @@ Behavior Changes:
 
   * AppendImages() now converts subsequent images to the colorspace of
     the first image, and no longer converts the first image to RGB.
-    Instead, it is assumed the user knows what she is doing.
+    Instead, it is assumed the user knows what she/he is doing.
 
   * SetImageColorRegion() no longer automatically converts the image
     to RGB.  The user is responsible for assuring that the provided
@@ -987,7 +2132,7 @@ New Features:
 
   * Added '+noise random' and '-operator noise-random' to 'convert'
     and 'mogrify'.  This modulates the existing image data with
-    uniformely random noise.
+    uniformly random noise.
 
   * Added -strip option in composite, convert, mogrify, and montage to
     remove all profiles and text attributes from the image.
@@ -1155,7 +2300,7 @@ Bug fixes:
 
   * InitializeMagick() and DestroyMagick() are now fully thread safe.
 
-  * When a shear angle was as zero, the shear request was being
+  * When a shear angle was zero, the shear request was being
     ignored entirely.
 
   * In DispatchImage(), the `K` channel was always output as black for
@@ -1195,7 +2340,7 @@ New Features:
     column to show the speedup compared with one thread, and the
     Karp-Flatt metric
 
-  * Added Add support for invoking "gs-cmyk" and "gs-cmyka" entries in
+  * Added support for invoking "gs-cmyk" and "gs-cmyka" entries in
     delegates.mgk when ColorSeparationType or ColorSeparationMatteType
     is requested.  These cause Ghostscript to always output CMYK PAM
     format (even if the input file was not in CMYK format).
@@ -1668,7 +2813,7 @@ Security Fixes:
 
 Bug fixes:
 
-  * JPEG: Profile chunks need to be concatentated in order to build
+  * JPEG: Profile chunks need to be concatenated in order to build
     the whole profile.  This was not working so embedded profiles
     larger than 32K or maybe 64K were being corrupted.  This bug was
     introduced in GraphicsMagick 1.2.
@@ -2267,7 +3412,7 @@ New Features:
     - ImportImageChannelsMasked(), import selected image channels.
     - SharpenImageChannel(), sharpen an image channel.
     - UnsharpMaskImageChannel(), unsharpmask an image channel.
-    - New cache view interfaces to correct shortcommings of original
+    - New cache view interfaces to correct shortcomings of original
       ones.  New interfaces are AcquireCacheViewPixels(),
       AcquireOneCacheViewPixel(), AcquireCacheViewIndexes(),
       GetCacheViewPixels(), SetCacheViewPixels(), and
@@ -2769,10 +3914,10 @@ GraphicsMagick support services:
 
   * Master web site at "http://www.GraphicsMagick.org/".
   * Mailing lists, bug tracking, and forums available via
-    "http://sourceforge.net/projects/graphicsmagick/".
-  * CVSWeb via "http://cvs.graphicsmagick.org/cgi-bin/cvsweb.cgi/".
-  * CVS via cvs.graphicsmagick.org (find instructions at
-    "http://www.graphicsmagick.org/www/cvs.html").
+    "https://sourceforge.net/projects/graphicsmagick/".
+  * Mercurial Web via "http://hg.code.sf.net/p/graphicsmagick/code/".
+  * Mercurial mirror via SourceForge (find instructions at
+    "http://www.graphicsmagick.org/Hg.html").
   * FTP via "ftp://ftp.graphicsmagick.org/pub/GraphicsMagick".
 
 Project maintenance improvements:
@@ -2816,7 +3961,7 @@ Code structure enhancements:
   * All utility support functions moved to magick/command.c in order to
     significantly reduce link dependencies, allowing statically-linked
     programs to be smaller.
-  * Use of MogrifyImage() elminated except for by utilities.
+  * Use of MogrifyImage() eliminated except for by utilities.
   * Re-builds due to changes to <magick/image.h> reduced by splitting the
     header into multiple headers.
   * ISO C '99 typedefs (gm_int16_t, gm_uint16_t, gm_int32_t, gm_uint32_t,
@@ -2898,4 +4043,4 @@ The objectives of GraphicsMagick are to:
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2017

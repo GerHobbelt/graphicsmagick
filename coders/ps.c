@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -314,14 +314,14 @@ static Image *ReadPSImage(const ImageInfo *image_info,ExceptionInfo *exception)
     char
       options[MaxTextExtent],
       arg[MaxTextExtent];
-    
+
     options[0]='\0';
     /*
       Append subrange.
     */
     if (image_info->subrange != 0)
       FormatString(options,"-dFirstPage=%lu -dLastPage=%lu",
-		   image_info->subimage+1,image_info->subimage+image_info->subrange);
+                   image_info->subimage+1,image_info->subimage+image_info->subrange);
     /*
       Append bounding box.
     */
@@ -335,14 +335,14 @@ static Image *ReadPSImage(const ImageInfo *image_info,ExceptionInfo *exception)
       (void) LiberateTemporaryFile((char *) image_info->filename);
     if(!AcquireTemporaryFileName((char *) image_info->filename))
       {
-	(void) LiberateTemporaryFile(postscript_filename);
-	ThrowReaderTemporaryFileException(image_info->filename);
+        (void) LiberateTemporaryFile(postscript_filename);
+        ThrowReaderTemporaryFileException(image_info->filename);
       }
     FormatString(command,delegate_info->commands,antialias,
-		 antialias,density,options,image_info->filename,
-		 postscript_filename);
+                 antialias,density,options,image_info->filename,
+                 postscript_filename);
   }
-  (void) MagickMonitorFormatted(0,8,&image->exception,RenderPostscriptText,
+  (void) MagickMonitorFormatted(0,8,exception,RenderPostscriptText,
                                 image_info->filename);
   status=InvokePostscriptDelegate(image_info->verbose,command,exception);
   if (!IsAccessibleAndNotEmpty(image_info->filename))
@@ -361,15 +361,15 @@ static Image *ReadPSImage(const ImageInfo *image_info,ExceptionInfo *exception)
       status=InvokePostscriptDelegate(image_info->verbose,command,exception);
     }
   (void) LiberateTemporaryFile(postscript_filename);
-  (void) MagickMonitorFormatted(7,8,&image->exception,RenderPostscriptText,
+  (void) MagickMonitorFormatted(7,8,exception,RenderPostscriptText,
                                 image_info->filename);
   if (IsAccessibleAndNotEmpty(image_info->filename))
     {
       /*
-	Read Ghostscript output.
+        Read Ghostscript output.
       */
       ImageInfo
-	*clone_info;
+        *clone_info;
 
       clone_info=CloneImageInfo(image_info);
       clone_info->blob=(void *) NULL;
@@ -395,25 +395,25 @@ static Image *ReadPSImage(const ImageInfo *image_info,ExceptionInfo *exception)
   if (image == (Image *) NULL)
     {
       if (UndefinedException == exception->severity)
-	ThrowException(exception,DelegateError,PostscriptDelegateFailed,filename);
+        ThrowException(exception,DelegateError,PostscriptDelegateFailed,filename);
     }
   else
     {
       do
-	{
-	  (void) strlcpy(image->magick,"PS",sizeof(image->magick));
-	  (void) strlcpy(image->filename,filename,sizeof(image->filename));
-	  next_image=SyncNextImageInList(image);
-	  if (next_image != (Image *) NULL)
-	    image=next_image;
-	} while (next_image != (Image *) NULL);
+        {
+          (void) strlcpy(image->magick,"PS",sizeof(image->magick));
+          (void) strlcpy(image->filename,filename,sizeof(image->filename));
+          next_image=SyncNextImageInList(image);
+          if (next_image != (Image *) NULL)
+            image=next_image;
+        } while (next_image != (Image *) NULL);
       while (image->previous != (Image *) NULL)
-	image=image->previous;
+        image=image->previous;
       if (image_info->subimage != 0)
         {
           unsigned long
             scene = image_info->subimage;
-          
+
           for (next_image=image;
                next_image != (Image *) NULL;
                next_image=next_image->next)
@@ -577,7 +577,7 @@ ModuleExport void UnregisterPSImage(void)
   bp=AppendHexVal(bp,Min(length,0xff)); \
 }
 
-static char* hexvals[] =
+static char* const hexvals[] =
   {
     "00","01","02","03","04","05","06","07","08","09","0A","0B",
     "0C","0D","0E","0F","10","11","12","13","14","15","16","17",
@@ -621,7 +621,7 @@ static inline char* AppendHexTriplet(char *q,
 static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
 {
   static const char
-    *PostscriptProlog[]=
+    * const PostscriptProlog[]=
     {
       "%%BeginProlog",
       "%",
@@ -861,9 +861,9 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
       "  currentfile buffer readline pop",
       "  token pop /pointsize exch def pop",
       "  /Times-Roman findfont pointsize scalefont setfont",
-      (char *) NULL
+      (const char *) NULL
     },
-    *PostscriptEpilog[]=
+    * const PostscriptEpilog[]=
     {
       "  x y scale",
       "  currentfile buffer readline pop",
@@ -875,7 +875,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
       "  token pop /compression exch def pop",
       "  class 0 gt { PseudoClassImage } { DirectClassImage } ifelse",
       "  grestore",
-      (char *) NULL
+      (const char *) NULL
     };
 
   char
@@ -887,7 +887,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
     page_geometry[MaxTextExtent];
 
   const char
-    **q;
+    * const *q;
 
   const ImageAttribute
     *attribute;
@@ -946,6 +946,8 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
     scene,
     text_size;
 
+  size_t
+    image_list_length;
 
   /*
     Open output image file.
@@ -954,6 +956,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -1086,7 +1089,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
             (void) WriteBlobString(image,"%%Orientation: Portrait\n");
             (void) WriteBlobString(image,"%%PageOrder: Ascend\n");
             FormatString(buffer,"%%%%Pages: %lu\n", image_info->adjoin ?
-              (unsigned long) GetImageListLength(image) : 1L);
+              (unsigned long) image_list_length : 1L);
             (void) WriteBlobString(image,buffer);
           }
         (void) WriteBlobString(image,"%%EndComments\n");
@@ -1302,9 +1305,9 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                               SaveImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
-            } 
+            }
             if (bp != buffer)
               {
                 *bp++='\n';
@@ -1372,7 +1375,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                 if (QuantumTick(y,image->rows))
                   if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                               SaveImageText,image->filename,
-					      image->columns,image->rows))
+                                              image->columns,image->rows))
                     break;
             }
             if (bp != buffer)
@@ -1439,7 +1442,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                   if (QuantumTick(y,image->rows))
                     if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                                 SaveImageText,image->filename,
-						image->columns,image->rows))
+                                                image->columns,image->rows))
                       break;
               }
               if (bp != buffer)
@@ -1486,7 +1489,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                   if (QuantumTick(y,image->rows))
                     if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                                 SaveImageText,image->filename,
-						image->columns,image->rows))
+                                                image->columns,image->rows))
                       break;
               }
               if (bp != buffer)
@@ -1572,7 +1575,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                   if (QuantumTick(y,image->rows))
                     if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                                 SaveImageText,image->filename,
-						image->columns,image->rows))
+                                                image->columns,image->rows))
                       break;
               }
               if (bp != buffer)
@@ -1614,7 +1617,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
                   if (QuantumTick(y,image->rows))
                     if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                                 SaveImageText,image->filename,
-						image->columns,image->rows))
+                                                image->columns,image->rows))
                       break;
               }
               if (bp != buffer)
@@ -1633,7 +1636,7 @@ static unsigned int WritePSImage(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    if (!MagickMonitorFormatted(scene++,GetImageListLength(image),&image->exception,
+    if (!MagickMonitorFormatted(scene++,image_list_length,&image->exception,
                                 SaveImagesText,image->filename))
       break;
   } while (image_info->adjoin);

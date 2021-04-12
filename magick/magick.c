@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2015 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -80,10 +80,8 @@ static void
 static SemaphoreInfo
   *magick_semaphore = (SemaphoreInfo *) NULL;
 
-#if defined(SupportMagickModules)
 static SemaphoreInfo
   *module_semaphore = (SemaphoreInfo *) NULL;
-#endif /* #if defined(SupportMagickModules) */
 
 static MagickInfo
   *magick_list = (MagickInfo *) NULL;
@@ -122,6 +120,7 @@ MagickGetFileSystemBlockSize(void)
 void
 MagickSetFileSystemBlockSize(const size_t block_size)
 {
+  assert(block_size > 0);
   filesystem_blocksize=block_size;
 }
 
@@ -167,7 +166,7 @@ DestroyMagick(void)
     }
 
   (void) LogMagickEvent(ConfigureEvent,GetMagickModule(),
-			"Destroy Magick");
+                        "Destroy Magick");
 
   MagickDestroyCommandInfo();   /* Command parser */
 #if defined(HasX11)
@@ -266,22 +265,14 @@ DestroyMagickInfoList(void)
   register MagickInfo
     *p;
 
-#if defined(SupportMagickModules)
   DestroyMagickModules();
-#endif /* defined(SupportMagickModules) */
-
-#if !defined(BuildMagickModules)
-  UnregisterStaticModules();
-#endif /* !defined(BuildMagickModules) */
 
   /*
     At this point, the list should be empty, but check for remaining
     entries anyway.
   */
-#if defined(BuildMagickModules)
   if (magick_list != (MagickInfo *) NULL)
     (void) printf("Warning: module registrations are still present!\n");
-#endif /* defined(BuildMagickModules) */
   for (p=magick_list; p != (MagickInfo *) NULL; )
   {
     magick_info=p;
@@ -296,9 +287,7 @@ DestroyMagickInfoList(void)
   magick_list=(MagickInfo *) NULL;
   DestroySemaphoreInfo(&magick_semaphore);
 
-#if defined(SupportMagickModules)
   DestroySemaphoreInfo(&module_semaphore);
-#endif /* #if defined(SupportMagickModules) */
 }
 
 /*
@@ -393,7 +382,7 @@ GetMagickInfoEntryLocked(const char *name)
       for (p=magick_list; p != (MagickInfo *) NULL; p=p->next)
         if (LocaleCompare(p->name,name) == 0)
           break;
-      
+
       if (p != (MagickInfo *) NULL)
         if (p != magick_list)
           {
@@ -416,38 +405,36 @@ GetMagickInfoEntryLocked(const char *name)
   return p;
 }
 MagickExport const MagickInfo *
-GetMagickInfo(const char *name,ExceptionInfo *ARGUNUSED(exception))
+GetMagickInfo(const char *name,ExceptionInfo *exception)
 {
   const MagickInfo
     *magick_info=(const MagickInfo *) NULL;
 
-#if defined(SupportMagickModules)
   if ((name != (const char *) NULL) &&
       (name[0] != '\0'))
     {
       LockSemaphoreInfo(module_semaphore);
       if (name[0] == '*')
-	{
-	  /*
-	    If all modules are requested, then use OpenModules to load all
-	    modules.
-	  */
-	  (void) OpenModules(exception);
-	}
+        {
+          /*
+            If all modules are requested, then use OpenModules to load all
+            modules.
+          */
+          (void) OpenModules(exception);
+        }
       else
-	{
-	  magick_info=GetMagickInfoEntryLocked(name);
-	  if (magick_info == (const MagickInfo *) NULL)
-	    {
-	      /*
-		Try to load a supporting module.
-	      */
-	      (void) OpenModule(name,exception);
-	    }
-	}
+        {
+          magick_info=GetMagickInfoEntryLocked(name);
+          if (magick_info == (const MagickInfo *) NULL)
+            {
+              /*
+                Try to load a supporting module.
+              */
+              (void) OpenModule(name,exception);
+            }
+        }
       UnlockSemaphoreInfo(module_semaphore);
     }
-#endif /* #if defined(SupportMagickModules) */
 
   /*
     Return whatever we've got
@@ -632,6 +619,9 @@ MagickSignal(int signo, Sigfunc *func)
 #  if defined(SA_INTERRUPT)  /* SunOS */
   act.sa_flags |= SA_INTERRUPT;
 #  endif
+#  if defined(SA_ONSTACK)  /* Use alternate signal stack if available */
+  act.sa_flags |= SA_ONSTACK;
+#  endif
   if (sigaction(signo, &act, &oact) < 0)
     return (SIG_ERR);
   return (oact.sa_handler);
@@ -783,7 +773,8 @@ MagickSignalHandlerMessage(const int signo, const char *subtext)
     }
   (void) strlcat(message,"...\n",sizeof(message));
 
-  if (write(STDERR_FILENO,message,strlen(message)) == -1)
+  if (write(STDERR_FILENO,message,
+            (MAGICK_POSIX_IO_SIZE_T) strlen(message)) == -1)
     {
       /* Exists to quench warning */
     }
@@ -831,16 +822,16 @@ MagickPanicSignalHandler(int signo)
       MagickSignalHandlerMessage(signo,"abort");
 
       /*
-	Call abort so that we quit with core dump.
+        Call abort so that we quit with core dump.
       */
       abort();
     }
 }
 
 static MagickBool QuitProgressMonitor(const char *task,
-				      const magick_int64_t quantum,
-				      const magick_uint64_t span,
-				      ExceptionInfo *exception)
+                                      const magick_int64_t quantum,
+                                      const magick_uint64_t span,
+                                      ExceptionInfo *exception)
 {
   ARG_NOT_USED(task);
   ARG_NOT_USED(quantum);
@@ -866,13 +857,13 @@ MagickSignalHandler(int signo)
   if (1 == quit_signal_handler_call_count)
     {
       if (MagickInitialized == InitInitialized)
-	{
+        {
 
-	  /*
-	    Set progress monitor handler to one which always returns
-	    MagickFail.
-	  */
-	  (void) SetMonitorHandler(QuitProgressMonitor);
+          /*
+            Set progress monitor handler to one which always returns
+            MagickFail.
+          */
+          (void) SetMonitorHandler(QuitProgressMonitor);
 
           /*
             Release persistent resources
@@ -884,11 +875,11 @@ MagickSignalHandler(int signo)
           */
           if (signo != SIGINT)
             MagickSignalHandlerMessage(signo,"quitting");
-	}
+        }
 
       /*
-	Invoke _exit(signo) (or equivalent) which avoids invoking
-	registered atexit() functions.
+        Invoke _exit(signo) (or equivalent) which avoids invoking
+        registered atexit() functions.
       */
       SignalHandlerExit(signo);
     }
@@ -896,7 +887,7 @@ MagickSignalHandler(int signo)
 
 /*
    The goal of this routine is to determine whether the passed
-   string is a valid and complete path to a file within the 
+   string is a valid and complete path to a file within the
    filesystem
  */
 #if !defined(UseInstalledMagick)
@@ -912,7 +903,7 @@ IsValidFilesystemPath(const char *path)
       if ((*path == *DirectorySeparator))
         return IsAccessibleNoLogging(path);
 #elif defined(MSWINDOWS)
-      /* For Windows we check to see if the path passed seems to be a 
+      /* For Windows we check to see if the path passed seems to be a
          pathof any kind (contains delimiters) or seem to be either UNC
          path or one with a drive letter spec in it: \\Server\share, C:\
       */
@@ -1090,13 +1081,13 @@ InitializeMagick(const char *path)
       SPINLOCK_RELEASE;
       return;
     }
-  
+
 #if defined(MSWINDOWS)
 # if defined(_DEBUG) && !defined(__BORLANDC__)
   {
     int
       debug;
-    
+
     debug=_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
     debug|=_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_DELAY_FREE_MEM_DF |
       _CRTDBG_LEAK_CHECK_DF;
@@ -1116,7 +1107,7 @@ InitializeMagick(const char *path)
   InitializeMagickRandomGenerator();
 
   (void) LogMagickEvent(ConfigureEvent,GetMagickModule(),
-			"Initialize Magick");
+                        "Initialize Magick");
 
   /*
     Set the filesystem block size.
@@ -1124,10 +1115,21 @@ InitializeMagick(const char *path)
   {
     size_t
       block_size=16384;
-    
+
     if ((p=getenv("MAGICK_IOBUF_SIZE")) != (const char *) NULL)
-      block_size = (size_t) MagickAtoL(p);
-    
+      {
+        long
+          block_size_long;
+
+        block_size_long = MagickAtoL(p);
+        if ((block_size_long > 0L) && (block_size_long <= 2097152L))
+          block_size=(size_t) block_size_long;
+        else
+          (void) LogMagickEvent(ConfigureEvent,GetMagickModule(),
+                                "Ignoring unreasonable MAGICK_IOBUF_SIZE of "
+                                "%ld bbytes", block_size_long);
+      }
+
     MagickSetFileSystemBlockSize(block_size);
   }
 
@@ -1154,13 +1156,13 @@ InitializeMagick(const char *path)
   if ((p=getenv("MAGICK_CODER_STABILITY")) != (const char *) NULL)
     {
       if (LocaleCompare(p,"BROKEN") == 0)
-	MinimumCoderClass=BrokenCoderClass;
+        MinimumCoderClass=BrokenCoderClass;
       else if (LocaleCompare(p,"UNSTABLE") == 0)
-	MinimumCoderClass=UnstableCoderClass;
+        MinimumCoderClass=UnstableCoderClass;
       else if (LocaleCompare(p,"STABLE") == 0)
-	MinimumCoderClass=StableCoderClass;
+        MinimumCoderClass=StableCoderClass;
       else if (LocaleCompare(p,"PRIMARY") == 0)
-	MinimumCoderClass=PrimaryCoderClass;
+        MinimumCoderClass=PrimaryCoderClass;
     }
 
 #if defined(MSWINDOWS)
@@ -1180,8 +1182,8 @@ InitializeMagick(const char *path)
 
   /* Let's log the three important setting as we exit this routine */
   (void) LogMagickEvent(ConfigureEvent,GetMagickModule(),
-			"Path: \"%s\" Name: \"%s\" Filename: \"%s\"",
-			GetClientPath(),GetClientName(),GetClientFilename());
+                        "Path: \"%s\" Name: \"%s\" Filename: \"%s\"",
+                        GetClientPath(),GetClientName(),GetClientFilename());
 
   /* Now initialized */
   MagickInitialized=InitInitialized;
@@ -1215,18 +1217,10 @@ InitializeMagickInfoList(void)
   assert(magick_semaphore == (SemaphoreInfo *) NULL);
   magick_semaphore=AllocateSemaphoreInfo();
 
-#if defined(SupportMagickModules)
   assert(module_semaphore == (SemaphoreInfo *) NULL);
   module_semaphore=AllocateSemaphoreInfo();
-#endif /* #if defined(SupportMagickModules) */
 
-#if !defined(BuildMagickModules)
-  RegisterStaticModules();          /* Register all static modules */
-#endif /* !defined(BuildMagickModules) */
-
-#if defined(SupportMagickModules)
   InitializeMagickModules();        /* Module loader */
-#endif /* defined(SupportMagickModules) */
 
   return MagickPass;
 }
@@ -1409,8 +1403,8 @@ ListModuleMap(FILE *file,ExceptionInfo *exception)
          {
            (void) fprintf(file, "  <module magick=\"%s\" name=\"%s\" />\n",
                           magick_array[i]->name,
-			  (magick_array[i]->module == NULL ? "(null)" :
-			   magick_array[i]->module));
+                          (magick_array[i]->module == NULL ? "(null)" :
+                           magick_array[i]->module));
          }
      }
    (void) fprintf(file, "</modulemap>\n");

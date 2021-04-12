@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -38,6 +38,7 @@
 #include "magick/studio.h"
 #include "magick/blob.h"
 #include "magick/pixel_cache.h"
+#include "magick/log.h"
 #include "magick/magick.h"
 #include "magick/monitor.h"
 #include "magick/utility.h"
@@ -124,6 +125,7 @@ static Image *ReadMTVImage(const ImageInfo *image_info,ExceptionInfo *exception)
   /*
     Read MTV image.
   */
+  buffer[0]='\0';
   (void) ReadBlobString(image,buffer);
   columns=0;
   rows=0;
@@ -134,13 +136,17 @@ static Image *ReadMTVImage(const ImageInfo *image_info,ExceptionInfo *exception)
   {
     size_t
       row_size;
-    
+
     /*
       Initialize image structure.
     */
     image->columns=columns;
     image->rows=rows;
     image->depth=8;
+    if (image->logging)
+    (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                          "Image[%lu] Geometry %lux%lu", image->scene,
+                          image->columns, image->rows);
     if (image_info->ping && (image_info->subrange != 0))
       if (image->scene >= (image_info->subimage+image_info->subrange-1))
         break;
@@ -158,9 +164,9 @@ static Image *ReadMTVImage(const ImageInfo *image_info,ExceptionInfo *exception)
     for (y=0; y < (long) image->rows; y++)
     {
       if (ReadBlob(image,row_size,pixels) != row_size)
-        ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,image);
+        break;
       p=pixels;
-      q=SetImagePixels(image,0,y,image->columns,1);
+      q=SetImagePixelsEx(image,0,y,image->columns,1,exception);
       if (q == (PixelPacket *) NULL)
         break;
       for (x=0; x < (long) image->columns; x++)
@@ -170,13 +176,13 @@ static Image *ReadMTVImage(const ImageInfo *image_info,ExceptionInfo *exception)
         q->blue=ScaleCharToQuantum(*p++);
         q++;
       }
-      if (!SyncImagePixels(image))
+      if (!SyncImagePixelsEx(image,exception))
         break;
       if (image->previous == (Image *) NULL)
         if (QuantumTick(y,image->rows))
           if (!MagickMonitorFormatted(y,image->rows,exception,LoadImageText,
                                       image->filename,
-				      image->columns,image->rows))
+                                      image->columns,image->rows))
             break;
     }
     MagickFreeMemory(pixels);
@@ -193,7 +199,9 @@ static Image *ReadMTVImage(const ImageInfo *image_info,ExceptionInfo *exception)
       if (image->scene >= (image_info->subimage+image_info->subrange-1))
         break;
     *buffer='\0';
-    (void) ReadBlobString(image,buffer);
+    count=0;
+    if (ReadBlobString(image,buffer) == NULL)
+      break;
     count=sscanf(buffer,"%lu %lu\n",&columns,&rows);
     if (count == 2)
       {
@@ -336,6 +344,9 @@ static unsigned int WriteMTVImage(const ImageInfo *image_info,Image *image)
   unsigned long
     scene;
 
+  size_t
+    image_list_length;
+
   /*
     Open output image file.
   */
@@ -343,6 +354,7 @@ static unsigned int WriteMTVImage(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -380,14 +392,14 @@ static unsigned int WriteMTVImage(const ImageInfo *image_info,Image *image)
         if (QuantumTick(y,image->rows))
           if (!MagickMonitorFormatted(y,image->rows,&image->exception,
                                       SaveImageText,image->filename,
-				      image->columns,image->rows))
+                                      image->columns,image->rows))
             break;
     }
     MagickFreeMemory(pixels);
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene++,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene++,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)

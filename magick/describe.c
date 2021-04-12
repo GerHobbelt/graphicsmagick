@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2012 GraphicsMagick Group
+% Copyright (C) 2003 - 2017 GraphicsMagick Group
 % Copyright (C) 2003 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -165,15 +165,16 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
           FormatSize(GetBlobSize(image),format);
           (void) fprintf(file,"%.1024s ",format);
         }
-      (void) fprintf(file,"%0.3fu %ld:%02ld",user_time,
+      (void) fprintf(file,"%0.3fu %ldm:%.6fs",
+                     user_time,
                      (long) (elapsed_time/60.0),
-                     (long) ceil(fmod(elapsed_time,60.0)));
+                     fmod(elapsed_time,60.0));
       /*
         Only display pixel read rate if the time accumulated is at
         least six times the timer's resolution (typically 0.01 on
         Unix).
       */
-      if (elapsed_time >= GetTimerResolution()*6)
+      if (!(image->ping) && (elapsed_time >= GetTimerResolution()*6))
         {
           pixels_per_second=(magick_int64_t) ((double) rows*columns/
                                               elapsed_time);
@@ -181,7 +182,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
           (void) fprintf(file," (%s pixels/s)",format);
         }
       (void) fprintf(file,"\n");
-    
+
       return (ferror(file) ? MagickFail : MagickPass);
     }
   /*
@@ -433,10 +434,14 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
       char
         tuple[MaxTextExtent];
 
+      MagickBool
+        found_transparency;
+
       register const PixelPacket
         *p;
 
       p=(PixelPacket *) NULL;
+      found_transparency = MagickFalse;
       for (y=0; y < image->rows; y++)
         {
           p=AcquireImagePixels(image,0,y,image->columns,1,&image->exception);
@@ -445,13 +450,16 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
           for (x=0; x < image->columns; x++)
             {
               if (p->opacity == TransparentOpacity)
-                break;
+                {
+                  found_transparency=MagickTrue;
+                  break;
+                }
               p++;
             }
           if (x < image->columns)
             break;
         }
-      if ((x < image->columns) || (y < image->rows))
+      if (found_transparency)
         {
           GetColorTuple(p,image->depth,image->matte,False,tuple);
           (void) fprintf(file,"  Opacity: %.1024s\t",tuple);
@@ -575,8 +583,8 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
   FormatSize(GetBlobSize(image),format);
   (void) fprintf(file,"  Filesize: %.1024s\n",format);
   fprintf(file,"  Interlace: %s\n",
-	  InterlaceTypeToString(image->interlace == UndefinedInterlace ?
-				NoInterlace : image->interlace));
+          InterlaceTypeToString(image->interlace == UndefinedInterlace ?
+                                NoInterlace : image->interlace));
   (void) fprintf(file,"  Orientation: %s\n",
                  OrientationTypeToString(image->orientation));
   (void) QueryColorname(image,&image->background_color,SVGCompliance,color,
@@ -592,7 +600,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
     (void) fprintf(file,"  Page geometry: %lux%lu%+ld%+ld\n",image->page.width,
                    image->page.height,image->page.x,image->page.y);
   (void) fprintf(file,"  Compose: %s\n",
-		 CompositeOperatorToString(image->compose));
+                 CompositeOperatorToString(image->compose));
   (void) fprintf(file,"  Dispose: ");
   switch (image->dispose)
     {
@@ -617,7 +625,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
     if (image->scene != 0)
       (void) fprintf(file,"  Scene: %lu\n",image->scene);
   (void) fprintf(file,"  Compression: %s\n",
-		 CompressionTypeToString(image->compression));
+                 CompressionTypeToString(image->compression));
   /*
     Display formatted image attributes. This must happen before we access
     any pseudo attributes like EXIF since doing so causes real attributes
@@ -628,15 +636,15 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
     for ( ; attribute != (const ImageAttribute *) NULL;
           attribute=attribute->next)
       {
-	if (LocaleNCompare("EXIF",attribute->key,4) != 0)
-	  {
-	    (void) fprintf(file,"  %c", toupper((int)attribute->key[0]));
-	    if (strlen(attribute->key) > 1)
-	      (void) fprintf(file,"%.1024s",attribute->key+1);
-	    
-	    (void) fprintf(file,": ");
-	    (void) fprintf(file,"%s\n",attribute->value);
-	  }
+        if (LocaleNCompare("EXIF",attribute->key,4) != 0)
+          {
+            (void) fprintf(file,"  %c", toupper((int)attribute->key[0]));
+            if (strlen(attribute->key) > 1)
+              (void) fprintf(file,"%.1024s",attribute->key+1);
+
+            (void) fprintf(file,": ");
+            (void) fprintf(file,"%s\n",attribute->value);
+          }
       }
   }
   if((profile=GetImageProfile(image,"ICM",&profile_length)) != 0)
@@ -656,7 +664,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
       */
       (void) fprintf(file,"  Profile-iptc: %lu bytes\n",(unsigned long)
                      profile_length);
-      for (i=0; i < profile_length; )
+      for (i=0; i+5U < profile_length; )
         {
           if (profile[i] != 0x1c)
             {
@@ -684,7 +692,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
             case 60: tag=(char *) "Created Time"; break;
             case 65: tag=(char *) "Originating Program"; break;
             case 70: tag=(char *) "Program Version"; break;
-            case 75: tag=(char *) "Object Cycle"; break;
+            case 75: tag=(char *) "Object Cyc"; break;
             case 80: tag=(char *) "Byline"; break;
             case 85: tag=(char *) "Byline Title"; break;
             case 90: tag=(char *) "City"; break;
@@ -725,6 +733,7 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
           (void) fprintf(file,"    %.1024s:\n",tag);
           length=profile[i++] << 8;
           length|=profile[i++];
+          length=Min(length,profile_length-i);
           text=MagickAllocateMemory(char *,length+1);
           if (text != (char *) NULL)
             {
@@ -754,13 +763,13 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
   {
     const char
       *profile_name;
-    
+
     size_t
       profile_length;
-              
+
     const unsigned char *
       profile_info;
-    
+
     ImageProfileIterator
       profile_iterator;
 
@@ -786,10 +795,10 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
               {
                 char
                   **values;
-                
+
                 register char
                   *p;
-                
+
                 values=StringToList(attribute->value);
                 if (values != (char **) NULL)
                   {
@@ -849,7 +858,8 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
       for (p=image->directory; *p != '\0'; p++)
         {
           q=p;
-          while ((*q != '\n') && (*q != '\0'))
+          while ((*q != '\n') && (*q != '\0') &&
+                 ((size_t) (q-p) < sizeof(image_info->filename)))
             q++;
           (void) strncpy(image_info->filename,p,q-p);
           image_info->filename[q-p]='\0';
@@ -889,11 +899,11 @@ MagickExport MagickPassFail DescribeImage(Image *image,FILE *file,
   */
   if (user_time >= GetTimerResolution())
     (void) fprintf(file,"  User Time: %0.3fu\n",user_time);
-  if (elapsed_time >= GetTimerResolution())
+  if (!(image->ping) && (elapsed_time >= GetTimerResolution()))
     {
-      (void) fprintf(file,"  Elapsed Time: %ld:%02ld\n",
+      (void) fprintf(file,"  Elapsed Time: %ldm:%.6fs\n",
                      (long) (elapsed_time/60.0),
-                     (long) ceil(fmod(elapsed_time,60.0)));
+                     fmod(elapsed_time,60.0));
       pixels_per_second=(magick_int64_t) ((double) image->rows*
                                           image->columns/
                                           (elapsed_time > GetTimerResolution() ?

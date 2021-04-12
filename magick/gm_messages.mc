@@ -11,6 +11,12 @@ Unable to create blob
 .
 
 MessageId       = +1
+SymbolicName    = BlobErrorUnableToDeduceImageFormat
+Language        = English
+Unable to deduce image format
+.
+
+MessageId       = +1
 SymbolicName    = BlobErrorUnableToObtainOffset
 Language        = English
 Unable to obtain current offset
@@ -68,6 +74,12 @@ MessageId       = +1
 SymbolicName    = CacheErrorInconsistentPersistentCacheDepth
 Language        = English
 Inconsistent persistent cache depth
+.
+
+MessageId       = +1
+SymbolicName    = CacheErrorPixelCacheDimensionsMisMatch
+Language        = English
+Pixel cache dimensions incompatible with image dimensions
 .
 
 MessageId       = +1
@@ -149,6 +161,12 @@ default warning
 .
 
 MessageId       = +1
+SymbolicName    = CoderErrorArithmeticOverflow
+Language        = English
+Arithmetic overflow
+.
+
+MessageId       = +1
 SymbolicName    = CoderErrorColormapTooLarge
 Language        = English
 Colormap size exceeds limit
@@ -191,9 +209,21 @@ Data storage type is not supported
 .
 
 MessageId       = +1
+SymbolicName    = CoderErrorDecodedImageNotReturned
+Language        = English
+Coder did not return an image (this is a bug, please report it!)
+.
+
+MessageId       = +1
 SymbolicName    = CoderErrorDeltaPNGNotSupported
 Language        = English
 Delta-PNG is not supported
+.
+
+MessageId       = +1
+SymbolicName    = CoderErrorDivisionByZero
+Language        = English
+Division by zero
 .
 
 MessageId       = +1
@@ -521,9 +551,21 @@ Unable to zip-compress image
 .
 
 MessageId       = +1
+SymbolicName    = CoderErrorUnsupportedBitsPerSample
+Language        = English
+Unsupported bits per sample
+.
+
+MessageId       = +1
 SymbolicName    = CoderErrorUnsupportedCellTypeInTheMatrix
 Language        = English
 Unsupported cell type in the matrix
+.
+
+MessageId       = +1
+SymbolicName    = CoderErrorUnsupportedSamplesPerPixel
+Language        = English
+Unsupported samples per pixel
 .
 
 MessageId       = +1
@@ -737,6 +779,12 @@ Image file or blob does not contain any image data
 .
 
 MessageId       = +1
+SymbolicName    = ImageErrorImageFileHasNoScenes
+Language        = English
+Image file has no scenes
+.
+
+MessageId       = +1
 SymbolicName    = ImageErrorImageTypeNotSupported
 Language        = English
 Image type not supported
@@ -935,6 +983,18 @@ Unrecognized XWD header
 .
 
 MessageId       = +1
+SymbolicName    = ImageErrorUnsupportedBitsPerSample
+Language        = English
+Unsupported bits per sample
+.
+
+MessageId       = +1
+SymbolicName    = ImageErrorUnsupportedNumberOfPlanes
+Language        = English
+Unsupported number of planes
+.
+
+MessageId       = +1
 SymbolicName    = ImageFatalErrorUnableToPersistKey
 Language        = English
 Unable to persist key
@@ -947,9 +1007,21 @@ Compression not valid
 .
 
 MessageId       = +1
+SymbolicName    = ImageWarningCorruptImage
+Language        = English
+Corrupt image (some data returned)
+.
+
+MessageId       = +1
 SymbolicName    = ImageWarningImproperImageHeader
 Language        = English
 Improper image header
+.
+
+MessageId       = +1
+SymbolicName    = ImageWarningInvalidColormapIndex
+Language        = English
+Invalid colormap index
 .
 
 MessageId       = +1
@@ -980,6 +1052,12 @@ MessageId       = +1
 SymbolicName    = ImageWarningStaticPlanesValueNotEqualToOne
 Language        = English
 Static planes value not equal to one
+.
+
+MessageId       = +1
+SymbolicName    = ImageWarningUnableToParseEmbeddedProfile
+Language        = English
+Unable to parse embedded profile
 .
 
 MessageId       = +1
@@ -1121,9 +1199,39 @@ Already pushing pattern definition
 .
 
 MessageId       = +1
+SymbolicName    = DrawErrorDrawingRecursionDetected
+Language        = English
+drawing recursion detected
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorFloatValueConversionError
+Language        = English
+text value does not convert to float
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorIntegerValueConversionError
+Language        = English
+text value does not convert to integer
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorInvalidPrimitiveArgument
+Language        = English
+invalid primitive argument
+.
+
+MessageId       = +1
 SymbolicName    = DrawErrorNonconformingDrawingPrimitiveDefinition
 Language        = English
 Non-conforming drawing primitive definition
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorPrimitiveArithmeticOverflow
+Language        = English
+primitive arithmetic overflow
 .
 
 MessageId       = +1
@@ -1142,6 +1250,18 @@ MessageId       = +1
 SymbolicName    = DrawErrorUnbalancedGraphicContextPushPop
 Language        = English
 unbalanced graphic context push-pop
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorUnreasonableGradientSize
+Language        = English
+unreasonable gradient image size
+.
+
+MessageId       = +1
+SymbolicName    = DrawErrorVectorPathTruncated
+Language        = English
+vector path truncated
 .
 
 MessageId       = +1
@@ -1205,6 +1325,12 @@ angle is discontinuous
 .
 
 MessageId       = +1
+SymbolicName    = ImageErrorCMYKAImageLacksAlphaChannel
+Language        = English
+CMYKA image lacks an alpha channel (indexes)
+.
+
+MessageId       = +1
 SymbolicName    = ImageErrorColorspaceColorProfileMismatch
 Language        = English
 Colorspace color profile mismatch
@@ -1232,6 +1358,12 @@ MessageId       = +1
 SymbolicName    = ImageErrorImageDoesNotContainResolution
 Language        = English
 image does not contain resolution
+.
+
+MessageId       = +1
+SymbolicName    = ImageErrorImageIsNotColormapped
+Language        = English
+image is not colormapped
 .
 
 MessageId       = +1
@@ -1337,6 +1469,12 @@ unable to deconstruct image sequence
 .
 
 MessageId       = +1
+SymbolicName    = ImageErrorUnableToExportImagePixels
+Language        = English
+unable to export image pixels
+.
+
+MessageId       = +1
 SymbolicName    = ImageErrorUnableToFlattenImage
 Language        = English
 unable to flatten image
@@ -1349,9 +1487,21 @@ Unable to get clip mask
 .
 
 MessageId       = +1
+SymbolicName    = ImageErrorUnableToGetCompositeMask
+Language        = English
+Unable to get composite mask
+.
+
+MessageId       = +1
 SymbolicName    = ImageErrorUnableToHandleImageChannel
 Language        = English
 unable to handle image channel
+.
+
+MessageId       = +1
+SymbolicName    = ImageErrorUnableToImportImagePixels
+Language        = English
+unable to import image pixels
 .
 
 MessageId       = +1
@@ -1370,6 +1520,12 @@ MessageId       = +1
 SymbolicName    = ImageErrorUnableToSetClipMask
 Language        = English
 Unable to set clip mask
+.
+
+MessageId       = +1
+SymbolicName    = ImageErrorUnableToSetCompositeMask
+Language        = English
+Unable to set composite mask
 .
 
 MessageId       = +1
@@ -1742,6 +1898,12 @@ MessageId       = +1
 SymbolicName    = OptionErrorSubimageSpecificationReturnsNoImages
 Language        = English
 Subimage specification returns no images
+.
+
+MessageId       = +1
+SymbolicName    = OptionErrorTileNotBoundedByImageDimensions
+Language        = English
+Tile is not bounded by image dimensions
 .
 
 MessageId       = +1
@@ -2303,6 +2465,12 @@ unable to add IPTC profile
 .
 
 MessageId       = +1
+SymbolicName    = LimitErrorUnableToAddOrRemoveProfile
+Language        = English
+unable to add or remove profile
+.
+
+MessageId       = +1
 SymbolicName    = LimitErrorUnableToAllocateCoefficients
 Language        = English
 unable to allocate coefficients
@@ -2318,6 +2486,12 @@ MessageId       = +1
 SymbolicName    = LimitErrorUnableToAllocateICCProfile
 Language        = English
 unable to allocate ICC profile
+.
+
+MessageId       = +1
+SymbolicName    = LimitErrorUnableToAllocateImage
+Language        = English
+Unable to allocate image
 .
 
 MessageId       = +1
@@ -2759,6 +2933,12 @@ unable to allocate magick info
 .
 
 MessageId       = +1
+SymbolicName    = LimitFatalErrorUnableToAllocateMagickMap
+Language        = English
+unable to allocate magick map
+.
+
+MessageId       = +1
 SymbolicName    = LimitFatalErrorUnableToAllocateModuleInfo
 Language        = English
 unable to allocate module info
@@ -2960,6 +3140,12 @@ MessageId       = +1
 SymbolicName    = StreamWarningDefault
 Language        = English
 default warning
+.
+
+MessageId       = +1
+SymbolicName    = TypeErrorFontNotSpecified
+Language        = English
+Font name not specified
 .
 
 MessageId       = +1

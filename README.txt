@@ -35,10 +35,10 @@ possible.
 
 GraphicsMagick is a continual work in progress. The very latest code
 is available via the Mercurial distributed source control management
-tool (http://mercurial.selenic.com/). GraphicsMagick may be retrieved
+tool (https://www.mercurial-scm.org/). GraphicsMagick may be retrieved
 via the following command:
 
-  hg clone http://graphicsmagick.hg.sourceforge.net/hgweb/graphicsmagick/graphicsmagick/ GM
+  hg clone http://hg.code.sf.net/p/graphicsmagick/code/ GM
 
 Mercurial provides a complete stand-alone repository which contains
 the full history of the GraphicsMagick project.  You may use the
@@ -164,19 +164,12 @@ building under Microsoft Windows:
   format. HP printers usually accept PCL format rather than HPGL
   format.  Ghostscript (see above) is also required.
 
-* GraphicsMagick requires the lcms library (1.11 or later, including
-  2.X) available from
+* GraphicsMagick requires the lcms library (2.0 or later) available
+  from
 
      http://www.littlecms.com/
 
   to perform ICC CMS color management.
-
-* GraphicsMagick requires gnuplot available from
-
-     http://gnuplot.sourceforge.net/
-
-  to read GNUPLOT plot files (with extension gplt).  Ghostscript (see
-  above) is also required.
 
 * GraphicsMagick requires Graphviz available from
 
@@ -252,34 +245,10 @@ building under Microsoft Windows:
   to read or write the PNG, MNG, or JNG image formats.  LIBPNG depends
   upon the ZLIB library (see below).
 
-* GraphicsMagick requires ra_ppm from Greg Ward's Radiance software
-  available from
-
-     http://radsite.lbl.gov/radiance/HOME.html
-
-  to read the Radiance image format.
-
-* GraphicsMagick requires rawtorle from the Utah Raster Toolkit
-  available via anonymous FTP as
-
-     ftp://ftp.graphicsmagick.org/pub/GraphicsMagick/delegates/urt-3.1b.tar.Z
-
-  to write the RLE image format.
-
-* GraphicsMagick requires scanimage from
-
-     http://www.sane-project.org/
-							 
-  to import an image from a scanner device.
-
 * GraphicsMagick requires Sam Leffler's TIFF software available via
-  anonymous FTP at
+  HTTP at
 
-     ftp://ftp.remotesensing.org/libtiff/
-
-  or via HTTP at
-
-     http://www.remotesensing.org/libtiff/
+     http://www.simplesystems.org/libtiff/
 
   to read the TIFF image format. It in turn optionally requires the
   JPEG and ZLIB libraries.  Libtiff 3.8.2 or later is recommended.
@@ -380,4 +349,4 @@ building under Microsoft Windows:
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2018

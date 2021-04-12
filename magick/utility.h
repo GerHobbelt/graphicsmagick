@@ -1,12 +1,12 @@
 /*
-  Copyright (C) 2003 - 2014 GraphicsMagick Group
+  Copyright (C) 2003 - 2016 GraphicsMagick Group
   Copyright (C) 2002 ImageMagick Studio
   Copyright 1991-1999 E. I. du Pont de Nemours and Company
- 
+
   This program is covered by multiple licenses, which are described in
   Copyright.txt. You should have received a copy of Copyright.txt with this
   package; otherwise see http://www.graphicsmagick.org/www/Copyright.html.
- 
+
   GraphicsMagick Utility Methods.
 */
 #ifndef _MAGICK_UTILITY_H
@@ -53,8 +53,6 @@ typedef struct _TokenInfo
   Utilities methods.
 */
 
-#undef ARGUNUSED
-#define ARGUNUSED(arg) arg MAGICK_ATTRIBUTE((__unused__))
 #undef ARG_NOT_USED
 #define ARG_NOT_USED(arg) (void) arg
 
@@ -139,7 +137,7 @@ extern MagickExport void
   ExpandFilename(char *),
   FormatSize(const magick_int64_t size,char *format),
   GetPathComponent(const char *,PathType,char *),
-  GetToken(const char *,char **,char *),
+  GetToken(const char *,char **,char *) MAGICK_FUNC_DEPRECATED,
   LocaleLower(char *),
   LocaleUpper(char *),
   Strip(char *),
@@ -155,6 +153,8 @@ extern MagickExport magick_int64_t
   MagickSizeStrToInt64(const char *str,const unsigned int kilo);
 
 extern MagickExport size_t
+  MagickGetToken(const char *start,char **end,char *token,
+                 const size_t buffer_length),
   MagickStripSpacesFromString(char *string),
   MagickStrlCat(char *dst, const char *src, const size_t size) MAGICK_FUNC_NONNULL,
   MagickStrlCpy(char *dst, const char *src, const size_t size) MAGICK_FUNC_NONNULL,
@@ -177,6 +177,12 @@ extern MagickExport size_t
 
 extern double MagickFmin(const double x, const double y) MAGICK_FUNC_CONST;
 extern double MagickFmax(const double x, const double y) MAGICK_FUNC_CONST;
+
+extern MagickExport MagickPassFail MagickAtoFChk(const char *str, double *value);
+extern MagickExport MagickPassFail MagickAtoIChk(const char *str, int *value);
+extern MagickExport MagickPassFail MagickAtoUIChk(const char *str, unsigned int *value);
+extern MagickExport MagickPassFail MagickAtoLChk(const char *str, long *value);
+extern MagickExport MagickPassFail MagickAtoULChk(const char *str, unsigned long *value);
 
 #endif /* defined(MAGICK_IMPLEMENTATION) */
 

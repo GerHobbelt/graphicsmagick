@@ -1,4 +1,4 @@
-/* Copyright (C) 2003-2014 GraphicsMagick Group */
+/* Copyright (C) 2003-2016 GraphicsMagick Group */
 
 /*
   ImageMagick MagickWand interface.
@@ -91,6 +91,9 @@ extern WandExport double
   *MagickGetSamplingFactors(MagickWand *,unsigned long *),
   *MagickQueryFontMetrics(MagickWand *,const DrawingWand *,const char *);
 
+extern WandExport GravityType
+  MagickGetImageGravity(MagickWand *wand);
+
 extern WandExport ImageType
   MagickGetImageType(MagickWand *);
 
@@ -131,6 +134,9 @@ extern WandExport MagickWand
   *MagickTransformImage(MagickWand *,const char *,const char *),
   *NewMagickWand(void);
 
+extern WandExport OrientationType
+  MagickGetImageOrientation(MagickWand *);
+
 extern WandExport PixelWand
   **MagickGetImageHistogram(MagickWand *,unsigned long *);
 
@@ -150,6 +156,7 @@ extern WandExport unsigned int
   MagickAnnotateImage(MagickWand *,const DrawingWand *,const double,
     const double,const double,const char *),
   MagickAnimateImages(MagickWand *,const char *),
+  MagickAutoOrientImage(MagickWand *wand,const OrientationType),
   MagickBlackThresholdImage(MagickWand *,const PixelWand *),
   MagickBlurImage(MagickWand *,const double,const double),
   MagickBorderImage(MagickWand *,const PixelWand *,const unsigned long,
@@ -208,9 +215,14 @@ extern WandExport unsigned int
   MagickGetImageWhitePoint(MagickWand *,double *,double *),
   MagickGetSize(const MagickWand *,unsigned long *,unsigned long *),
   MagickHaldClutImage(MagickWand *wand,const MagickWand *clut_wand),
+  MagickHasColormap(MagickWand *,unsigned int *),
   MagickHasNextImage(MagickWand *),
   MagickHasPreviousImage(MagickWand *),
   MagickImplodeImage(MagickWand *,const double),
+  MagickIsGrayImage(MagickWand *,unsigned int *),
+  MagickIsMonochromeImage(MagickWand *,unsigned int *),
+  MagickIsOpaqueImage(MagickWand *,unsigned int *),
+  MagickIsPaletteImage(MagickWand *,unsigned int *),
   MagickLabelImage(MagickWand *,const char *),
   MagickLevelImage(MagickWand *,const double,const double,const double),
   MagickLevelImageChannel(MagickWand *,const ChannelType,const double,
@@ -249,6 +261,7 @@ extern WandExport unsigned int
   MagickReduceNoiseImage(MagickWand *,const double),
   MagickRelinquishMemory(void *),
   MagickRemoveImage(MagickWand *),
+  MagickRemoveImageOption(MagickWand *wand,const char *,const char *),
   MagickResampleImage(MagickWand *,const double,const double,const FilterTypes,
     const double),
   MagickResizeImage(MagickWand *,const unsigned long,const unsigned long,
@@ -289,6 +302,7 @@ extern WandExport unsigned int
   MagickSetImageMatte(MagickWand *,const unsigned int),
   MagickSetImageMatteColor(MagickWand *,const PixelWand *),
   MagickSetImageOption(MagickWand *,const char *,const char *,const char *),
+  MagickSetImageOrientation(MagickWand *,const OrientationType),
   MagickSetImagePage(MagickWand *wand,
     const unsigned long width,const unsigned long height,const long x,
     const long y),
@@ -356,6 +370,7 @@ extern WandExport unsigned char
   *MagickWriteImageBlob(MagickWand *,size_t *);
 
 extern WandExport void
+  MagickClearException(MagickWand *),
   MagickResetIterator(MagickWand *);
 
 #if defined(__cplusplus) || defined(c_plusplus)

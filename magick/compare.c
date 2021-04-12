@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2008 GraphicsMagick Group
+% Copyright (C) 2003 - 2016 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -241,10 +241,17 @@ DifferenceImage(const Image *reference_image,const Image *compare_image,
   assert(difference_options != (const DifferenceImageOptions *) NULL);
   assert(exception != (ExceptionInfo *) NULL);
 
-  difference_image=CloneImage(compare_image,compare_image->columns,
-                              compare_image->rows,MagickTrue,exception);
+  difference_image=AllocateImage((ImageInfo *) NULL);
   if (difference_image == (Image *) NULL)
-    return ((Image *) NULL);
+    {
+      ThrowImageException3(ResourceLimitError,MemoryAllocationFailed,
+                           UnableToAllocateImage);
+      return ((Image *) NULL);
+    }
+  difference_image->storage_class = DirectClass;
+  difference_image->rows = reference_image->rows;
+  difference_image->columns = reference_image->columns;
+  difference_image->depth = Max(reference_image->depth, compare_image->depth);
 
   /*
     Update "difference" image to mark changes.
@@ -539,7 +546,7 @@ GetImageChannelDifference(const Image *reference_image,
 
       char
         description[MaxTextExtent];
-      
+
       FormatString(description,"[%%s]*[%%s] Compute image difference using %s metric...",
                    MetricTypeToString(metric));
 
@@ -930,7 +937,7 @@ IsImagesEqual(Image *image,const Image *reference)
   /*
     Compute final error statistics.
   */
-  
+
   if (image->matte)
     normalize = sqrt(4.0); /* sqrt(1.0*1.0+1.0*1.0+1.0*1.0+1.0*1.0) */
   else

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2014 GraphicsMagick Group
+% Copyright (C) 2003 - 2018 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -316,7 +316,7 @@ ModuleExport void UnregisterPS2Image(void)
 static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
 {
   static const char
-    *PostscriptProlog[]=
+    * const PostscriptProlog[]=
     {
       "%%%%BeginProlog",
       "%%",
@@ -450,9 +450,9 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
       "  currentfile buffer readline pop",
       "  token pop /pointsize exch def pop",
       "  /Helvetica findfont pointsize scalefont setfont",
-      (char *) NULL
+      (const char *) NULL
     },
-    *PostscriptEpilog[]=
+    * const PostscriptEpilog[]=
     {
       "  x y scale",
       "  currentfile buffer readline pop",
@@ -466,7 +466,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
       "  token pop /compression exch def pop",
       "  class 0 gt { PseudoClassImage } { DirectClassImage } ifelse",
       "  grestore",
-      (char *) NULL
+      (const char *) NULL
     };
 
   char
@@ -477,7 +477,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
     **labels;
 
   const char
-    **q;
+    * const *q;
 
   CompressionType
     compression;
@@ -542,6 +542,9 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
   void
     *blob;
 
+  size_t
+    image_list_length;
+
   /*
     Open output image file.
   */
@@ -549,6 +552,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
+  image_list_length=GetImageListLength(image);
   status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == False)
     ThrowWriterException(FileOpenError,UnableToOpenFile,image);
@@ -704,7 +708,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
               (void) strcpy(buffer,"%%Pages: 1\n");
             else
               FormatString(buffer,"%%%%Pages: %lu\n",(unsigned long)
-                GetImageListLength(image));
+                image_list_length);
             (void) WriteBlobString(image,buffer);
           }
         (void) WriteBlobString(image,"%%EndComments\n");
@@ -832,10 +836,10 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
             /*
               Write image in JPEG format.
             */
-	    blob=ImageToJPEGBlob(image,image_info,&length,&image->exception);
-	    if (blob == (char *) NULL)
-	      ThrowWriterException2(CoderError,image->exception.reason,image);
-	    (void) WriteBlob(image,length,blob);
+            blob=ImageToJPEGBlob(image,image_info,&length,&image->exception);
+            if (blob == (char *) NULL)
+              ThrowWriterException2(CoderError,image->exception.reason,image);
+            (void) WriteBlob(image,length,blob);
             MagickFreeMemory(blob);
             break;
           }
@@ -875,7 +879,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                   &image->exception,
                                                   SaveImageText,
                                                   image->filename,
-						  image->columns,image->rows);
+                                                  image->columns,image->rows);
                     if (status == False)
                       break;
                   }
@@ -917,7 +921,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                   &image->exception,
                                                   SaveImageText,
                                                   image->filename,
-						  image->columns,image->rows);
+                                                  image->columns,image->rows);
                     if (status == False)
                       break;
                   }
@@ -940,14 +944,14 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
           {
             case JPEGCompression:
             {
-	      /*
-		Write image in JPEG format.
-	      */
-	      blob=ImageToJPEGBlob(image,image_info,&length,&image->exception);
-	      if (blob == (char *) NULL)
-		ThrowWriterException2(CoderError,image->exception.reason,image);
-	      (void) WriteBlob(image,length,blob);
-	      MagickFreeMemory(blob);
+              /*
+                Write image in JPEG format.
+              */
+              blob=ImageToJPEGBlob(image,image_info,&length,&image->exception);
+              if (blob == (char *) NULL)
+                ThrowWriterException2(CoderError,image->exception.reason,image);
+              (void) WriteBlob(image,length,blob);
+              MagickFreeMemory(blob);
               break;
             }
             case RLECompression:
@@ -1005,7 +1009,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                     &image->exception,
                                                     SaveImageText,
                                                     image->filename,
-						    image->columns,image->rows);
+                                                    image->columns,image->rows);
                       if (status == False)
                         break;
                     }
@@ -1065,7 +1069,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                     &image->exception,
                                                     SaveImageText,
                                                     image->filename,
-						    image->columns,image->rows);
+                                                    image->columns,image->rows);
                       if (status == False)
                         break;
                     }
@@ -1130,7 +1134,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                     &image->exception,
                                                     SaveImageText,
                                                     image->filename,
-						    image->columns,image->rows);
+                                                    image->columns,image->rows);
                       if (status == False)
                         break;
                     }
@@ -1169,7 +1173,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
                                                     &image->exception,
                                                     SaveImageText,
                                                     image->filename,
-						    image->columns,image->rows);
+                                                    image->columns,image->rows);
                       if (status == False)
                         break;
                     }
@@ -1201,7 +1205,7 @@ static unsigned int WritePS2Image(const ImageInfo *image_info,Image *image)
     if (image->next == (Image *) NULL)
       break;
     image=SyncNextImageInList(image);
-    status=MagickMonitorFormatted(scene++,GetImageListLength(image),
+    status=MagickMonitorFormatted(scene++,image_list_length,
                                   &image->exception,SaveImagesText,
                                   image->filename);
     if (status == False)

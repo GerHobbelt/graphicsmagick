@@ -51,7 +51,7 @@ GraphicsMagick Supported Formats
 .. _SFW : http://www.algonet.se/~cyren/sfw/
 .. _SMPTE : http://www.smpte.org/
 .. _SVG : http://www.w3.org/Graphics/SVG/
-.. _TIFF : http://www.remotesensing.org/libtiff/
+.. _TIFF : http://www.simplesystems.org/libtiff/
 .. _TopoL : http://www.topol.cz/english/share/index.php3
 .. _VIFF: http://www.fileformat.info/format/viff/egff.htm
 .. _WBMP : http://www.openmobilealliance.org/Technical/wapindex.aspx
@@ -61,7 +61,6 @@ GraphicsMagick Supported Formats
 .. _XPM : http://www.fileformat.info/format/xpm/egff.htm
 .. _XWD : http://www.fileformat.info/format/xwd/egff.htm
 .. _freetype2 : http://www.freetype.org/
-.. _Gnuplot : http://gnuplot.sourceforge.net/
 .. _hp2xx : http://www.gnu.org/software/hp2xx/hp2xx.html
 .. _html2ps : http://user.it.uu.se/~jan/
 .. _jasper : http://www.ece.uvic.ca/~mdadams/jasper/
@@ -185,8 +184,6 @@ image formats.
    |              |      |                           | The PNG format provides a superior set of        |
    |              |      |                           | features to GIF. Consider using PNG format       |
    |              |      |                           | rather than GIF if clients are able to read PNG. |
-   +--------------+------+---------------------------+--------------------------------------------------+
-   | GPLT         | R    | Gnuplot_ plot files       | Requires Gnuplot_ 3.5 or later.                  |
    +--------------+------+---------------------------+--------------------------------------------------+
    | GRAY         | RW   | Raw gray samples          | Use -size, -depth, and -endian to specify the    |
    |              |      |                           | image width, height, depth, and byte order.      |
@@ -347,8 +344,8 @@ image formats.
    | PS3          | RW   | Adobe Level III           | Requires Ghostscript_ to read.                   |
    |              |      | PostScript file           |                                                  |
    +--------------+------+---------------------------+--------------------------------------------------+
-   | PSD          | RW   | Adobe Photoshop bitmap    |                                                  |
-   |              |      | file                      |                                                  |
+   | PSD          | RW   | Adobe Photoshop bitmap    | PSD format is no longer supported since the      |
+   |              |      | file                      | 1.3.24 release.                                  |
    +--------------+------+---------------------------+--------------------------------------------------+
    |              |      |                           | Multi-resolution TIFF_ containing successively   |
    | PTIF         | RW   | Pyramid encoded TIFF_     | smaller versions of the image down to the size   |
@@ -815,4 +812,4 @@ automatically uncompressed while the image is read.
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2018

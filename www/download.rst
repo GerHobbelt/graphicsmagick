@@ -76,7 +76,7 @@ Here are some known download sites for GraphicsMagick:
 
   `SourceForge file download <https://sourceforge.net/projects/graphicsmagick/files/>`_ (http protocol)
 
-  `Czechoslovakian ftp mirror <http://78.108.103.11/MIRROR/ftp/GraphicsMagick/>`_ (http protocol)
+  `Czech ftp mirror <http://78.108.103.11/MIRROR/ftp/GraphicsMagick/>`_ (http protocol)
 
   `Polish ftp mirror via ftp <ftp://ftp.icm.edu.pl/pub/unix/graphics/GraphicsMagick/>`_ (ftp protocol)
 
@@ -86,4 +86,4 @@ Here are some known download sites for GraphicsMagick:
 
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| GraphicsMagick Group 2002 - 2015
+Copyright |copy| GraphicsMagick Group 2002 - 2018
