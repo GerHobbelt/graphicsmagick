@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2020 GraphicsMagick Group
+% Copyright (C) 2003 - 2021 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
 %
@@ -86,6 +86,13 @@
 #if defined(TIFF_VERSION_BIG)
 #  define HasBigTIFF 1
 #endif /* defined(TIFF_BIGTIFF_VERSION) */
+
+#if defined(HAVE_STDINT_H) && (TIFFLIB_VERSION >= 20201219)
+#  undef uint16
+#  define uint16 uint16_t
+#  undef uint32
+#  define uint32 uint32_t
+#endif /* TIFFLIB_VERSION */
 
 /*
   Set to 1 in order to log low-level BLOB I/O at "coder" level.
@@ -2024,8 +2031,8 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
       if (planar_config == PLANARCONFIG_SEPARATE)
         image->interlace=PlaneInterlace;
       (void) TIFFGetFieldDefaulted(tiff,TIFFTAG_RESOLUTIONUNIT,&units);
-      x_resolution=image->x_resolution;
-      y_resolution=image->y_resolution;
+      x_resolution=(float) image->x_resolution;
+      y_resolution=(float) image->y_resolution;
       (void) TIFFGetFieldDefaulted(tiff,TIFFTAG_XRESOLUTION,&x_resolution);
       (void) TIFFGetFieldDefaulted(tiff,TIFFTAG_YRESOLUTION,&y_resolution);
       image->x_resolution=x_resolution;
@@ -2577,18 +2584,12 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                                          image);
               }
 
-            if (!AcquireMagickResource(MemoryResource,scanline_size))
-              ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
-                                       image);
-
-            scanline=MagickAllocateResourceLimitedMemory(unsigned char *,(size_t) scanline_size);
+            scanline=MagickAllocateResourceLimitedClearedMemory(unsigned char *,(size_t) scanline_size);
             if (scanline == (unsigned char *) NULL)
               {
-                LiberateMagickResource(MemoryResource,scanline_size);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
-            memset(scanline,0,(size_t) scanline_size);
             for (sample=0; sample < max_sample; sample++)
               {
                 for (y=0; y < image->rows; y++)
@@ -2671,7 +2672,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                           break;
                   }
               }
-            LiberateMagickResource(MemoryResource,scanline_size);
             MagickFreeResourceLimitedMemory(scanline);
             break;
           }
@@ -2768,18 +2768,12 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                                          image);
               }
 
-            if (!AcquireMagickResource(MemoryResource,strip_size_max))
-              ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
-                                       image);
-
-            strip=MagickAllocateResourceLimitedMemory(unsigned char *,(size_t) strip_size_max);
+            strip=MagickAllocateResourceLimitedClearedMemory(unsigned char *,(size_t) strip_size_max);
             if (strip == (unsigned char *) NULL)
               {
-                LiberateMagickResource(MemoryResource,strip_size_max);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
-            memset(strip,0,(size_t) strip_size_max);
             /*
               Compute per-row stride.
             */
@@ -2891,7 +2885,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                 if (status == MagickFail)
                   break;
               }
-            LiberateMagickResource(MemoryResource,strip_size_max);
             MagickFreeResourceLimitedMemory(strip);
             break;
           }
@@ -3021,18 +3014,12 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
             /*
               Allocate tile buffer
             */
-            if (!AcquireMagickResource(MemoryResource,tile_size_max))
-              ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
-                                       image);
-
-            tile=MagickAllocateResourceLimitedMemory(unsigned char *, (size_t) tile_size_max);
+            tile=MagickAllocateResourceLimitedClearedMemory(unsigned char *, (size_t) tile_size_max);
             if (tile == (unsigned char *) NULL)
               {
-                LiberateMagickResource(MemoryResource,tile_size_max);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
-            memset(tile,0,(size_t) tile_size_max);
             tiles_total=(((image->columns/tile_columns)+((image->columns % tile_columns) ? 1 : 0))
                          *((image->rows/tile_rows)+((image->rows % tile_rows) ? 1 : 0)))*max_sample;
             /*
@@ -3169,7 +3156,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                   break;
               }
 
-            LiberateMagickResource(MemoryResource,tile_size_max);
             MagickFreeResourceLimitedMemory(tile);
             break;
           }
@@ -3213,19 +3199,15 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                                          image);
               }
             strip_pixels_size=MagickArraySize(number_pixels,sizeof(uint32));
-            if ((strip_pixels_size == 0) ||
-                (!AcquireMagickResource(MemoryResource,strip_pixels_size)))
+            if (strip_pixels_size == 0)
               ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                        image);
-
-            strip_pixels=MagickAllocateResourceLimitedMemory(uint32 *,strip_pixels_size);
+            strip_pixels=MagickAllocateResourceLimitedClearedMemory(uint32 *,strip_pixels_size);
             if (strip_pixels == (uint32 *) NULL)
               {
-                LiberateMagickResource(MemoryResource,strip_pixels_size);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
-            memset(strip_pixels,0,(size_t) number_pixels*sizeof(uint32));
             if (logging)
               (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                                     "Allocated %" MAGICK_SIZE_T_F "u bytes for RGBA strip",
@@ -3290,7 +3272,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                         break;
                       }
               }
-            LiberateMagickResource(MemoryResource,strip_pixels_size);
             MagickFreeResourceLimitedMemory(strip_pixels);
             break;
           }
@@ -3395,14 +3376,12 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
             */
             tile_pixels_size=MagickArraySize(MagickArraySize(tile_columns,tile_rows),
                                              sizeof (uint32));
-            if ((tile_pixels_size == 0) ||
-                (!AcquireMagickResource(MemoryResource,tile_pixels_size)))
+            if (tile_pixels_size == 0)
               ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                        image);
             tile_pixels=MagickAllocateResourceLimitedMemory(uint32*,tile_pixels_size);
             if (tile_pixels == (uint32 *) NULL)
               {
-                LiberateMagickResource(MemoryResource,tile_pixels_size);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
@@ -3513,7 +3492,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                     break;
                   }
               }
-            LiberateMagickResource(MemoryResource,tile_pixels_size);
             MagickFreeResourceLimitedMemory(tile_pixels);
             break;
           }
@@ -3564,15 +3542,12 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
               unknown reasons.
             */
             pixels_size=MagickArraySize(number_pixels,sizeof(uint32));
-            if ((pixels_size == 0) ||
-                (!AcquireMagickResource(MemoryResource,pixels_size)))
+            if (pixels_size == 0)
               ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                        image);
-
             pixels=MagickAllocateResourceLimitedMemory(uint32 *,pixels_size);
             if (pixels == (uint32 *) NULL)
               {
-                LiberateMagickResource(MemoryResource,pixels_size);
                 ThrowTIFFReaderException(ResourceLimitError,MemoryAllocationFailed,
                                          image);
               }
@@ -3580,7 +3555,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                                    (uint32) image->rows,
                                    pixels,0))
               {
-                LiberateMagickResource(MemoryResource,pixels_size);
                 MagickFreeResourceLimitedMemory(pixels);
                 status=MagickFail;
                 break;
@@ -3641,7 +3615,6 @@ ReadTIFFImage(const ImageInfo *image_info,ExceptionInfo *exception)
                 if (status == MagickFail)
                   break;
               }
-            LiberateMagickResource(MemoryResource,pixels_size);
             MagickFreeResourceLimitedMemory(pixels);
             break;
           }
@@ -4252,10 +4225,9 @@ WriteNewsProfile(TIFF *tiff,
         Handle TIFFTAG_RICHTIFFIPTC tag.
       */
       length += (4-(length & 0x03)); /* Round up for long word alignment */
-      profile=MagickAllocateResourceLimitedMemory(unsigned char *,length);
+      profile=MagickAllocateResourceLimitedClearedMemory(unsigned char *,length);
       if (profile == (unsigned char *) NULL)
         return;
-      (void) memset(profile,0,length);
       (void) memcpy(profile,profile_data,profile_length);
 
       if (TIFFIsByteSwapped(tiff))
@@ -4276,10 +4248,9 @@ WriteNewsProfile(TIFF *tiff,
       length += (length & 0x01); /* Round up for Photoshop */
 #if defined(GET_ONLY_IPTC_DATA)
       length += 12;              /* Space for 8BIM header */
-      profile=MagickAllocateResourceLimitedMemory(unsigned char *,length);
+      profile=MagickAllocateResourceLimitedClearedMemory(unsigned char *,length);
       if (profile == (unsigned char *) NULL)
         return;
-      (void) memset(profile,0,length);
       (void) memcpy(profile,"8BIM\04\04\0\0",8);
       profile[8]=(length >> 24) & 0xff;
       profile[9]=(length >> 16) & 0xff;
@@ -4287,10 +4258,9 @@ WriteNewsProfile(TIFF *tiff,
       profile[11]=length & 0xff;
       (void) memcpy(profile+12,profile_data,profile_length);
 #else
-      profile=MagickAllocateResourceLimitedMemory(unsigned char *,length);
+      profile=MagickAllocateResourceLimitedClearedMemory(unsigned char *,length);
       if (profile == (unsigned char *) NULL)
         return;
-      (void) memset(profile,0,length);
       (void) memcpy(profile,profile_data,profile_length);
 #endif
       (void) LogMagickEvent(CoderEvent,GetMagickModule(),
@@ -5610,12 +5580,12 @@ WriteTIFFImage(const ImageInfo *image_info,Image *image)
             Set image primary chromaticities (x,y coordinates of RGB
             colorants and white point).
           */
-          chromaticity[0]=image->chromaticity.red_primary.x;
-          chromaticity[1]=image->chromaticity.red_primary.y;
-          chromaticity[2]=image->chromaticity.green_primary.x;
-          chromaticity[3]=image->chromaticity.green_primary.y;
-          chromaticity[4]=image->chromaticity.blue_primary.x;
-          chromaticity[5]=image->chromaticity.blue_primary.y;
+          chromaticity[0]=(float) image->chromaticity.red_primary.x;
+          chromaticity[1]=(float) image->chromaticity.red_primary.y;
+          chromaticity[2]=(float) image->chromaticity.green_primary.x;
+          chromaticity[3]=(float) image->chromaticity.green_primary.y;
+          chromaticity[4]=(float) image->chromaticity.blue_primary.x;
+          chromaticity[5]=(float) image->chromaticity.blue_primary.y;
           if (logging)
             (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                                   "Primary Chromaticities: "
@@ -5627,8 +5597,8 @@ WriteTIFFImage(const ImageInfo *image_info,Image *image)
                                   chromaticity[4] /* blue_primary.x */,
                                   chromaticity[5] /* blue_primary.y */);
           (void) TIFFSetField(tiff,TIFFTAG_PRIMARYCHROMATICITIES,chromaticity);
-          chromaticity[0]=image->chromaticity.white_point.x;
-          chromaticity[1]=image->chromaticity.white_point.y;
+          chromaticity[0]=(float) image->chromaticity.white_point.x;
+          chromaticity[1]=(float) image->chromaticity.white_point.y;
           if (logging)
             (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                                   "White Point: %gx%g",
@@ -5814,12 +5784,12 @@ WriteTIFFImage(const ImageInfo *image_info,Image *image)
           /*
             Initialize TIFF colormap.
           */
-          blue=MagickAllocateResourceLimitedArray(unsigned short *,
-                                                  65536L,sizeof(unsigned short));
-          green=MagickAllocateResourceLimitedArray(unsigned short *,
-                                                   65536L,sizeof(unsigned short));
-          red=MagickAllocateResourceLimitedArray(unsigned short *,
-                                                 65536L,sizeof(unsigned short));
+          blue=MagickAllocateResourceLimitedClearedArray(unsigned short *,
+                                                         65536L,sizeof(unsigned short));
+          green=MagickAllocateResourceLimitedClearedArray(unsigned short *,
+                                                          65536L,sizeof(unsigned short));
+          red=MagickAllocateResourceLimitedClearedArray(unsigned short *,
+                                                        65536L,sizeof(unsigned short));
           if ((blue == (unsigned short *) NULL) ||
               (green == (unsigned short *) NULL) ||
               (red == (unsigned short *) NULL))
@@ -5830,9 +5800,6 @@ WriteTIFFImage(const ImageInfo *image_info,Image *image)
               ThrowTIFFWriterException(ResourceLimitError,MemoryAllocationFailed,
                                        image);
             }
-          (void) memset(red,0,65536L*sizeof(unsigned short));
-          (void) memset(green,0,65536L*sizeof(unsigned short));
-          (void) memset(blue,0,65536L*sizeof(unsigned short));
           for (i=0; i < image->colors; i++)
             {
               red[i]=ScaleQuantumToShort(image->colormap[i].red);

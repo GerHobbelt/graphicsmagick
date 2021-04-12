@@ -77,6 +77,21 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #endif
+/*
+  Old JasPer uses non-persistent '!defined(EXCLUDE_FOO_SUPPORT)' and
+  modern JasPer uses persistent 'if defined(JAS_INCLUDE_FOO_CODEC)'
+  in jas_image.h
+*/
+#if defined(EXCLUDE_JP2_SUPPORT)
+#  undef HAVE_JP2_DECODE
+#endif
+#if defined(EXCLUDE_JPC_SUPPORT)
+#  undef HAVE_JPC_DECODE
+#endif
+#if defined(EXCLUDE_PGX_SUPPORT)
+#  undef HAVE_PGX_DECODE
+#endif
+
 
 /*
   Forward declarations.
@@ -294,14 +309,14 @@ typedef struct _StreamManager
   We have yet to find a useful way to determine the version of the
   JasPer library using the C pre-processor.
  */
-#if !defined(MAGICK_JP2_NEW_STREAM_INTERFACE)
-#define MAGICK_JP2_NEW_STREAM_INTERFACE 0
-#endif /* if !defined(MAGICK_JP2_NEW_STREAM_INTERFACE) */
+#if !defined(MAGICK_JP2_OLD_STREAM_INTERFACE)
+#define MAGICK_JP2_OLD_STREAM_INTERFACE 0
+#endif /* if !defined(MAGICK_JP2_OLD_STREAM_INTERFACE) */
 
-#if MAGICK_JP2_NEW_STREAM_INTERFACE
-static int BlobRead(jas_stream_obj_t *object,char *buffer,unsigned length)
-#else
+#if MAGICK_JP2_OLD_STREAM_INTERFACE
 static int BlobRead(jas_stream_obj_t *object,char *buffer,const int length)
+#else
+static int BlobRead(jas_stream_obj_t *object,char *buffer,unsigned length)
 #endif
 {
   size_t
@@ -314,10 +329,10 @@ static int BlobRead(jas_stream_obj_t *object,char *buffer,const int length)
   return ((int) count);
 }
 
-#if MAGICK_JP2_NEW_STREAM_INTERFACE
-static int BlobWrite(jas_stream_obj_t *object,const char *buffer,unsigned length)
-#else
+#if MAGICK_JP2_OLD_STREAM_INTERFACE
 static int BlobWrite(jas_stream_obj_t *object,char *buffer,const int length)
+#else
+static int BlobWrite(jas_stream_obj_t *object,const char *buffer,unsigned length)
 #endif
 {
   size_t
@@ -394,7 +409,7 @@ static jas_stream_t *JP2StreamManager(jas_stream_ops_t *stream_ops, Image *image
 }
 
 static Image *ReadJP2Image(const ImageInfo *image_info,
-  ExceptionInfo *exception)
+                           ExceptionInfo *exception)
 {
   Image
     *image;
@@ -426,6 +441,12 @@ static Image *ReadJP2Image(const ImageInfo *image_info,
   register PixelPacket
     *q;
 
+  size_t
+    magick_length;
+
+  magick_off_t
+    pos;
+
   int
     component,
     components[4],
@@ -433,6 +454,9 @@ static Image *ReadJP2Image(const ImageInfo *image_info,
 
   Quantum
     *channel_lut[4];
+
+  unsigned char
+    magick[16];
 
   unsigned int
     status;
@@ -462,12 +486,67 @@ static Image *ReadJP2Image(const ImageInfo *image_info,
     ThrowReaderException(FileOpenError,UnableToOpenFile,image);
 
   /*
+    Get the header so we can auto-detect the format.
+  */
+
+  /* Get current seek position (normally 0) */
+  pos=TellBlob(image);
+
+  /* Read header */
+  if ((magick_length=ReadBlob(image,sizeof(magick),magick)) != sizeof(magick))
+    {
+      ThrowReaderException(CorruptImageError,UnexpectedEndOfFile,
+                           image);
+    }
+
+  /* Restore seek position */
+  if (SeekBlob(image,pos,SEEK_SET) != pos)
+    {
+      ThrowReaderException(BlobError,UnableToSeekToOffset,image);
+    }
+
+  /*
     Obtain a JP2 Stream.
   */
   jp2_stream=JP2StreamManager(&StreamOperators, image);
   if (jp2_stream == (jas_stream_t *) NULL)
     ThrowReaderException(DelegateError,UnableToManageJP2Stream,image);
-  jp2_image=jas_image_decode(jp2_stream,-1,0);
+
+
+#if HAVE_JP2_DECODE
+  if (IsJP2(magick,sizeof(magick)))
+    {
+      /* jas_image_t *jp2_decode(jas_stream_t *in, const char *optstr); */
+      jp2_image=jp2_decode(jp2_stream,0);
+      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                            "Decoding JP2...");
+    }
+#endif
+#if HAVE_JPC_DECODE
+  if (IsJPC(magick,sizeof(magick)))
+    {
+      /* jas_image_t *jpc_decode(jas_stream_t *in, const char *optstr); */
+      jp2_image=jpc_decode(jp2_stream,0);
+      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                            "Decoding JPC...");
+    }
+#endif
+#if HAVE_PGX_DECODE
+  if (IsPGX(magick,sizeof(magick)))
+    {
+      /* jas_image_t *pgx_decode(jas_stream_t *in, const char *optstr); */
+      jp2_image=pgx_decode(jp2_stream,0);
+      (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                            "Decoding PGX...");
+    }
+#endif
+
+  /*
+    Using jas_image_decode() makes us subject to Jasper's own format
+    determination, which may include file formats we don't want to
+    support via Jasper.
+  */
+  /* jp2_image=jas_image_decode(jp2_stream,-1,0); */
   if (jp2_image == (jas_image_t *) NULL)
     ThrowJP2ReaderException(DelegateError,UnableToDecodeImageFile,image);
 
@@ -665,7 +744,7 @@ static Image *ReadJP2Image(const ImageInfo *image_info,
           for (x=0; x < (long) image->columns; x++)
             q[x].blue=(channel_lut[2])[jas_matrix_getv(pixels,x)];
 
-            /* Opacity */
+          /* Opacity */
           if (number_components > 3)
             {
               (void) jas_image_readcmpt(jp2_image,(short) components[3],0,
@@ -770,11 +849,19 @@ static Image *ReadJP2Image(const ImageInfo *image_info,
 */
 ModuleExport void RegisterJP2Image(void)
 {
+  static char
+    version[16];
+
   MagickInfo
     *entry;
 
+  (void) strlcpy(version,"JasPer ",sizeof(version));
+  (void) strlcat(version,jas_getversion(),sizeof(version));
+
+#if HAVE_JPC_DECODE
   entry=SetMagickInfo("J2C");
   entry->description="JPEG-2000 Code Stream Syntax";
+  entry->version=version;
   entry->module="JP2";
   entry->magick=(MagickHandler) IsJPC;
   entry->adjoin=False;
@@ -786,9 +873,12 @@ ModuleExport void RegisterJP2Image(void)
 #endif
   entry->coder_class=StableCoderClass;
   (void) RegisterMagickInfo(entry);
+#endif /* if HAVE_JPC_DECODE */
 
+#if HAVE_JP2_DECODE
   entry=SetMagickInfo("JP2");
   entry->description="JPEG-2000 JP2 File Format Syntax";
+  entry->version=version;
   entry->module="JP2";
   entry->magick=(MagickHandler) IsJP2;
   entry->adjoin=False;
@@ -800,9 +890,12 @@ ModuleExport void RegisterJP2Image(void)
 #endif
   entry->coder_class=StableCoderClass;
   (void) RegisterMagickInfo(entry);
+#endif /* HAVE_JP2_DECODE */
 
+#if HAVE_JPC_DECODE
   entry=SetMagickInfo("JPC");
   entry->description="JPEG-2000 Code Stream Syntax";
+  entry->version=version;
   entry->module="JP2";
   entry->magick=(MagickHandler) IsJPC;
   entry->adjoin=False;
@@ -814,9 +907,12 @@ ModuleExport void RegisterJP2Image(void)
 #endif
   entry->coder_class=StableCoderClass;
   (void) RegisterMagickInfo(entry);
+#endif /* if HAVE_JPC_DECODE */
 
+#if HAVE_PGX_DECODE
   entry=SetMagickInfo("PGX");
   entry->description="JPEG-2000 VM Format";
+  entry->version=version;
   entry->module="JP2";
   entry->magick=(MagickHandler) IsPGX;
   entry->adjoin=False;
@@ -828,6 +924,7 @@ ModuleExport void RegisterJP2Image(void)
 #endif
   entry->coder_class=StableCoderClass;
   (void) RegisterMagickInfo(entry);
+#endif /* if HAVE_PGX_DECODE */
 }
 
 /*

@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.15.2: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.13.1: http://docutils.sourceforge.net/" />
 <title>Installing GraphicsMagick</title>
 <link rel="stylesheet" href="docutils-articles.css" type="text/css" />
 </head>
@@ -148,11 +148,7 @@ available as</p>
 </li>
 <li><p class="first">GraphicsMagick requires Ghostscript software available from</p>
 <blockquote>
-<p><a class="reference external" href="http://pages.cs.wisc.edu/~ghost/">http://pages.cs.wisc.edu/~ghost/</a></p>
-<blockquote>
-<p>or</p>
-</blockquote>
-<p><a class="reference external" href="http://sourceforge.net/projects/ghostscript/">http://sourceforge.net/projects/ghostscript/</a></p>
+<p><a class="reference external" href="https://www.ghostscript.com/download.html">https://www.ghostscript.com/download.html</a></p>
 </blockquote>
 <p>to read the Postscript or the Portable Document Format (PDF).</p>
 <p>Ghostscript Fonts (also known as &quot;URW Standard postscript fonts
@@ -263,15 +259,16 @@ source distribution if you want to read lossless jpeg-encoded DICOM
 <p>Use of lossless JPEG is not encouraged. Unless you have a requirement
 to read lossless jpeg-encoded DICOM images, please disregard the patch.</p>
 </li>
-<li><p class="first">GraphicsMagick requires the JasPer Project's JasPer library version
-1.701.0 (or later) available via http from</p>
-<blockquote>
-<p><a class="reference external" href="http://www.ece.uvic.ca/~mdadams/jasper/">http://www.ece.uvic.ca/~mdadams/jasper/</a></p>
-</blockquote>
-<p>to read and write the JPEG-2000 format. Please note that JasPer 1.900.1
-may have a problem when used with GraphicsMagick's modules build. To
-solve this problem, edit the file src/libjasper/base/jas_init.c and
-comment out the line which invokes atexit().</p>
+<li><p class="first">GraphicsMagick requires the JasPer Project's JasPer library from
+<a class="reference external" href="https://jasper-software.github.io/jasper/">https://jasper-software.github.io/jasper/</a> (although older versions
+back to 1.701.0 are still available via http from the original web
+site at <a class="reference external" href="http://www.ece.uvic.ca/~mdadams/jasper/">http://www.ece.uvic.ca/~mdadams/jasper/</a>) to read and write
+the JPEG-2000 format.  Due to security concerns, using the latest
+version of JasPer is recommended.</p>
+<p>Please note that JasPer 1.900.1 may have a problem when used with
+GraphicsMagick's modules build. To solve this problem, edit the file
+src/libjasper/base/jas_init.c and comment out the line which invokes
+atexit().</p>
 </li>
 <li><p class="first">On Unix-type systems, Windows/MinGW, and Windows/Cygwin,
 GraphicsMagick requires libltdl from libtool in order to support
@@ -406,12 +403,22 @@ distributed with &quot;.xz&quot; or &quot;.lzma&quot; extensions.</p>
 </blockquote>
 <p>to read or write the PNG or Zip compressed MIFF images.</p>
 </li>
-<li><p class="first">GraphicsMagick requires the Zstd library from</p>
+<li><p class="first">GraphicsMagick requires the Zstandard (Zstd) library from</p>
 <blockquote>
 <p><a class="reference external" href="https://facebook.github.io/zstd/">https://facebook.github.io/zstd/</a></p>
+<p>or</p>
+<p><a class="reference external" href="https://github.com/facebook/zstd/releases">https://github.com/facebook/zstd/releases</a></p>
 </blockquote>
 <p>to read or write Zstd compressed TIFF images.  In the future it is
 likely that other purposes will be found for Zstd.</p>
+</li>
+<li><p class="first">GraphicsMagick may require the deflate library to link with libtiff.</p>
+<blockquote>
+<p>Libtiff may optionally depend on the libdeflate library (from
+<a class="reference external" href="https://github.com/ebiggers/libdeflate">https://github.com/ebiggers/libdeflate</a>).  Linking with this
+library may be necessary for builds where libtiff depends on
+libdeflate.</p>
+</blockquote>
 </li>
 </ul>
 </div>
@@ -419,7 +426,7 @@ likely that other purposes will be found for Zstd.</p>
 
 <hr class="docutils">
 <div class="document">
-    <p><a href="Copyright.html">Copyright</a> © GraphicsMagick Group 2002 - 2020<!--SPONSOR_LOGO--></p>
+    <p><a href="Copyright.html">Copyright</a> © GraphicsMagick Group 2002 - 2021<!--SPONSOR_LOGO--></p>
 </div>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003 - 2019 GraphicsMagick Group
+% Copyright (C) 2003 - 2021 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -480,15 +480,27 @@ MSLStartDocument(void *context)
 static void
 MSLEndDocument(void *context)
 {
-  /*   MSLInfo */
-  /*     *msl_info; */
+  MSLInfo
+    *msl_info;
 
-  ARG_NOT_USED(context);
   /*
     Called when the document end has been detected.
   */
-  /*   msl_info=(MSLInfo *) context; */
   (void) LogMagickEvent(CoderEvent,GetMagickModule(),"  SAX.endDocument()");
+  msl_info=(MSLInfo *) context;
+
+  /*
+    ProcessMSLScript() cleans up its own direct allocations.
+  */
+
+  /*
+    Don't free xmlParserCtxtPtr parser which is used later
+  */
+  if (msl_info->document != (xmlDocPtr) NULL)
+    {
+      xmlFreeDoc(msl_info->document);
+      msl_info->document=(xmlDocPtr) NULL;
+    }
 }
 
 static void
@@ -526,13 +538,16 @@ MSLPushImage(MSLInfo *msl_info,Image *image)
                     MemoryAllocationFailed,UnableToAllocateImage);
   if ( msl_info->nGroups )
     msl_info->group_info[msl_info->nGroups-1].numImages++;
-  attribute=GetImageAttribute(msl_info->attributes[n-1],(char *) NULL);
-  while (attribute != (const ImageAttribute *) NULL)
+  if (msl_info->attributes[n-1] != (Image *) NULL)
     {
-      (void) SetImageAttribute(msl_info->attributes[n],attribute->key,NULL);
-      (void) SetImageAttribute(msl_info->attributes[n],attribute->key,
-                               attribute->value);
-      attribute=attribute->next;
+      attribute=GetImageAttribute(msl_info->attributes[n-1],(char *) NULL);
+      while (attribute != (const ImageAttribute *) NULL)
+        {
+          (void) SetImageAttribute(msl_info->attributes[n],attribute->key,NULL);
+          (void) SetImageAttribute(msl_info->attributes[n],attribute->key,
+                                   attribute->value);
+          attribute=attribute->next;
+        }
     }
 }
 
@@ -544,11 +559,8 @@ MSLPopImage(MSLInfo *msl_info)
   */
   if ( (msl_info->nGroups == 0) && (msl_info->n > 0) )
     {
-      if (msl_info->image[msl_info->n] != (Image *) NULL)
-        {
-          DestroyImage(msl_info->image[msl_info->n]);
-          msl_info->image[msl_info->n]=(Image *) NULL;
-        }
+      DestroyImage(msl_info->image[msl_info->n]);
+      msl_info->image[msl_info->n]=(Image *) NULL;
 
       DestroyDrawInfo(msl_info->draw_info[msl_info->n]);
       msl_info->draw_info[msl_info->n]=(DrawInfo *) NULL;
@@ -559,6 +571,12 @@ MSLPopImage(MSLInfo *msl_info)
       DestroyImageInfo(msl_info->image_info[msl_info->n]);
       msl_info->image_info[msl_info->n]=(ImageInfo *) NULL;
       msl_info->n--;
+    }
+  if (msl_info->nGroups != 0)
+    {
+      (void) LogMagickEvent
+        (CoderEvent,GetMagickModule(),
+         "  Skipping destroy due to nGroups = %lu", msl_info->nGroups);
     }
 }
 
@@ -621,6 +639,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -698,6 +722,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -817,6 +847,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -895,6 +931,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -1020,6 +1062,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -1227,6 +1275,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -1384,6 +1438,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -1448,6 +1508,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -1651,6 +1717,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -1968,6 +2040,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2090,6 +2168,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2185,6 +2269,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2313,6 +2403,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2376,6 +2472,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2426,6 +2528,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2533,6 +2641,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2619,6 +2733,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2686,6 +2806,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2807,6 +2933,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2895,6 +3027,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -2968,6 +3106,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3058,6 +3202,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3144,6 +3294,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3312,6 +3468,12 @@ MSLStartElement(void *context,const xmlChar *name,
                 for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
                   {
                     keyword=(const char *) attributes[i++];
+                    if (msl_info->attributes[n] == (Image *) NULL)
+                      {
+                        ThrowException(msl_info->exception,OptionError,
+                                       NoImagesDefined,(char *) keyword);
+                        break;
+                      }
                     value=TranslateText(msl_info->image_info[n],
                                         msl_info->attributes[n],
                                         (char *) attributes[i]);
@@ -3389,6 +3551,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3487,6 +3655,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3563,6 +3737,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3618,6 +3798,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3681,6 +3867,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3758,6 +3950,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3835,6 +4033,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -3931,6 +4135,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -4001,6 +4211,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -4056,6 +4272,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -4148,6 +4370,12 @@ MSLStartElement(void *context,const xmlChar *name,
             for (i=0; (attributes[i] != (const xmlChar *) NULL); i++)
               {
                 keyword=(const char *) attributes[i++];
+                if (msl_info->attributes[n] == (Image *) NULL)
+                  {
+                    ThrowException(msl_info->exception,OptionError,
+                                   NoImagesDefined,(char *) keyword);
+                    break;
+                  }
                 value=TranslateText(msl_info->image_info[n],
                                     msl_info->attributes[n],
                                     (char *) attributes[i]);
@@ -4306,6 +4534,10 @@ MSLReference(void *context,const xmlChar *name)
                         "  SAX.reference(%.1024s)",name);
   msl_info=(MSLInfo *) context;
   parser=msl_info->parser;
+  if (parser == (xmlParserCtxtPtr) NULL)
+    return;
+  if (parser->node == (xmlNodePtr) NULL)
+    return;
   if (*name == '#')
     (void) xmlAddChild(parser->node,xmlNewCharRef(msl_info->document,name));
   else
@@ -4421,6 +4653,7 @@ MSLError(void *context,const char *format,...)
 #endif
   ThrowException2(msl_info->exception,DelegateFatalError,reason,"some text");
   va_end(operands);
+  msl_info->parser->instate = XML_PARSER_EOF;
 }
 
 static void
@@ -4448,8 +4681,11 @@ MSLCDataBlock(void *context,const xmlChar *value,int length)
       (void) xmlTextConcat(child,value,length);
       return;
     }
-  (void) xmlAddChild(parser->node,
-                     xmlNewCDataBlock(parser->myDoc,value,length));
+  /* Create a new node containing a CDATA block. */
+  /* FIXME: parser->myDoc is null so add fails.  What do do? */
+  child=xmlNewCDataBlock(parser->myDoc,value,length);
+  if (xmlAddChild(parser->node,child) == (xmlNodePtr) NULL)
+    xmlFreeNode(child);
 }
 
 static void
@@ -4527,6 +4763,10 @@ MSLExternalSubset(void *context,const xmlChar *name,
 /* } */
 #endif
 
+/*
+  Note that if an image is passed in, that it is from the writer and
+  should never be freed!
+ */
 static unsigned int
 ProcessMSLScript(const ImageInfo *image_info,Image **image,
                  ExceptionInfo *exception)
@@ -4538,6 +4778,7 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
     message[MaxTextExtent];
 
   Image
+    *writer_image,
     *msl_image;
 
   long
@@ -4570,6 +4811,8 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
   assert(image_info != (const ImageInfo *) NULL);
   assert(image_info->signature == MagickSignature);
   assert(image != (Image **) NULL);
+  writer_image=*image; /* Non-null if writing */
+  (void) memset(&msl_info,0,sizeof(msl_info));
   msl_image=AllocateImage(image_info);
   status=OpenBlob(image_info,msl_image,ReadBinaryBlobMode,exception);
   if (status == MagickFail)
@@ -4597,8 +4840,11 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
       (msl_info.image == (Image **) NULL) ||
       (msl_info.attributes == (Image **) NULL) ||
       (msl_info.group_info == (MSLGroupInfo *) NULL))
-    MagickFatalError3(ResourceLimitFatalError,MemoryAllocationFailed,
-                      UnableToInterpretMSLImage);
+    {
+      ThrowException3(exception,ResourceLimitError,
+                      MemoryAllocationFailed,UnableToInterpretMSLImage);
+      goto  msl_info_error;
+    }
   msl_info.image_info[0]=CloneImageInfo(image_info);
   msl_info.draw_info[0]=CloneDrawInfo(image_info,(DrawInfo *) NULL);
   if (image_info->attributes)
@@ -4607,9 +4853,9 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
     msl_info.attributes[0]=(Image *) NULL;
   msl_info.group_info[0].numImages=0;
   /* the first slot is used to point to the MSL file image */
-  *msl_info.image=msl_image;
-  if (*image != (Image *) NULL)
-    MSLPushImage(&msl_info,*image);
+  msl_info.image[0]=msl_image;
+  if (writer_image != (Image *) NULL)
+    MSLPushImage(&msl_info,writer_image);
   (void) xmlSubstituteEntitiesDefault(1);
 
   (void) memset(&SAXModules,0,sizeof(SAXModules));
@@ -4640,10 +4886,20 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
   SAXModules.getParameterEntity=MSLGetParameterEntity;
   SAXModules.cdataBlock=MSLCDataBlock;
   SAXModules.externalSubset=MSLExternalSubset;
+  /*
+    The following fields are extensions available only on version 2:
+    startElementNsSAX2Func startElementNs;
+    endElementNsSAX2Func endElementNs;
+    xmlStructuredErrorFunc serror;
+  */
 
   SAXHandler=(&SAXModules);
   msl_info.parser=xmlCreatePushParserCtxt(SAXHandler,&msl_info,(char *) NULL,0,
                                           msl_image->filename);
+  if (msl_info.parser == (xmlParserCtxtPtr) NULL)
+    {
+      /* FIXME: Handle failure! */
+    }
   while (ReadBlobString(msl_image,message) != (char *) NULL)
     {
       n=(long) strlen(message);
@@ -4658,6 +4914,18 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
     }
   if (msl_info.exception->severity == UndefinedException)
     (void) xmlParseChunk(msl_info.parser," ",1,True);
+
+  /*
+    Assure that our private context is freed, even if we abort before
+    seeing the document end.
+  */
+  MSLEndDocument(&msl_info);
+  if (msl_info.parser->myDoc != (xmlDocPtr) NULL)
+    xmlFreeDoc(msl_info.parser->myDoc);
+  /*
+    Free all the memory used by a parser context. However the parsed
+    document in ctxt->myDoc is not freed (so we just did that).
+  */
   xmlFreeParserCtxt(msl_info.parser);
   (void) LogMagickEvent(CoderEvent,GetMagickModule(),"end SAX");
 
@@ -4667,24 +4935,57 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
 
 /*   printf("ProcessMSLScript(msl_info->n=%ld\n",msl_info.n); */
 
-  if (*image == (Image *) NULL)
-    *image=*msl_info.image;
+ msl_info_error:
 
-  if (msl_info.draw_info[0] != (DrawInfo *) NULL)
+  /*
+    Capture any exception which might have been reported to MSL file
+    image.
+  */
+  if (msl_image->exception.severity > exception->severity)
+    CopyException(exception,&msl_image->exception);
+
+  /*
+    Allocations from MSLPushImage().  MSLPopImage() should already do this.
+  */
+  if (msl_info.nGroups == 0)
     {
-      DestroyDrawInfo(msl_info.draw_info[0]);
-      msl_info.draw_info[0]=(DrawInfo *) NULL;
+      while (msl_info.n > 0)
+        {
+          /*
+            Do not destroy image which was passed in from the writer!
+          */
+          if (writer_image != msl_info.image[msl_info.n])
+            {
+              if (msl_info.image[msl_info.n]->exception.severity > exception->severity)
+                CopyException(exception,&msl_info.image[msl_info.n]->exception);
+              DestroyImage(msl_info.image[msl_info.n]);
+              msl_info.image[msl_info.n]=(Image *) NULL;
+            }
+
+          DestroyDrawInfo(msl_info.draw_info[msl_info.n]);
+          msl_info.draw_info[msl_info.n]=(DrawInfo *) NULL;
+
+          DestroyImage(msl_info.attributes[msl_info.n]);
+          msl_info.attributes[msl_info.n]=(Image *) NULL;
+
+          DestroyImageInfo(msl_info.image_info[msl_info.n]);
+          msl_info.image_info[msl_info.n]=(ImageInfo *) NULL;
+          msl_info.n--;
+        }
     }
-  if (msl_info.attributes[0] != (Image *) NULL)
-    {
-      DestroyImage(msl_info.attributes[0]);
-      msl_info.attributes[0]=(Image *) NULL;
-    }
-  if (msl_info.image_info[0] != (ImageInfo *) NULL)
-    {
-      DestroyImageInfo(msl_info.image_info[0]);
-      msl_info.image_info[0]=(ImageInfo *) NULL;
-    }
+
+  /*
+    FIXME: May also need to handle group destruction similar to in
+    MSLEndElement() if libxml2 does not process an end element.
+  */
+  DestroyDrawInfo(msl_info.draw_info[0]);
+  msl_info.draw_info[0]=(DrawInfo *) NULL;
+
+  DestroyImage(msl_info.attributes[0]);
+  msl_info.attributes[0]=(Image *) NULL;
+
+  DestroyImageInfo(msl_info.image_info[0]);
+  msl_info.image_info[0]=(ImageInfo *) NULL;
 
   MagickFreeMemory(msl_info.image_info);
   MagickFreeMemory(msl_info.draw_info);
@@ -4692,10 +4993,31 @@ ProcessMSLScript(const ImageInfo *image_info,Image **image,
   MagickFreeMemory(msl_info.image);
   MagickFreeMemory(msl_info.group_info);
 
-  CloseBlob(*image);
+  CloseBlob(msl_image);
+  /*
+    If acting as writer, then destroy temporary msl_image, otherwise,
+    return msl_image as the image which was read
+  */
+  if (writer_image != (Image *) NULL)
+    {
+      DestroyImage(msl_image);
+      msl_image=(Image *) NULL;
+    }
+  else
+    {
+      if (exception->severity < ErrorException)
+        {
+          *image=msl_image;
+        }
+      else
+        {
+          DestroyImage(msl_image);
+          msl_image=(Image *) NULL;
+        }
+    }
 
-  return((*image != (Image *) NULL) &&
-         ((*image)->exception.severity == UndefinedException));
+  /* FIXME: It is not clear what constitutes "success" for MSL */
+  return exception->severity < ErrorException ? MagickPass : MagickFail;
 }
 
 static Image *
@@ -4703,6 +5025,9 @@ ReadMSLImage(const ImageInfo *image_info,ExceptionInfo *exception)
 {
   Image *
     image;
+
+  MagickPassFail
+    status;
 
   assert(image_info != (const ImageInfo *) NULL);
   assert(image_info->signature == MagickSignature);
@@ -4713,7 +5038,11 @@ ReadMSLImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   image=(Image *) NULL;
-  (void) ProcessMSLScript(image_info,&image,exception);
+  status=ProcessMSLScript(image_info,&image,exception);
+
+  if (status == MagickFail)
+    (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                          "ProcessMSLScript() returned MagickFail!");
   return(image);
 }
 #endif /* defined(HasXML) */
@@ -4817,12 +5146,22 @@ UnregisterMSLImage(void)
 #if defined(HasXML)
 static unsigned int WriteMSLImage(const ImageInfo *image_info,Image *image)
 {
+  MagickPassFail
+    status;
+
   assert(image_info != (const ImageInfo *) NULL);
   assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
   assert(image->signature == MagickSignature);
-  (void) ReferenceImage(image);
-  (void) ProcessMSLScript(image_info,&image,&image->exception);
-  return(True);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
+  if (status == False)
+    ThrowWriterException(FileOpenError,UnableToOpenFile,image);
+  /* (void) ReferenceImage(image); what for? */
+  status=ProcessMSLScript(image_info,&image,&image->exception);
+  if (status == MagickFail)
+    (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                          "ProcessMSLScript() returned MagickFail!");
+  CloseBlob(image);
+  return status;
 }
 #endif /* defined(HasXML) */

@@ -1782,7 +1782,7 @@ Optional Packages:
   --without-bzlib         disable BZLIB support
   --without-dps           disable Display Postscript support
   --with-fpx              enable FlashPIX support
-  --without-gdi32         disable Windows gdi32 support
+  --without-gdi32         disable Windows gdi32/user32 (clipboard) support
   --without-gs            disable Ghostscript support
   --without-jbig          disable JBIG support
   --without-webp          disable WEBP support
@@ -19352,7 +19352,7 @@ if test "$with_fpx" != 'yes' ; then
     DISTCHECK_CONFIG_FLAGS="${DISTCHECK_CONFIG_FLAGS} --with-fpx=$with_fpx "
 fi
 
-# Enable Windows lgdi32 library
+# Enable Windows gdi32/user32 libraries
 
 # Check whether --with-gdi32 was given.
 if test "${with_gdi32+set}" = set; then :
@@ -26132,6 +26132,18 @@ $as_echo "#define HasJP2 1" >>confdefs.h
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
         have_jp2='yes'
+        for ac_func in jp2_decode jpc_decode pgx_decode
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
     fi
     else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -27707,7 +27719,7 @@ fi
 
 
 #
-# Check for Windows gdi32 library
+# Check for Windows gdi32/user32 libraries (for Windows clipboard support)
 #
 have_gdi32='no'
 if test "$with_gdi32" != 'no'
@@ -27719,9 +27731,19 @@ $as_echo_n "checking for Windows GDI32 support... " >&6; }
 $as_echo "" >&6; }
   failed=0
   passed=0
-  found_libgdi32=0
+  #found_libuser32=0
+  #found_libgdi32=0
   ac_fn_c_check_header_mongrel "$LINENO" "windows.h" "ac_cv_header_windows_h" "$ac_includes_default"
 if test "x$ac_cv_header_windows_h" = xyes; then :
+  passed=`expr $passed + 1`
+else
+  failed=`expr $failed + 1`
+fi
+
+
+  ac_fn_c_check_header_compile "$LINENO" "winuser.h" "ac_cv_header_winuser_h" "#include <windows.h>
+"
+if test "x$ac_cv_header_winuser_h" = xyes; then :
   passed=`expr $passed + 1`
 else
   failed=`expr $failed + 1`
@@ -27737,51 +27759,18 @@ else
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenClipboard in -lgdi32" >&5
-$as_echo_n "checking for OpenClipboard in -lgdi32... " >&6; }
-if ${ac_cv_lib_gdi32_OpenClipboard+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lgdi32  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char OpenClipboard ();
-int
-main ()
-{
-return OpenClipboard ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_gdi32_OpenClipboard=yes
-else
-  ac_cv_lib_gdi32_OpenClipboard=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gdi32_OpenClipboard" >&5
-$as_echo "$ac_cv_lib_gdi32_OpenClipboard" >&6; }
-if test "x$ac_cv_lib_gdi32_OpenClipboard" = xyes; then :
-  found_libgdi32=`expr $found_libgdi32 + 1`
-fi
-
-  if test $found_libgdi32 -gt 0
+  # For some reason MSYS2 and Cygwin i686 build fails library tests.
+  #AC_CHECK_LIB([user32],[OpenClipboard],[found_libuser32=`expr $found_libuser32 + 1`],[],[])
+  #AC_CHECK_LIB([gdi32],[CreateDIBSection],[found_libgdi32=`expr $found_libgdi32 + 1`],[],[])
+  #if test $found_libuser32 -gt 0 -a  $found_libgdi32 -gt 0
+  #then
+  #  passed=`expr $passed + 1`
+  #else
+  #  failed=`expr $failed + 1`
+  #fi
+  if test "$cygwin_build" = yes -o "$native_win32_build" = yes
   then
-    passed=`expr $passed + 1`
-  else
-    failed=`expr $failed + 1`
+        passed=`expr $passed + 1`
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Windows GDI32 support is complete" >&5
 $as_echo_n "checking if Windows GDI32 support is complete... " >&6; }
@@ -27793,7 +27782,7 @@ $as_echo_n "checking if Windows GDI32 support is complete... " >&6; }
 $as_echo "no -- some components failed test" >&6; }
       have_gdi32='no (failed tests)'
     else
-      LIB_GDI32='-lgdi32'
+      LIB_GDI32='-lgdi32 -luser32'
       LIBS="$LIB_GDI32 $LIBS"
 
 $as_echo "#define HasWINGDI32 1" >>confdefs.h
@@ -30060,7 +30049,7 @@ fi
 
 if test "$build_modules" != 'no'
 then
-  MAGICK_DEP_LIBS="$LIBS_USER $LIB_LCMS $LIB_TTF $LIB_GS $LIB_XEXT $LIB_IPC $LIB_X11 $LIB_LZMA $LIB_BZLIB $LIB_ZLIB $LIB_LTDL $LIB_TRIO $LIB_GDI32 $LIB_MATH $LIB_THREAD $LIB_TCMALLOC $LIB_UMEM $LIB_MTMALLOC"
+  MAGICK_DEP_LIBS="$LIBS_USER $LIB_LCMS $LIB_TTF $LIB_GS $LIB_XEXT $LIB_IPC $LIB_X11 $LIB_BZLIB $LIB_ZLIB $LIB_LTDL $LIB_TRIO $LIB_GDI32 $LIB_MATH $LIB_THREAD $LIB_TCMALLOC $LIB_UMEM $LIB_MTMALLOC"
 else
   MAGICK_DEP_LIBS="$LIBS_USER $LIB_JBIG $LIB_WEBP $LIB_LCMS $LIB_TIFF $LIB_TTF $LIB_JP2 $LIB_JPEG $LIB_GS $LIB_PNG $LIB_FPX $LIB_WMF $LIB_DPS $LIB_XEXT $LIB_IPC $LIB_X11 $LIB_LZMA $LIB_BZLIB $LIB_XML $LIB_ZLIB $LIB_ZSTD $LIB_TRIO $LIB_GDI32 $LIB_MATH $LIB_THREAD $LIB_TCMALLOC $LIB_UMEM $LIB_MTMALLOC"
 fi

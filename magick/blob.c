@@ -2238,6 +2238,7 @@ MagickExport void *ImageToBlob(const ImageInfo *image_info,Image *image,
     {
       /*
         Native blob support for this image format.
+        FIXME: This results in a memory leak if the blob is not opened.
       */
       clone_info->blob=MagickAllocateMemory(void *,65535L);
       if (clone_info->blob == (void *) NULL)
@@ -2258,7 +2259,7 @@ MagickExport void *ImageToBlob(const ImageInfo *image_info,Image *image,
       *image->filename='\0';
       /* Write the image to the blob */
       status=WriteImage(clone_info,image);
-      if (status == MagickFalse)
+      if (status == MagickFail)
         {
           /* Only assert our own exception if an exception was not already reported. */
           if (image->exception.severity == UndefinedException)

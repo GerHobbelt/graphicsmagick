@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2020 GraphicsMagick Group
+% Copyright (C) 2003-2021 GraphicsMagick Group
 % Copyright (c) 2000 Markus Friedl.  All rights reserved.
 % Copyright (C) 2002 ImageMagick Studio
 % Copyright 1991-1999 E. I. du Pont de Nemours and Company
@@ -3654,12 +3654,12 @@ MagickExport long MagickDoubleToLong(const double dval/*, ExceptionInfo *excepti
           lval=0;
           break;
         }
-      if (dval > LONG_MAX)
+      if (floor(dval) > ((double) LONG_MAX - 1))
         {
           lval=LONG_MAX;
           break;
         }
-      if (dval < LONG_MIN)
+      if (ceil(dval) < ((double) LONG_MIN + 1))
         {
           lval=LONG_MIN;
           break;
@@ -4189,7 +4189,12 @@ MagickSpawnVP(const unsigned int verbose,const char *file, char *const argv[])
 #if defined(HAVE_SPAWNVP)
   {
     /* int spawnvp(int mode, const char *path, const char * const *argv); */
-    status = spawnvp(_P_WAIT, file, /*(const char * const *)*/ (char * const *) argv);
+#if defined(__MINGW64_VERSION_MAJOR)
+    /* MinGW-w64 prototype is lacking */
+    status = spawnvp(_P_WAIT, file, (char * const *) argv);
+#else
+    status = spawnvp(_P_WAIT, file, (const char * const *) argv);
+#endif
   }
 #else
   {
@@ -6303,15 +6308,19 @@ MagickExport char *TranslateTextEx(const ImageInfo *image_info,
       }
       case 'x':
       {
-        /* Horizontal resolution */
-        FormatString(buffer,"%g",image->x_resolution);
+        /* Horizontal resolution (default to 72.0 DPI if impossibly small) */
+        FormatString(buffer,"%g",
+                     fabs(image->x_resolution) > MagickEpsilon ? image->x_resolution :
+                     (image->units == PixelsPerCentimeterResolution ? 72.0/2.54 : 72.0));
         q+=(translate)(q,buffer,MaxTextExtent);
         break;
       }
       case 'y':
       {
-        /* Vertical resolution */
-        FormatString(buffer,"%g",image->y_resolution);
+        /* Vertical resolution (default to 72.0 DPI if impossibly small) */
+        FormatString(buffer,"%g",
+                     fabs(image->y_resolution) > MagickEpsilon ? image->y_resolution :
+                     (image->units == PixelsPerCentimeterResolution ? 72.0/2.54 : 72.0));
         q+=(translate)(q,buffer,MaxTextExtent);
         break;
       }

@@ -1,5 +1,5 @@
 /*
-% Copyright (C) 2003-2020 GraphicsMagick Group
+% Copyright (C) 2003-2021 GraphicsMagick Group
 % Copyright (C) 2002 ImageMagick Studio
 %
 % This program is covered by multiple licenses, which are described in
@@ -768,7 +768,7 @@ unsigned Flags;
  if(Flags & ROT)
         {
         x=ReadBlobLSBLong(image);       /*Rot Angle*/
-        if(Angle) *Angle=x/65536.0;
+        if(Angle) *Angle=(float) (x/65536.0);
         }
  if(Flags & (ROT|SCL))
         {
@@ -940,7 +940,26 @@ static Image *ExtractPostscript(Image *image,const ImageInfo *image_info,
         (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                               "ExtractPostscript(): Zero copy read.");
     }
+#if 0
+  /*
+    Write in-memory blob to file for test purposes.
+  */
+  {
+    char file_name[MaxTextExtent];
+    FILE *file;
 
+    FormatString(file_name,"wpg-blob.%s",format);
+    if ((file=fopen(file_name,"w")) != (FILE *) NULL)
+      {
+        if (image->logging)
+          (void) LogMagickEvent(CoderEvent,GetMagickModule(),
+                                "Writing %s...", file_name);
+        (void) fwrite(ps_data, 1, PS_Size, file);
+        (void) fclose(file);
+      }
+    SeekBlob(image,PS_Offset,SEEK_SET);
+  }
+#endif
   /*
     Read nested image from blob, forcing read as Postscript format
   */

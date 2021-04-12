@@ -700,6 +700,9 @@
       <Message name="UnreasonableDashPolygonLength">
         unreasonable dash polygon length
       </Message>
+      <Message name="UnreasonableAffineMatrix">
+        unreasonable affine matrix
+      </Message>
       <Message name="UnableToDrawOnImage">
         unable to draw on image
       </Message>
@@ -1482,6 +1485,9 @@
         </Message>
         <Message name="UnableToGetPackageInfo">
           Unable to get package info
+        </Message>
+        <Message name="UnableToInterpretMSLImage">
+          unable to interpret MSL image
         </Message>
         <Message name="UnableToLevelImage">
           unable to level image
