@@ -96,6 +96,11 @@ namespace MagickLib
 #      pragma message( "Magick++ lib static interface" )
 #    endif
 #    if defined(_MSC_VER) && defined(STATIC_MAGICK) && !defined(NOAUTOLINK_MAGICK)
+
+#pragma message ("Monolithic builds SHOULD NOT produce pesky boost::auto_link #pragma comment(lib, xyz) linker instructions. This is by design; if you must, add them by hand, but really your MSVC projects' dependency chain should take care of this by itself.")
+
+#error XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 #      if defined(_DEBUG)
 #        if defined(HasBZLIB)
 #          pragma comment(lib, "CORE_DB_bzlib_.lib")
